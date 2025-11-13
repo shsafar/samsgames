@@ -1,0 +1,1892 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>JushBox — Sliding-Stack Puzzle (Level 1)</title>
+<style>
+  :root { --gap: 8px; --cell: 100px; --radius: 16px; --speed: 180ms; }
+  html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; position: fixed; overscroll-behavior: none; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #ffffff; color: #1e293b; touch-action: none; overscroll-behavior: none; }
+  .wrap { width: 100%; max-width: 900px; padding: 12px; margin: 0 auto; height: 100vh; overflow: visible; position: relative; }
+  h1 { margin: 0 0 4px; font-size: 22px; user-select: none; -webkit-user-select: none; }
+  .sub { opacity: .85; font-size: 14px; margin-bottom: 12px; user-select: none; -webkit-user-select: none; }
+  .target-banner { background:#334155; color:#fff; text-align:center; padding:12px; font-weight:700; font-size:18px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 12px; margin: 8px; }
+  .target-icon { display:inline-block; width:24px; height:24px; border-radius:6px; margin-right:8px; vertical-align:middle; }
+  .toolbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .toolbar .group { display: inline-flex; gap: 8px; align-items: center; background:#0b1220; padding:8px 10px; border-radius: 12px; box-shadow: inset 0 0 0 1px #1f2a44; color: #ffffff; }
+  label { font-size: 12px; opacity: .9; color: inherit; }
+  select, input[type="checkbox"] { accent-color:#38bdf8; }
+  button { border: 0; padding: 8px 12px; border-radius: 10px; cursor: pointer; background: #1f2937; color: #e5e7eb; font-size: 14px; font-weight: 600; transition: transform .05s ease, opacity .15s ease; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  button:hover { transform: translateY(-1px); }
+  button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .stats { margin: 8px auto 0; display:flex; flex-wrap:wrap; gap:10px; font-size:12px; opacity:.95; justify-content: center; width: 100%; max-width:95vw; }
+  .board { display: grid; gap: var(--gap); width: fit-content; margin: 8px auto 10px; user-select: none; touch-action: none; position: relative; grid-template-columns: repeat(3, var(--cell)); grid-template-rows: repeat(3, var(--cell)); }
+  .cell { width: var(--cell); height: var(--cell); background: #0b1220; border-radius: var(--radius); position: relative; overflow: hidden; box-shadow: inset 0 0 0 2px #1f2a44, 0 10px 20px rgba(0,0,0,.25); }
+  /* diagonal markers */
+  .diag-markers { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+  .diag-marker { position: absolute; width: 8px; height: 8px; background: rgba(0,0,0,0.6); border-radius: 50%; }
+  .cell[data-full="true"]::before{ content:"MAX 5"; position:absolute; inset:8px; display:grid; place-items:center; font-size:12px; font-weight:800; color:#fecaca; background: rgba(239,68,68,.15); border:1px dashed #ef4444; border-radius:14px; pointer-events:none; }
+  .cell[data-hover="true"] { outline: 3px dashed #22c55e; outline-offset: 3px; }
+  .cell[data-selected="true"] { outline: 3px solid #38bdf8; outline-offset: 3px; }
+  .tile { position: absolute; inset: 8px; border-radius: 14px; display: grid; place-items: center; font-weight: 800; letter-spacing: .3px; box-shadow: 0 8px 20px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.25); transform: translateZ(0); transition: transform var(--speed) ease, box-shadow var(--speed) ease; touch-action: none; }
+  .tile .label { font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  .tile .badge { position:absolute; top:6px; left:6px; min-width:24px; height:22px; padding:0 6px; border-radius:999px; display:grid; place-items:center; font-size:12px; font-weight:900; background:rgba(0,0,0,.55); color:#fff; letter-spacing:.2px; }
+  .note { text-align: center; font-size: 13px; opacity: .75; margin-top: 10px; }
+  /* colors (3-color level) */
+  .c-blue{background:#3b82f6}.c-red{background:#ef4444}.c-yellow{background:#f59e0b}
+  .c-green{background:#22c55e}.c-purple{background:#a855f7}
+  .c-empty{background:#000; color:#94a3b8;}
+  /* modal */
+  .modal-wrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:60}
+  .modal-wrap.show{display:flex}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+  .modal{position:relative; z-index:1; width:min(92vw,480px); background:#ffffff; color:#1e293b; border-radius:20px; box-shadow:0 25px 70px rgba(0,0,0,.3); padding:28px; border:1px solid #e2e8f0}
+  .modal h2{margin:0 0 10px;font-size:24px;color:#0f172a}
+  .modal p{margin:0 0 16px;color:#475569;font-size:15px}
+  .modal .statline{display:flex;gap:16px;font-size:14px;margin-bottom:18px;color:#334155}
+  .modal .statline b{color:#0f172a}
+  .modal .actions{display:flex;gap:10px;justify-content:flex-end}
+  .modal .actions button{background:#e2e8f0;color:#1e293b}
+  .modal .actions button.primary{background:#10b981;color:white}
+  /* floating ghost for animation */
+  .ghost { position: fixed; z-index: 50; pointer-events: none; will-change: transform; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.25); }
+  /* bronze coin animation - 3 seconds */
+  .bronze-coin-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); animation: fadeIn 0.3s ease; }
+  .bronze-coin-overlay.show { display: flex; }
+  .bronze-coin-large { width: 280px; height: 280px; animation: bronzeCoinPop 3s ease-out forwards; border-radius: 50%; box-shadow: 0 20px 60px rgba(180,83,9,.6); }
+  .bronze-coin-large img { width: 100%; height: 100%; object-fit: contain; }
+  @keyframes bronzeCoinPop {
+    0% { transform: scale(0) rotate(0deg); opacity: 0; }
+    30% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+    50% { transform: scale(1) rotate(360deg); opacity: 1; }
+    85% { transform: scale(1) rotate(540deg); opacity: 1; }
+    100% { transform: scale(0.8) rotate(720deg); opacity: 0; }
+  }
+  /* silver coin animation */
+  .silver-coin-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); animation: fadeIn 0.3s ease; }
+  .silver-coin-overlay.show { display: flex; }
+  .silver-coin-large { width: 300px; height: 300px; animation: coinPop 2s ease-out forwards; border-radius: 50%; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .silver-coin-large img { width: 100%; height: 100%; object-fit: contain; }
+  /* gold coin animation */
+  .gold-coin-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); animation: fadeIn 0.3s ease; }
+  .gold-coin-overlay.show { display: flex; }
+  .gold-coin-large { width: 350px; height: 350px; animation: goldCoinPop 5s ease-out forwards; border-radius: 50%; box-shadow: 0 25px 80px rgba(251,191,36,.6); }
+  .gold-coin-large img { width: 100%; height: 100%; object-fit: contain; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes coinPop {
+    0% { transform: scale(0) rotate(0deg); opacity: 0; }
+    50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+    70% { transform: scale(1) rotate(360deg); opacity: 1; }
+    100% { transform: scale(1) rotate(360deg); opacity: 0; }
+  }
+  @keyframes goldCoinPop {
+    0% { transform: scale(0) rotate(0deg); opacity: 0; }
+    15% { transform: scale(1.3) rotate(180deg); opacity: 1; }
+    35% { transform: scale(1.1) rotate(360deg); opacity: 1; }
+    85% { transform: scale(1.1) rotate(720deg); opacity: 1; }
+    100% { transform: scale(0.8) rotate(1080deg); opacity: 0; }
+  }
+  /* Gold Cube flash animation - 10 seconds */
+  .gold-cube-flash { position: fixed; inset: 0; z-index: 120; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.8); backdrop-filter: blur(6px); animation: fadeIn 0.3s ease; }
+  .gold-cube-flash.show { display: flex; }
+  .gold-cube-board-size { width: min(95vw, 500px); height: min(95vw, 500px); animation: cubeFlash 10s ease-out forwards; }
+  .gold-cube-board-size img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 40px rgba(251,191,36,0.8)); }
+  @keyframes cubeFlash {
+    0% { transform: scale(0) rotate(0deg); opacity: 0; filter: brightness(2); }
+    5% { transform: scale(1.2) rotate(360deg); opacity: 1; filter: brightness(2); }
+    10% { transform: scale(1) rotate(720deg); opacity: 1; filter: brightness(1.5); }
+    90% { transform: scale(1) rotate(3600deg); opacity: 1; filter: brightness(1.2); }
+    100% { transform: scale(0.8) rotate(3960deg); opacity: 0; filter: brightness(1); }
+  }
+  /* Tester mode indicators */
+  #levelGuideIcon.tester-active { color: #ef4444 !important; opacity: 1 !important; }
+  #levelGuideTitle { cursor: pointer; user-select: none; }
+  #levelGuideTitle.tester-active { color: #ef4444 !important; }
+  @keyframes titleFlash {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .title-flash { animation: titleFlash 0.25s ease; }
+  /* sidebar for awards */
+  .side { display:flex; gap:16px; align-items:flex-start; margin: 10px auto; width:min(95vw, 900px); touch-action: none; overscroll-behavior: none; }
+  .side .panel { flex:0 0 220px; background:#ffffff; border-radius:16px; padding:12px; box-shadow: inset 0 0 0 1px #e2e8f0; }
+  .side .panel h3{ margin:0 0 8px; font-size:14px; opacity:.9 }
+  .side .panel .row{ display:flex; align-items:center; gap:8px; margin:6px 0 }
+  .icon{ width:22px; height:22px; display:inline-block }
+  .coins{ display:flex; gap:6px; flex-wrap:wrap; }
+  .rings{ display:flex; gap:6px; flex-wrap:wrap; }
+  .panel .count{ font-weight:800; font-size:12px; background:#111827; padding:4px 8px; border-radius:999px; }
+  .panel button.small{ padding:8px 10px; font-size:12px; border-radius:10px; }
+  .panel button.small:disabled{ opacity:.5 }
+
+  /* Responsive design - iPhone (portrait) */
+  @media (max-width: 767px) and (max-height: 896px) {
+    :root { --cell: 70px; --gap: 6px; --radius: 12px; }
+    body { padding: 8px; }
+    h1 { font-size: 18px; margin-bottom: 3px; }
+    .sub { font-size: 11px; margin-bottom: 10px; }
+    .toolbar { gap: 5px; margin-bottom: 8px; }
+    .toolbar .group { padding: 5px 7px; }
+    button { padding: 6px 8px; font-size: 11px; }
+    label { font-size: 10px; }
+    .stats { font-size: 10px; gap: 6px; margin: 6px auto 0; max-width: 100%; padding: 0 4px; }
+    .side { flex-direction: column; gap: 10px; }
+    .side .panel { flex: 1; width: 100%; }
+    .note { font-size: 11px; margin-top: 6px; }
+    .cell { box-shadow: inset 0 0 0 1px #1f2a44, 0 4px 8px rgba(0,0,0,.2); }
+    .tile { inset: 4px; font-size: 14px; }
+    .tile .label { font-size: 14px; }
+    .tile .badge { top: 4px; left: 4px; min-width: 18px; height: 18px; font-size: 10px; }
+  }
+
+  /* iPad portrait and landscape */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    :root { --cell: 140px; --gap: 12px; --radius: 20px; }
+    body { padding: 20px; }
+    .wrap { width: min(90vw, 1100px); padding: 32px; }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    .sub { font-size: 18px; margin-bottom: 20px; }
+    .target-banner { padding: 18px; font-size: 26px; border-radius: 16px; margin: 12px; }
+    .target-icon { width: 36px; height: 36px; border-radius: 8px; margin-right: 12px; }
+    button { padding: 14px 20px; font-size: 18px; border-radius: 14px; }
+    .toolbar { gap: 12px; margin-bottom: 16px; }
+    .toolbar .group { padding: 12px 16px; gap: 12px; }
+    label { font-size: 15px; }
+    .side { gap: 20px; width: min(90vw, 1100px); }
+    .side .panel { flex: 0 0 260px; padding: 16px; }
+    .side .panel h3 { font-size: 16px; margin-bottom: 10px; }
+    .note { font-size: 14px; margin-top: 12px; }
+    .tile { inset: 10px; }
+    .tile .label { font-size: 22px; }
+    .tile .badge { top: 8px; left: 8px; min-width: 28px; height: 26px; font-size: 14px; padding: 0 8px; }
+    .modal { width: min(85vw, 600px); padding: 36px; }
+    .modal h2 { font-size: 28px; }
+    .modal p { font-size: 17px; }
+  }
+
+  /* Large iPad Pro and desktop */
+  @media (min-width: 1025px) {
+    :root { --cell: 145px; --gap: 12px; --radius: 20px; }
+    body { padding: 24px; }
+    .wrap { width: min(90vw, 1200px); padding: 36px; }
+    h1 { font-size: 36px; margin-bottom: 10px; }
+    .sub { font-size: 20px; margin-bottom: 24px; }
+    .target-banner { padding: 20px; font-size: 28px; border-radius: 18px; margin: 16px; }
+    .target-icon { width: 40px; height: 40px; border-radius: 10px; margin-right: 14px; }
+    button { padding: 16px 24px; font-size: 20px; border-radius: 16px; }
+    .toolbar { gap: 14px; margin-bottom: 20px; }
+    .toolbar .group { padding: 14px 18px; gap: 14px; }
+    .stats { font-size: 18px; gap: 18px; margin: 16px auto 0; }
+    label { font-size: 16px; }
+    .side { width: min(90vw, 1200px); gap: 24px; }
+    .side .panel { flex: 0 0 280px; padding: 18px; }
+    .side .panel h3 { font-size: 17px; }
+    .tile .label { font-size: 24px; }
+    .tile .badge { top: 8px; left: 8px; min-width: 30px; height: 28px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+  <!-- Gold Cube Banner -->
+  <div id="goldCubeBanner" style="display:none; background:linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%); color:#000; text-align:center; padding:10px; font-weight:900; font-size:16px; box-shadow: 0 4px 10px rgba(251,191,36,0.5);">
+    🏆 Gold Cube Awarded (0)
+  </div>
+
+  <!-- Target Color Banner for Daily Mode -->
+  <div id="targetColorBanner" class="target-banner" style="display:none;">
+    <span id="targetColorIcon" class="target-icon"></span>
+    <span id="targetColorText">Target Color: Blue</span>
+  </div>
+
+  <div class="wrap">
+    <h1>JushBox</h1>
+
+    <div class="toolbar">
+      <div class="group">
+        <button id="shuffleBtn" style="background:#22c55e;color:white;">Shuffle/Start</button>
+        <button id="resetBtn" style="background:#eab308;color:white;">Reset to Uniform</button>
+        <button id="pauseBtn" style="background:#ec4899;color:white;">Pause</button>
+        <button id="startOverBtn" style="background:#ef4444;color:white;">Start Over</button>
+      </div>
+      <div class="group">
+        <label><input type="checkbox" id="diagToggle"> Diagonal moves</label>
+        <label>Speed
+          <select id="speedSelect">
+            <option value="140">Snappy</option>
+            <option value="180" selected>Normal</option>
+            <option value="300">Slow</option>
+            <option value="500">Very Slow</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="fxToggle" checked> Sound/Haptics</label>
+      </div>
+      <div class="stats">
+        <div>Moves: <span id="moves">0</span></div>
+        <div>Time: <span id="time">0:00</span></div>
+        <div><span id="levelLabel">Level 1</span>, solved: <span id="wins">0</span></div>
+        <div style="flex-basis: 100%; height: 0;"></div>
+        <div id="coinBadgesSection">
+          <div style="margin-left:0;">💰 Bronze: <span id="bronzeCoinDisplay">0</span></div>
+          <div>Silver: <span id="silverCoinDisplay">0</span></div>
+          <div>Gold: <span id="goldCoinDisplay">0</span></div>
+        </div>
+        <div>Stack Max: <span id="maxDepthDisplay">5</span></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div id="board" class="board"></div>
+      <aside class="panel" id="awardsPanel">
+        <h3>Level Awards <span id="levelGuideIcon" style="cursor:pointer; opacity:0.7; font-size:16px; margin-left:4px;" title="View Level Guide">ℹ️</span></h3>
+        <div class="row">
+          <span>Level 1 Coins: <strong id="coinCount">0</strong>/3</span>
+        </div>
+        <div class="coins" id="coinSlots"></div>
+        <div class="row" style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0">
+          <span class="icon" id="bronzeIcon"></span>
+          <span>Level 1 Wins: <strong id="bronzeStatus" style="color:#cd7f32">0</strong></span>
+        </div>
+        <hr style="border-color:#e2e8f0; margin:10px 0"/>
+        <div class="row">
+          <span>Level 2 Coins: <strong id="ringCount">0</strong>/2</span>
+        </div>
+        <div class="rings" id="ringSlots"></div>
+        <div class="row" style="margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0">
+          <span class="icon" id="silverIcon"></span>
+          <span>Level 2 Wins: <strong id="silverStatus" style="color:#94a3b8">0</strong></span>
+        </div>
+        <hr style="border-color:#e2e8f0; margin:10px 0"/>
+        <div class="row">
+          <span>Level 3 Wins: <strong id="goldCount">0</strong></span>
+        </div>
+        <div class="golds" id="goldSlots"></div>
+        <hr style="border-color:#e2e8f0; margin:10px 0"/>
+        <div class="row">
+          <span>Level 4 Wins: <strong id="diamondCount">0</strong></span>
+        </div>
+        <div class="diamonds" id="diamondSlots"></div>
+        <hr style="border-color:#e2e8f0; margin:10px 0"/>
+        <div class="row">
+          <span>Level 5 Wins: <strong id="level5Count">0</strong></span>
+        </div>
+        <div class="row" style="margin-top:8px; font-size:13px; color:#64748b;">
+          <span>Attempts: <strong id="level5Attempts" style="color:#0f172a;">0</strong>/2</span>
+        </div>
+      </aside>
+    </div>
+
+    <div id="congratsWrap" class="modal-wrap" aria-hidden="true">
+      <div class="modal-backdrop" id="congratsBackdrop"></div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="congratsTitle">
+        <h2 id="congratsTitle">🎉 Congratulations!</h2>
+        <p id="congratsMsg">You solved Level 1.</p>
+        <div class="statline">
+          <div>Moves: <b id="congratsMoves">0</b></div>
+          <div>Time: <b id="congratsTime">0:00</b></div>
+          <div>Total <span id="congratsLevelLabel">L1</span> Solved: <b id="congratsTotal">0</b></div>
+        </div>
+        <div class="actions">
+          <button id="uniformBtn">Reset to Uniform</button>
+          <button id="againBtn" class="primary">Shuffle New Game</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Silver Coin Animation Overlay -->
+  <!-- Bronze Coin Animation (3 seconds) -->
+  <div id="bronzeCoinOverlay" class="bronze-coin-overlay">
+    <div class="bronze-coin-large" id="bronzeCoinLarge"></div>
+  </div>
+
+  <div id="silverCoinOverlay" class="silver-coin-overlay">
+    <div class="silver-coin-large" id="silverCoinLarge"></div>
+  </div>
+
+  <!-- Gold Coin Animation Overlay -->
+  <div id="goldCoinOverlay" class="gold-coin-overlay">
+    <div class="gold-coin-large" id="goldCoinLarge"></div>
+  </div>
+
+  <!-- Gold Cube Flash Animation - 10 seconds -->
+  <div id="goldCubeFlash" class="gold-cube-flash">
+    <div class="gold-cube-board-size">
+      <img src="goldcube.png" alt="Gold Cube">
+    </div>
+  </div>
+
+  <!-- Dragon Penalty Modal -->
+  <div id="dragonWrap" class="modal-wrap" aria-hidden="true">
+    <div class="modal-backdrop" id="dragonBackdrop"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dragonTitle">
+      <h2 id="dragonTitle">🐉 Dragon Attack!</h2>
+      <p style="font-size: 16px; font-weight: 600; color: #ef4444;">The dragon burned all your earnings!</p>
+      <p>Starting over Level 4...</p>
+      <div class="actions">
+        <button id="dragonOkBtn" class="primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time Expired Modal -->
+  <div id="timeExpiredWrap" class="modal-wrap" aria-hidden="true">
+    <div class="modal-backdrop" id="timeExpiredBackdrop"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="timeExpiredTitle">
+      <h2 id="timeExpiredTitle">⏰ Time's Up!</h2>
+      <p style="font-size: 16px; font-weight: 600; color: #ef4444;">You lost one winning in this level</p>
+      <p>Continue playing for <b>3 bronze coins</b>?</p>
+      <p style="font-size: 14px; color: #64748b;">You'll get a fresh board with 120 seconds</p>
+      <div class="actions">
+        <button id="timeExpiredGiveUpBtn">Give Up</button>
+        <button id="timeExpiredContinueBtn" class="primary" style="background:#f59e0b;">Continue (3 Bronze)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Drop Warning Modal -->
+  <div id="levelDropWrap" class="modal-wrap" aria-hidden="true">
+    <div class="modal-backdrop" id="levelDropBackdrop"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="levelDropTitle">
+      <h2 id="levelDropTitle">⚠️ Sorry!</h2>
+      <p style="font-size: 18px; font-weight: 600; color: #ef4444;">Dropping One Level</p>
+      <p style="font-size: 14px; color: #64748b;">You'll restart at the previous level</p>
+      <div class="actions">
+        <button id="levelDropOkBtn" class="primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start Over Warning Modal -->
+  <div id="startOverWrap" class="modal-wrap" aria-hidden="true">
+    <div class="modal-backdrop" id="startOverBackdrop"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="startOverTitle">
+      <h2 id="startOverTitle">⚠️ Start Over?</h2>
+      <p>This will erase ALL your game progress including:</p>
+      <ul style="margin: 10px 0; padding-left: 20px; color: #475569;">
+        <li>All Level 1, 2, 3, and 4 wins</li>
+        <li>Bronze Coin</li>
+        <li>Silver Coin</li>
+        <li>All unlocked levels</li>
+      </ul>
+      <p style="color: #ef4444; font-weight: 600;">This action cannot be undone!</p>
+      <div class="actions">
+        <button id="cancelStartOverBtn">Cancel</button>
+        <button id="confirmStartOverBtn" style="background:#ef4444;color:white;">Erase Everything</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Guide Modal -->
+  <div id="levelGuideWrap" class="modal-wrap" aria-hidden="true">
+    <div class="modal-backdrop" id="levelGuideBackdrop"></div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="levelGuideTitle" style="max-width:600px;">
+      <h2 id="levelGuideTitle">🎮 Level Guide</h2>
+
+      <div style="max-height:60vh; overflow-y:auto; margin-bottom:16px;">
+        <div style="margin-bottom:20px; padding:16px; background:#f8fafc; border-radius:12px; border-left:4px solid #3b82f6;">
+          <h3 style="margin:0 0 8px; font-size:18px; color:#0f172a;">📍 Level 1</h3>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📏 <strong>Grid:</strong> 3×3</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">🎨 <strong>Colors:</strong> Blue, Red, Yellow (3)</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📚 <strong>Stack:</strong> Up to 5 tiles</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">⏱️ <strong>Time:</strong> Unlimited</p>
+          <p style="margin:4px 0; font-size:14px; color:#0f172a; font-weight:600;">🎯 Goal: Earn 3 coins → Bronze Coin</p>
+        </div>
+
+        <div style="margin-bottom:20px; padding:16px; background:#f8fafc; border-radius:12px; border-left:4px solid #94a3b8;">
+          <h3 style="margin:0 0 8px; font-size:18px; color:#0f172a;">📍 Level 2</h3>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📏 <strong>Grid:</strong> 3×3</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">🎨 <strong>Colors:</strong> Blue, Red, Yellow (3)</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📚 <strong>Stack:</strong> Up to 6 tiles</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">⏱️ <strong>Time:</strong> 120 seconds</p>
+          <p style="margin:4px 0; font-size:14px; color:#0f172a; font-weight:600;">🎯 Goal: Earn 2 coins → Silver Coin</p>
+        </div>
+
+        <div style="margin-bottom:20px; padding:16px; background:#f8fafc; border-radius:12px; border-left:4px solid #22c55e;">
+          <h3 style="margin:0 0 8px; font-size:18px; color:#0f172a;">📍 Level 3</h3>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📏 <strong>Grid:</strong> 3×3</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">🎨 <strong>Colors:</strong> Blue, Red, Yellow, Green (4)</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📚 <strong>Stack:</strong> Up to 6 tiles</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">⏱️ <strong>Time:</strong> 120 seconds</p>
+          <p style="margin:4px 0; font-size:14px; color:#ef4444;">⭐ <strong>Special:</strong> Dragon tiles (resets level)</p>
+          <p style="margin:4px 0; font-size:14px; color:#0f172a; font-weight:600;">🎯 Goal: Win once</p>
+        </div>
+
+        <div style="margin-bottom:20px; padding:16px; background:#f8fafc; border-radius:12px; border-left:4px solid #f59e0b;">
+          <h3 style="margin:0 0 8px; font-size:18px; color:#0f172a;">📍 Level 4</h3>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📏 <strong>Grid:</strong> 4×4</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">🎨 <strong>Colors:</strong> Blue, Red, Yellow, Green (4)</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📚 <strong>Stack:</strong> Up to 6 tiles</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">⏱️ <strong>Time:</strong> 120 seconds</p>
+          <p style="margin:4px 0; font-size:14px; color:#ef4444;">⭐ <strong>Special:</strong> Dragon tiles, Golden tile (instant win)</p>
+          <p style="margin:4px 0; font-size:14px; color:#0f172a; font-weight:600;">🎯 Goal: Win once to unlock Level 5</p>
+        </div>
+
+        <div style="margin-bottom:12px; padding:16px; background:#f8fafc; border-radius:12px; border-left:4px solid #a855f7;">
+          <h3 style="margin:0 0 8px; font-size:18px; color:#0f172a;">📍 Level 5 (Ultimate Challenge)</h3>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📏 <strong>Grid:</strong> 4×4</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">🎨 <strong>Colors:</strong> Blue, Red, Yellow, Green, Purple (5)</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">📚 <strong>Stack:</strong> Up to 6 tiles</p>
+          <p style="margin:4px 0; font-size:14px; color:#475569;">⏱️ <strong>Time:</strong> 120 seconds</p>
+          <p style="margin:4px 0; font-size:14px; color:#ef4444;">⭐ <strong>Special:</strong> 4 Dragon tiles + 1 Golden tile</p>
+          <p style="margin:4px 0; font-size:14px; color:#ef4444;">💪 <strong>Attempts:</strong> 2 attempts only</p>
+          <p style="margin:4px 0; font-size:14px; color:#0f172a; font-weight:600;">🎯 Goal: Beat this level to win!</p>
+        </div>
+
+        <div style="margin-top:20px; padding:16px; background:linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius:12px; text-align:center;">
+          <p style="margin:0; font-size:18px; font-weight:700; color:#ffffff; text-shadow:0 2px 4px rgba(0,0,0,0.3);">🏆 Ultimate Goal: Beat all 5 levels to win the Golden Cube! 🏆</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="levelGuideCloseBtn" class="primary">Got It!</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// --- SEEDED RANDOM GENERATOR ---
+var seed = Date.now();
+function seededRandom() {
+  seed = (seed * 9301 + 49297) % 233280;
+  return seed / 233280;
+}
+
+// Override Math.random with seeded version
+Math.random = seededRandom;
+
+// Expose setSeed function for Swift to call
+window.setSeed = function(newSeed) {
+  seed = newSeed;
+  console.log('Seed set to:', seed);
+};
+
+// Daily mode flag and level (set by Swift)
+window.dailyMode = false;
+window.dailyLevel = 1;
+window.dailyInitialState = null;
+
+// Expose startDailyGame for Swift to call after setting seed and level
+window.startDailyGame = function(level) {
+  window.dailyMode = true;
+  window.dailyLevel = level;
+  console.log('Starting daily game at level:', level);
+
+  // Update button text for daily mode
+  var shuffleBtn = document.getElementById('shuffleBtn');
+  if (shuffleBtn) {
+    shuffleBtn.textContent = 'Start';
+  }
+
+  // Hide Level Awards panel in daily mode
+  var awardsPanel = document.getElementById('awardsPanel');
+  if (awardsPanel) {
+    awardsPanel.style.display = 'none';
+  }
+
+  // Switch to the specified level directly
+  if (level === 4) {
+    switchToLevel4();
+  } else if (level === 3) {
+    switchToLevel3();
+  } else if (level === 2) {
+    switchToLevel2();
+  } else {
+    // Level 1
+    boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+    boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+    render();
+    syncFullBadges();
+    updateMaxDepthDisplay();
+  }
+
+  // Hide coin badges in daily mode
+  var coinBadges = document.getElementById('coinBadgesSection');
+  if (coinBadges) {
+    coinBadges.style.display = 'none';
+  }
+
+  // Shuffle the game once to create the daily puzzle
+  console.log('🎲 Shuffling to create today\'s puzzle...');
+  shuffleGame();
+  console.log('✅ Daily puzzle shuffled');
+
+  // Show target color banner in daily mode
+  showTargetColorBanner();
+
+  // Aggressively prevent ALL page scrolling in daily mode
+  var preventScroll = function(e) {
+    // Only prevent if not clicking on buttons/controls
+    var target = e.target;
+    var isButton = target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT';
+
+    // Allow button clicks but prevent all other default scrolling
+    if (!isButton) {
+      e.preventDefault();
+    }
+  };
+
+  document.addEventListener('touchmove', preventScroll, { passive: false });
+  document.addEventListener('touchstart', preventScroll, { passive: false });
+  document.body.addEventListener('touchmove', preventScroll, { passive: false });
+
+  console.log('🔒 Scroll prevention enabled for daily mode');
+
+  // Save initial state after shuffle (for daily mode restart)
+  setTimeout(function() {
+    window.dailyInitialState = deepCopy(stacks);
+    console.log('💾 Saving daily puzzle initial state...');
+    console.log('💾 Stacks size:', stacks.length, 'x', stacks[0].length);
+    console.log('💾 Current level:', currentLevel);
+    console.log('💾 First cell has', stacks[0][0].length, 'tiles');
+    console.log('💾 Sample tile:', stacks[0][0][0]);
+    console.log('✅ Saved daily puzzle initial state');
+  }, 200);
+};
+
+// Flag to control auto-start (set by Swift before loading)
+window.waitingForSeed = false;
+
+// --- CONFIG (Level 1) ---
+var CONFIG = { rows: 3, cols: 3, defaultDepth: 3, maxDepth: 5, palette:["c-blue","c-red","c-yellow"] };
+// Top→Bottom ordering (what you see at start on the board): BLUE (top), RED (middle), YELLOW (bottom)
+var LAYERS_TOP_TO_BOTTOM = ["c-blue","c-red","c-yellow"];
+
+// --- STORAGE KEYS ---
+var WINS_KEY='jbx:l1:wins';
+var COINS_KEY='jbx:l1:coins';
+var BRONZE_KEY='jbx:l1:bronze';
+var BRONZE_COINS_KEY='jbx:coins:bronze';
+var SILVER_COINS_KEY='jbx:coins:silver';
+var GOLD_COINS_KEY='jbx:coins:gold';
+var RINGS_KEY='jbx:l2:rings';
+var SILVER_KEY='jbx:l2:silver';
+var GOLDS_KEY='jbx:l3:golds';
+var DIAMONDS_KEY='jbx:l4:diamonds';
+var GOLD_UNLOCK_KEY='jbx:l4:unlocked';
+var LEVEL5_ATTEMPTS_KEY='jbx:l5:attempts';
+var GOLD_CUBES_KEY='jbx:goldcubes';
+var currentLevel=1;
+
+// --- STATE ---
+var stacks0 = buildInitialStacks(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth);
+var stacks = deepCopy(stacks0);
+var selected = null; var undoStack = []; var isAnimating=false; var diagEnabled=false; var moves=0; var t0=null; var timerId=null; var levelTimer=null; var levelTimeLeft=0; var fxOn=true; var gameWon=false; var isPaused=false; var pausedTime=0;
+
+var root = document.documentElement;
+var boardEl = document.getElementById("board");
+var movesEl=document.getElementById('moves'); var timeEl=document.getElementById('time'); var winsEl=document.getElementById('wins');
+var levelLabelEl=document.getElementById('levelLabel');
+var bronzeCoinDisplayEl=document.getElementById('bronzeCoinDisplay'); var silverCoinDisplayEl=document.getElementById('silverCoinDisplay'); var goldCoinDisplayEl=document.getElementById('goldCoinDisplay');
+var maxDepthDisplayEl=document.getElementById('maxDepthDisplay');
+var congratsWrap=document.getElementById('congratsWrap'); var congratsMoves=document.getElementById('congratsMoves'); var congratsTime=document.getElementById('congratsTime'); var congratsTotal=document.getElementById('congratsTotal');
+var congratsMsg=document.getElementById('congratsMsg'); var congratsLevelLabel=document.getElementById('congratsLevelLabel');
+var againBtn=document.getElementById('againBtn'); var uniformBtn=document.getElementById('uniformBtn'); var congratsBackdrop=document.getElementById('congratsBackdrop');
+// awards panel els
+var coinCountEl=document.getElementById('coinCount'); var ringCountEl=document.getElementById('ringCount'); var goldCountEl=document.getElementById('goldCount'); var diamondCountEl=document.getElementById('diamondCount');
+var coinSlots=document.getElementById('coinSlots'); var ringSlots=document.getElementById('ringSlots'); var goldSlots=document.getElementById('goldSlots'); var diamondSlots=document.getElementById('diamondSlots');
+var bronzeStatusEl=document.getElementById('bronzeStatus'); var bronzeIcon=document.getElementById('bronzeIcon');
+var silverStatusEl=document.getElementById('silverStatus'); var silverIcon=document.getElementById('silverIcon');
+var bronzeCoinOverlay=document.getElementById('bronzeCoinOverlay'); var bronzeCoinLarge=document.getElementById('bronzeCoinLarge');
+var silverCoinOverlay=document.getElementById('silverCoinOverlay'); var silverCoinLarge=document.getElementById('silverCoinLarge');
+var goldCoinOverlay=document.getElementById('goldCoinOverlay'); var goldCoinLarge=document.getElementById('goldCoinLarge');
+var dragonWrap=document.getElementById('dragonWrap'); var dragonBackdrop=document.getElementById('dragonBackdrop'); var dragonOkBtn=document.getElementById('dragonOkBtn');
+var timeExpiredWrap=document.getElementById('timeExpiredWrap'); var timeExpiredBackdrop=document.getElementById('timeExpiredBackdrop');
+var goldCubeBanner=document.getElementById('goldCubeBanner'); var goldCubeFlash=document.getElementById('goldCubeFlash');
+var timeExpiredGiveUpBtn=document.getElementById('timeExpiredGiveUpBtn'); var timeExpiredContinueBtn=document.getElementById('timeExpiredContinueBtn');
+var levelDropWrap=document.getElementById('levelDropWrap'); var levelDropBackdrop=document.getElementById('levelDropBackdrop'); var levelDropOkBtn=document.getElementById('levelDropOkBtn');
+var startOverBtn=document.getElementById('startOverBtn'); var startOverWrap=document.getElementById('startOverWrap');
+var startOverBackdrop=document.getElementById('startOverBackdrop'); var cancelStartOverBtn=document.getElementById('cancelStartOverBtn');
+var confirmStartOverBtn=document.getElementById('confirmStartOverBtn');
+
+// --- INIT GRID & FIRST RENDER ---
+function initGame(){
+  // Initialize coin displays
+  initCoinDisplays();
+  // Show Gold Cube banner if player has any
+  updateGoldCubeDisplay();
+
+  // Determine which level to start on based on progress
+  var startLevel = 1;
+  if(getDiamonds() >= 1) {
+    startLevel = 5; // Level 5 unlocks after 1 diamond (1 Level 4 win)
+  } else if(getGolds() >= 4) {
+    startLevel = 4;
+  } else if(getSilver()) {
+    startLevel = 3;
+  } else if(getBronze()) {
+    startLevel = 2;
+  }
+
+  // Switch to the appropriate level if not Level 1
+  if(startLevel === 5) {
+    switchToLevel5();
+  } else if(startLevel === 4) {
+    switchToLevel4();
+  } else if(startLevel === 3) {
+    switchToLevel3();
+  } else if(startLevel === 2) {
+    switchToLevel2();
+  } else {
+    boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+    boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+    render();
+    syncFullBadges();
+    updateMaxDepthDisplay();
+  }
+}
+
+// --- BUILD INITIAL STACKS (uniform layers across all chambers) ---
+function buildInitialStacks(rows, cols, depth){
+  var stacks = []; var r,c,i; var L=LAYERS_TOP_TO_BOTTOM.length;
+  // We build bottom->top so that the top ends up BLUE (index 0 of LAYERS_TOP_TO_BOTTOM)
+  // For Top→Bottom = [Blue, Red, Yellow], Bottom→Top must be [Yellow, Red, Blue].
+  for(r=0;r<rows;r++){
+    var row=[];
+    for(c=0;c<cols;c++){
+      var stack=[];
+      for(i=0; i<depth; i++){
+        var color = LAYERS_TOP_TO_BOTTOM[(L - 1 - (i % L))]; // bottom first: Yellow, then Red, then Blue
+        stack.push({ color: color, label: color.replace("c-","").toUpperCase() });
+      }
+      row.push(stack);
+    }
+    stacks.push(row);
+  }
+  return stacks;
+}
+
+// --- BUILD INITIAL STACKS WITH SPECIAL TILES (Level 4) ---
+function buildInitialStacksWithSpecialTiles(rows, cols, depth){
+  var stacks = []; var r,c,i; var L=LAYERS_TOP_TO_BOTTOM.length;
+  var totalTiles = rows * cols * depth;
+  var allTiles = [];
+
+  // Create all regular tiles
+  for(i=0; i<totalTiles; i++){
+    var color = LAYERS_TOP_TO_BOTTOM[(L - 1 - (i % L))];
+    allTiles.push({ color: color, label: color.replace("c-","").toUpperCase() });
+  }
+
+  // Replace 2 random tiles with dragons and 1 with golden tile
+  // Dragon tiles
+  var dragonIndex1 = Math.floor(Math.random() * allTiles.length);
+  allTiles[dragonIndex1] = { type: 'dragon', label: 'DRAGON' };
+
+  var dragonIndex2;
+  do {
+    dragonIndex2 = Math.floor(Math.random() * allTiles.length);
+  } while(dragonIndex2 === dragonIndex1);
+  allTiles[dragonIndex2] = { type: 'dragon', label: 'DRAGON' };
+
+  // Golden tile
+  var goldenIndex;
+  do {
+    goldenIndex = Math.floor(Math.random() * allTiles.length);
+  } while(goldenIndex === dragonIndex1 || goldenIndex === dragonIndex2);
+  allTiles[goldenIndex] = { type: 'golden', label: 'GOLDEN' };
+
+  // Distribute tiles into stacks
+  var tileIndex = 0;
+  for(r=0;r<rows;r++){
+    var row=[];
+    for(c=0;c<cols;c++){
+      var stack=[];
+      for(i=0; i<depth; i++){
+        stack.push(allTiles[tileIndex]);
+        tileIndex++;
+      }
+      row.push(stack);
+    }
+    stacks.push(row);
+  }
+  return stacks;
+}
+
+// Level 5 special tiles: 4 dragons + 1 golden tile
+function buildInitialStacksWithSpecialTilesLevel5(rows, cols, depth){
+  var stacks = []; var r,c,i; var L=LAYERS_TOP_TO_BOTTOM.length;
+  var totalTiles = rows * cols * depth;
+  var allTiles = [];
+
+  // Create all regular tiles (5 colors)
+  for(i=0; i<totalTiles; i++){
+    var color = LAYERS_TOP_TO_BOTTOM[(L - 1 - (i % L))];
+    allTiles.push({ color: color, label: color.replace("c-","").toUpperCase() });
+  }
+
+  // Replace 4 random tiles with dragons
+  var dragonIndexes = [];
+  for(var d=0; d<4; d++){
+    var dragonIndex;
+    do {
+      dragonIndex = Math.floor(Math.random() * allTiles.length);
+    } while(dragonIndexes.includes(dragonIndex));
+    dragonIndexes.push(dragonIndex);
+    allTiles[dragonIndex] = { type: 'dragon', label: 'DRAGON' };
+  }
+
+  // Replace 1 tile with golden tile
+  var goldenIndex;
+  do {
+    goldenIndex = Math.floor(Math.random() * allTiles.length);
+  } while(dragonIndexes.includes(goldenIndex));
+  allTiles[goldenIndex] = { type: 'golden', label: 'GOLDEN' };
+
+  // Distribute tiles into stacks
+  var tileIndex = 0;
+  for(r=0;r<rows;r++){
+    var row=[];
+    for(c=0;c<cols;c++){
+      var stack=[];
+      for(i=0; i<depth; i++){
+        stack.push(allTiles[tileIndex]);
+        tileIndex++;
+      }
+      row.push(stack);
+    }
+    stacks.push(row);
+  }
+  return stacks;
+}
+
+// --- PERSISTED WINS ---
+function getWins(){ var n=parseInt(localStorage.getItem(WINS_KEY)||'0',10); return isNaN(n)?0:n; }
+function setWins(n){ localStorage.setItem(WINS_KEY,String(n)); winsEl.textContent=n; }
+setWins(getWins());
+initAwardsUI();
+
+// Initialize tester mode visual indicators on page load
+(function(){
+  var testerMode = localStorage.getItem('jbx:testerMode') === 'true';
+  if(testerMode){
+    var titleEl = document.getElementById('levelGuideTitle');
+    var iconEl = document.getElementById('levelGuideIcon');
+    if(titleEl) titleEl.classList.add('tester-active');
+    if(iconEl) iconEl.classList.add('tester-active');
+  }
+})();
+
+// --- TIMER ---
+function startTimer(){ if(timerId) return; t0=Date.now(); timerId=setInterval(function(){ var s=Math.floor((Date.now()-t0)/1000); var m=Math.floor(s/60); var ss=('0'+(s%60)).slice(-2); timeEl.textContent=m+':'+ss; }, 250); }
+function stopTimer(){ clearInterval(timerId); timerId=null; }
+
+// --- LEVEL TIMER (120 seconds for Levels 2-4) ---
+function startLevelTimer(){
+  if(currentLevel === 1) return; // No timer for Level 1
+
+  // Check if tester mode is enabled
+  var testerMode = localStorage.getItem('jbx:testerMode') === 'true';
+  if(testerMode){
+    // Display infinity symbol in green instead of timer
+    if(timeEl){
+      timeEl.textContent = '∞';
+      timeEl.style.color = '#10b981';
+    }
+    return; // Skip timer for tester mode
+  }
+
+  stopLevelTimer();
+  levelTimeLeft = 120;
+  updateLevelTimerDisplay();
+  levelTimer = setInterval(function(){
+    levelTimeLeft--;
+    updateLevelTimerDisplay();
+    if(levelTimeLeft <= 0){
+      stopLevelTimer();
+      onTimeExpired();
+    }
+  }, 1000);
+}
+function stopLevelTimer(){
+  if(levelTimer){ clearInterval(levelTimer); levelTimer=null; }
+}
+function updateLevelTimerDisplay(){
+  if(currentLevel === 1) return;
+  var m=Math.floor(levelTimeLeft/60);
+  var ss=('0'+(levelTimeLeft%60)).slice(-2);
+  timeEl.textContent=m+':'+ss;
+  if(levelTimeLeft <= 10){
+    timeEl.style.color = '#ef4444'; // Red when low
+  } else {
+    timeEl.style.color = 'inherit';
+  }
+}
+
+function onTimeExpired(){
+  // Don't show time expired modals in daily mode
+  if(window.dailyMode) {
+    console.log('⏰ Time expired in daily mode - no penalty');
+    return;
+  }
+
+  if(gameWon) return; // Already won, don't penalize
+  stopTimer();
+  stopLevelTimer();
+
+  // Special handling for Level 5 - 2 attempts system
+  if(currentLevel === 5){
+    useLevel5Attempt();
+    var remainingAttempts = getLevel5Attempts();
+
+    if(remainingAttempts > 0){
+      // Still have attempts, show retry message
+      alert('Attempt failed! You have ' + remainingAttempts + ' attempt(s) remaining.');
+      shuffleGame(); // Give another try with fresh board
+      return;
+    } else {
+      // No more attempts, drop to Level 4
+      resetLevel5Attempts();
+      dropLevel(); // Will drop to Level 4
+      return;
+    }
+  }
+
+  // Normal time expired modal for Levels 2-4
+  timeExpiredWrap.classList.add('show');
+}
+
+// --- COIN ECONOMY ---
+function getBronzeCoins(){ return parseInt(localStorage.getItem(BRONZE_COINS_KEY)||'0',10)||0; }
+function setBronzeCoins(n){ localStorage.setItem(BRONZE_COINS_KEY, String(n)); bronzeCoinDisplayEl.textContent=n; bronzeStatusEl.textContent=n; }
+function getSilverCoins(){ return parseInt(localStorage.getItem(SILVER_COINS_KEY)||'0',10)||0; }
+function setSilverCoins(n){ localStorage.setItem(SILVER_COINS_KEY, String(n)); silverCoinDisplayEl.textContent=n; silverStatusEl.textContent=n; }
+function getGoldCoins(){ return parseInt(localStorage.getItem(GOLD_COINS_KEY)||'0',10)||0; }
+function setGoldCoins(n){ localStorage.setItem(GOLD_COINS_KEY, String(n)); goldCoinDisplayEl.textContent=n; }
+
+// Convert all coins to bronze equivalent for spending
+function getTotalBronzeEquivalent(){
+  return getBronzeCoins() + (getSilverCoins() * 10) + (getGoldCoins() * 50);
+}
+
+// Spend bronze coins (converts from higher denominations if needed)
+function spendBronzeCoins(amount){
+  var total = getTotalBronzeEquivalent();
+  if(total < amount) return false; // Not enough
+
+  var remaining = amount;
+  var bronze = getBronzeCoins();
+  var silver = getSilverCoins();
+  var gold = getGoldCoins();
+
+  // First spend bronze
+  if(bronze >= remaining){
+    setBronzeCoins(bronze - remaining);
+    return true;
+  }
+  remaining -= bronze;
+  setBronzeCoins(0);
+
+  // Then convert silver to bronze
+  var silverNeeded = Math.ceil(remaining / 10);
+  if(silver >= silverNeeded){
+    setSilverCoins(silver - silverNeeded);
+    var leftover = (silverNeeded * 10) - remaining;
+    setBronzeCoins(leftover);
+    return true;
+  }
+  remaining -= (silver * 10);
+  setSilverCoins(0);
+
+  // Finally convert gold to bronze
+  var goldNeeded = Math.ceil(remaining / 50);
+  setGoldCoins(gold - goldNeeded);
+  var leftover = (goldNeeded * 50) - remaining;
+  setBronzeCoins(leftover);
+  return true;
+}
+
+// Award coins when winning
+function awardBronzeCoin(){ setBronzeCoins(getBronzeCoins() + 1); }
+function awardSilverCoin(){ setSilverCoins(getSilverCoins() + 1); }
+function awardGoldCoin(){ setGoldCoins(getGoldCoins() + 1); }
+
+// Initialize coin displays
+function initCoinDisplays(){ setBronzeCoins(getBronzeCoins()); setSilverCoins(getSilverCoins()); setGoldCoins(getGoldCoins()); }
+
+// --- GOLD CUBE FUNCTIONS ---
+function getGoldCubes(){ return parseInt(localStorage.getItem(GOLD_CUBES_KEY)||'0',10); }
+function setGoldCubes(n){ localStorage.setItem(GOLD_CUBES_KEY, String(n)); updateGoldCubeDisplay(); }
+function awardGoldCube(){ setGoldCubes(getGoldCubes() + 1); }
+function updateGoldCubeDisplay(){
+  var cubes = getGoldCubes();
+  if(cubes > 0){
+    goldCubeBanner.textContent = '🏆 Gold Cube Awarded (' + cubes + ')';
+    goldCubeBanner.style.display = 'block';
+  } else {
+    goldCubeBanner.style.display = 'none';
+  }
+}
+function showGoldCubeFlash(){
+  goldCubeFlash.classList.add('show');
+  setTimeout(function(){ goldCubeFlash.classList.remove('show'); }, 10000);
+}
+
+// --- LEVEL 5 ATTEMPTS FUNCTIONS ---
+function getLevel5Attempts(){ return parseInt(localStorage.getItem(LEVEL5_ATTEMPTS_KEY)||'2',10); }
+function setLevel5Attempts(n){
+  localStorage.setItem(LEVEL5_ATTEMPTS_KEY, String(n));
+  updateLevel5AttemptsDisplay();
+}
+function resetLevel5Attempts(){ setLevel5Attempts(2); }
+function useLevel5Attempt(){
+  var attempts = getLevel5Attempts();
+  if(attempts > 0){ setLevel5Attempts(attempts - 1); }
+  return getLevel5Attempts();
+}
+function updateLevel5AttemptsDisplay(){
+  var el = document.getElementById('level5Attempts');
+  if(el){
+    var remaining = getLevel5Attempts();
+    var used = 2 - remaining; // Show used attempts out of 2
+    el.textContent = used;
+  }
+}
+
+// --- RENDER ---
+function render(){
+  boardEl.innerHTML="";
+  for(var r=0;r<CONFIG.rows;r++){
+    for(var c=0;c<CONFIG.cols;c++){
+      var cell=document.createElement("div");
+      cell.className="cell";
+      cell.setAttribute('data-r', r);
+      cell.setAttribute('data-c', c);
+      cell.setAttribute('data-selected', (selected && selected.r===r && selected.c===c) ? "true":"false");
+      cell.setAttribute('data-full', stacks[r][c].length>=CONFIG.maxDepth ? 'true':'false');
+      cell.addEventListener("click", onCellClick);
+
+      var count = stacks[r][c].length;
+      var top=peekTop(stacks[r][c]);
+      var tile=document.createElement("div");
+      if(top){
+        // Check if chamber is full for red badge number
+        var badgeStyle = count >= CONFIG.maxDepth ? ' style="color:#ef4444 !important;"' : '';
+        // Check for special tiles
+        if(top.type === 'dragon'){
+          tile.className = "tile";
+          tile.style.background = 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #450a0a 100%)';
+          tile.innerHTML = '<img src="dragontile.png" style="width:90%;height:90%;object-fit:contain;opacity:0.9;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));">' + '<div class="badge"'+badgeStyle+'>'+count+'</div>';
+          tile.style.boxShadow='0 8px 20px rgba(127,29,29,.5), inset 0 0 0 2px rgba(0,0,0,.25), 0 '+count+'px '+Math.min(18, count*2)+'px rgba(0,0,0,.25)';
+          tile.addEventListener("pointerdown", (function(rr,cc){ return function(ev){ startDrag(ev, rr, cc); }; })(r,c));
+        } else if(top.type === 'golden'){
+          tile.className = "tile";
+          tile.style.background = 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)';
+          tile.innerHTML = '<img src="goldcoin.png" style="width:85%;height:85%;object-fit:contain;opacity:0.95;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.4));">' + '<div class="badge"'+badgeStyle+'>'+count+'</div>';
+          tile.style.boxShadow='0 8px 25px rgba(251,191,36,.6), inset 0 0 0 2px rgba(217,119,6,.4), 0 '+count+'px '+Math.min(18, count*2)+'px rgba(251,191,36,.3)';
+          tile.addEventListener("pointerdown", (function(rr,cc){ return function(ev){ startDrag(ev, rr, cc); }; })(r,c));
+        } else {
+          tile.className = "tile "+top.color;
+          tile.innerHTML = '<div class="label">'+pretty(top.label)+'</div>' + '<div class="badge"'+badgeStyle+'>'+count+'</div>';
+          tile.style.boxShadow='0 8px 20px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.25), 0 '+count+'px '+Math.min(18, count*2)+'px rgba(0,0,0,.25)';
+          tile.addEventListener("pointerdown", (function(rr,cc){ return function(ev){ startDrag(ev, rr, cc); }; })(r,c));
+        }
+      } else {
+        tile.className = "tile c-empty";
+        tile.innerHTML = '<div class="label">Empty</div>' + '<div class="badge">0</div>';
+        tile.style.boxShadow='inset 0 0 0 2px rgba(255,255,255,.05)';
+      }
+      cell.appendChild(tile);
+      boardEl.appendChild(cell);
+    }
+  }
+  movesEl.textContent=moves;
+  updateDiagMarkers();
+}
+
+// --- DIAGONAL MARKERS ---
+function updateDiagMarkers(){
+  var existing = boardEl.querySelector('.diag-markers');
+  if(existing){ existing.remove(); }
+
+  if(diagEnabled){ return; } // Don't show markers when diagonal is enabled
+
+  var markersContainer = document.createElement('div');
+  markersContainer.className = 'diag-markers';
+
+  var cellSize = parseFloat(getComputedStyle(root).getPropertyValue('--cell'));
+  var gap = parseFloat(getComputedStyle(root).getPropertyValue('--gap'));
+
+  // Create markers at intersection points
+  for(var r=0; r<CONFIG.rows-1; r++){
+    for(var c=0; c<CONFIG.cols-1; c++){
+      var marker = document.createElement('div');
+      marker.className = 'diag-marker';
+      var left = (c + 1) * cellSize + (c + 0.5) * gap;
+      var top = (r + 1) * cellSize + (r + 0.5) * gap;
+      marker.style.left = left + 'px';
+      marker.style.top = top + 'px';
+      marker.style.transform = 'translate(-50%, -50%)';
+      markersContainer.appendChild(marker);
+    }
+  }
+
+  boardEl.appendChild(markersContainer);
+}
+
+// --- CLICK-TO-MOVE ---
+function onCellClick(e){ if(isAnimating || isPaused) return; var r=Number(e.currentTarget.getAttribute('data-r')); var c=Number(e.currentTarget.getAttribute('data-c')); if(!selected){ if(stacks[r][c].length>0){ selected={r:r,c:c}; render(); } return; } var src=selected; var dst={r:r,c:c}; if(src.r===dst.r && src.c===dst.c){ selected=null; render(); return; } if(isAdjacent(src,dst,diagEnabled) && canReceive(dst)){ doMoveAnimated(src,dst); } else { beepBad(); selected = stacks[r][c].length ? {r:r,c:c}:null; render(); } }
+
+// --- DRAG & DROP ---
+function startDrag(ev, r, c){ if(isAnimating || isPaused) return; if(stacks[r][c].length===0) return; ev.preventDefault(); selected={r:r,c:c}; render(); var srcCell=getCellEl(r,c); srcCell.setAttribute('data-selected','true');
+  var tileEl=srcCell.querySelector('.tile'); var rect=tileEl.getBoundingClientRect(); var ghost=tileEl.cloneNode(true); ghost.classList.add('ghost'); ghost.style.width=rect.width+'px'; ghost.style.height=rect.height+'px'; ghost.style.left=rect.left+'px'; ghost.style.top=rect.top+'px'; ghost.style.transform='translate(0,0)'; document.body.appendChild(ghost);
+  var over = null; function onMove(e){ var x=e.clientX, y=e.clientY; ghost.style.transform='translate('+(x-rect.left-rect.width/2)+'px, '+(y-rect.top-rect.height/2)+'px)'; ghost.style.visibility='hidden'; var el=document.elementFromPoint(x,y); ghost.style.visibility='visible'; var cellEl = el && el.closest ? el.closest('.cell') : null; clearHovers(); if(cellEl){ var rr=+cellEl.getAttribute('data-r'), cc=+cellEl.getAttribute('data-c'); var okAdj=isAdjacent({r:r,c:c},{r:rr,c:cc},diagEnabled); var okCap=canReceive({r:rr,c:cc}); if(okAdj && okCap){ cellEl.setAttribute('data-hover','true'); over={r:rr,c:cc}; } else { over=null; } } }
+  function onUp(){ document.removeEventListener('pointermove', onMove); document.removeEventListener('pointerup', onUp); ghost.remove(); clearHovers(); if(over){ doMoveAnimated({r:r,c:c}, over); } else { beepBad(); selected=null; render(); } }
+  document.addEventListener('pointermove', onMove); document.addEventListener('pointerup', onUp); }
+function clearHovers(){ var list=document.querySelectorAll('.cell[data-hover="true"]'); for(var i=0;i<list.length;i++){ list[i].setAttribute('data-hover','false'); } }
+
+// capacity check
+function canReceive(dst){ return stacks[dst.r][dst.c].length < CONFIG.maxDepth; }
+function syncFullBadges(){ var cells=boardEl.querySelectorAll('.cell'); cells.forEach(function(cell){ var rr=+cell.getAttribute('data-r'), cc=+cell.getAttribute('data-c'); cell.setAttribute('data-full', stacks[rr][cc].length>=CONFIG.maxDepth ? 'true':'false'); }); updateMaxDepthDisplay(); }
+function updateMaxDepthDisplay(){
+  if(!maxDepthDisplayEl){ return; }
+  maxDepthDisplayEl.textContent = CONFIG.maxDepth;
+  var anyFull = false;
+  for(var r=0; r<CONFIG.rows; r++){
+    for(var c=0; c<CONFIG.cols; c++){
+      if(stacks[r][c].length >= CONFIG.maxDepth){
+        anyFull = true;
+        break;
+      }
+    }
+    if(anyFull) break;
+  }
+  // Use !important to override any CSS rules
+  maxDepthDisplayEl.style.setProperty('color', anyFull ? '#ef4444' : 'inherit', 'important');
+}
+
+// --- ANIMATED MOVE ---
+function doMoveAnimated(src, dst){ if(isAnimating) return; if(stacks[src.r][src.c].length===0) { selected=null; render(); return; } if(!canReceive(dst)){ beepBad(); selected=null; render(); return; } isAnimating=true; undoStack.push(deepCopy(stacks));
+  var moving = stacks[src.r][src.c][stacks[src.r][src.c].length-1];
+  var srcCell=getCellEl(src.r,src.c);
+  var srcTile=srcCell.querySelector('.tile'); var rect=srcTile.getBoundingClientRect(); var ghost=srcTile.cloneNode(true); ghost.classList.add('ghost'); var dstCount = stacks[dst.r][dst.c].length + 1; var badgeEl = ghost.querySelector('.badge'); if(badgeEl){ badgeEl.textContent = dstCount; if(dstCount >= CONFIG.maxDepth){ badgeEl.style.color = '#ef4444'; } } ghost.style.boxShadow = '0 8px 20px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.25), 0 '+dstCount+'px '+Math.min(18, dstCount*2)+'px rgba(0,0,0,.25)'; ghost.style.width=rect.width+'px'; ghost.style.height=rect.height+'px'; ghost.style.left=rect.left+'px'; ghost.style.top=rect.top+'px'; ghost.style.transform='translate(0,0)'; document.body.appendChild(ghost);
+  // Hide source tile visually during animation
+  srcTile.style.opacity='0';
+  // Animate ghost to destination
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ var dstCell=getCellEl(dst.r,dst.c); var endRect = dstCell.getBoundingClientRect(); var dx = (endRect.left - rect.left); var dy = (endRect.top - rect.top); ghost.style.transition = 'transform var(--speed) ease'; ghost.style.transform = 'translate('+dx+'px, '+dy+'px)'; }); });
+  setTimeout(function(){
+    // After animation completes, commit model and render final state
+    stacks[src.r][src.c].pop(); stacks[dst.r][dst.c].push(moving); selected=null; render(); syncFullBadges();
+    ghost.remove(); isAnimating=false; moves++;
+    if(moves===1) startTimer();
+    if(fxOn){ beepGood(); vibrate(12); }
+
+    // Check for special tiles in Level 4
+    if(currentLevel === 4){
+      // Check if dragon tile was just moved/revealed
+      var dstTop = peekTop(stacks[dst.r][dst.c]);
+      if(dstTop && dstTop.type === 'dragon'){
+        // Dragon penalty: reset Level 4 progress
+        stopTimer();
+        dragonWrap.classList.add('show');
+        return;
+      }
+      // Check if golden tile was just moved/revealed
+      if(dstTop && dstTop.type === 'golden'){
+        // Golden tile: instant win!
+        gameWon=true; stopTimer();
+
+        // Notify Swift in daily mode
+        if(window.dailyMode && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+          window.webkit.messageHandlers.gameComplete.postMessage('completed');
+          console.log('Daily puzzle completed - notified Swift');
+        }
+
+        var total=getWins()+1; setWins(total);
+        awardDiamond();
+        congratsMsg.textContent='🎖️ Golden Tile! You won Level '+currentLevel+' instantly!';
+        congratsLevelLabel.textContent='L'+currentLevel;
+        congratsMoves.textContent=String(moves);
+        congratsTime.textContent=timeEl.textContent;
+        congratsTotal.textContent=String(total);
+        congratsWrap.classList.add('show');
+        render();
+        return;
+      }
+    }
+
+    // Normal win check
+    var won=checkAllSameVisible();
+    if(won && !gameWon){
+      gameWon=true; stopTimer(); stopLevelTimer();
+
+      // Notify Swift in daily mode
+      if(window.dailyMode && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+        window.webkit.messageHandlers.gameComplete.postMessage('completed');
+        console.log('Daily puzzle completed - notified Swift');
+      }
+
+      // Check if Level 5 win (ultimate victory)
+      if(currentLevel === 5){
+        // Award Gold Cube
+        awardGoldCube();
+        resetLevel5Attempts();
+
+        // Show Gold Cube flash animation for 10 seconds
+        showGoldCubeFlash();
+
+        // Show special congratulations
+        congratsMsg.textContent='🎉 ULTIMATE VICTORY! You completed Level 5!';
+        congratsLevelLabel.textContent='L5';
+        congratsMoves.textContent=String(moves);
+        congratsTime.textContent=timeEl.textContent;
+        congratsTotal.textContent='Gold Cube Awarded!';
+        congratsWrap.classList.add('show');
+
+        // Wait 10 seconds for animation, then reset all progress
+        setTimeout(function(){
+          resetAllProgress();
+        }, 11000); // Wait for flash animation + 1 second
+        return;
+      }
+
+      var total=getWins()+1; setWins(total);
+      // Award progress tokens
+      if(currentLevel===1){ awardCoin(); }
+      else if(currentLevel===2){ awardRing(); }
+      else if(currentLevel===3){ awardGold(); }
+      else if(currentLevel===4){ awardDiamond(); }
+      // Award actual coins
+      if(currentLevel===1){ awardBronzeCoin(); }
+      else if(currentLevel===2){ awardSilverCoin(); }
+      else if(currentLevel===3){ awardGoldCoin(); }
+      else if(currentLevel===4){ awardGoldCoin(); } // Level 4 awards gold coins too
+
+      // Special message for Level 1 when Bronze Coin is earned (3rd win)
+      if(currentLevel===1 && getCoins()===3 && !getBronze()){
+        congratsMsg.textContent='🎉 Congratulations! You earned a Bronze Coin!';
+      } else {
+        congratsMsg.textContent='You solved Level '+currentLevel+'.';
+      }
+      congratsLevelLabel.textContent='L'+currentLevel;
+      congratsMoves.textContent=String(moves);
+      congratsTime.textContent=timeEl.textContent;
+      congratsTotal.textContent=String(total);
+      congratsWrap.classList.add('show');
+
+      // Auto-advance to next level after coin animation (NOT in daily mode)
+      if(!window.dailyMode){
+        var shouldAdvance = false;
+        var advanceDelay = 0;
+
+        if(currentLevel === 1 && getCoins() >= 3){
+          shouldAdvance = true;
+          advanceDelay = 3500; // Bronze coin animation (3s) + 0.5s buffer
+        } else if(currentLevel === 2 && getRings() >= 2){
+          shouldAdvance = true;
+          advanceDelay = 2500; // Silver coin animation (2s) + 0.5s buffer
+        } else if(currentLevel === 3 && getGolds() >= 1){
+          shouldAdvance = true;
+          advanceDelay = 5500; // Gold coin animation (5s) + 0.5s buffer
+        } else if(currentLevel === 4 && getDiamonds() >= 1){
+          shouldAdvance = true;
+          advanceDelay = 1000; // No special coin animation, just brief pause
+        }
+
+        if(shouldAdvance){
+          setTimeout(function(){
+            hideCongrats();
+            gameWon = false;
+            if(currentLevel === 1){ switchToLevel2(); }
+            else if(currentLevel === 2){ switchToLevel3(); }
+            else if(currentLevel === 3){ switchToLevel4(); }
+            else if(currentLevel === 4){ switchToLevel5(); }
+            shuffleGame();
+          }, advanceDelay);
+        }
+      }
+    }
+    render();
+  }, parseInt(getComputedStyle(root).getPropertyValue('--speed')) + 40);
+}
+
+// --- CONTROLS ---
+var shuffleBtn = document.getElementById('shuffleBtn');
+var resetBtn = document.getElementById('resetBtn');
+var pauseBtn = document.getElementById('pauseBtn');
+
+console.log('🔧 Setting up button listeners...');
+console.log('shuffleBtn:', shuffleBtn);
+console.log('resetBtn:', resetBtn);
+console.log('pauseBtn:', pauseBtn);
+
+document.getElementById('diagToggle').addEventListener('change',function(){ diagEnabled=this.checked; updateDiagMarkers(); });
+document.getElementById('speedSelect').addEventListener('change',function(){ root.style.setProperty('--speed', this.value+'ms'); });
+document.getElementById('fxToggle').addEventListener('change',function(){ fxOn=this.checked; });
+
+// Prevent double-firing (touch + click)
+var shuffleBtnProcessing = false;
+
+shuffleBtn.addEventListener('click', function(e){
+  e.preventDefault();
+  e.stopPropagation();
+
+  if(shuffleBtnProcessing) {
+    console.log('⚠️ Skipping - already processing');
+    return;
+  }
+
+  console.log('🟢 Shuffle/Start button clicked', e);
+  console.log('Daily mode:', window.dailyMode);
+  console.log('Has initial state:', !!window.dailyInitialState);
+
+  if(isAnimating) {
+    console.log('⚠️ Skipping - animation in progress');
+    return;
+  }
+
+  shuffleBtnProcessing = true;
+  setTimeout(function() { shuffleBtnProcessing = false; }, 300);
+
+  hideCongrats();
+  gameWon=false;
+  isPaused=false;
+  pausedTime=0;
+  document.getElementById('pauseBtn').textContent='Pause';
+
+  // In daily mode, restart from saved initial state instead of re-shuffling
+  if(window.dailyMode && window.dailyInitialState) {
+    console.log('🔄 Restarting daily puzzle from saved state');
+    console.log('📋 Current stacks length:', stacks.length);
+    console.log('📋 Initial state length:', window.dailyInitialState.length);
+
+    stacks = deepCopy(window.dailyInitialState);
+    selected = null;
+    undoStack = [];
+    moves = 0;
+    movesEl.textContent = '0';
+    stopTimer();
+    stopLevelTimer();
+    timeEl.textContent = '0:00';
+    if(currentLevel > 1) {
+      startLevelTimer();
+    }
+
+    console.log('🎨 Calling render()...');
+    render();
+    console.log('🔖 Calling syncFullBadges()...');
+    syncFullBadges();
+    console.log('📏 Calling updateMaxDepthDisplay()...');
+    updateMaxDepthDisplay();
+    console.log('✅ Daily puzzle restarted successfully');
+    console.log('📊 New moves count:', moves);
+    console.log('📊 Stacks after restart:', stacks.length, 'x', stacks[0].length);
+  } else {
+    console.log('🎲 Shuffling game');
+    shuffleGame();
+  }
+});
+
+resetBtn.addEventListener('click', function(e){
+  console.log('🟡 Reset button clicked', e);
+  if(isAnimating) {
+    console.log('⚠️ Skipping - animation in progress');
+    return;
+  }
+  hideCongrats();
+  gameWon=false;
+  isPaused=false;
+  pausedTime=0;
+  document.getElementById('pauseBtn').textContent='Pause';
+
+  // In daily mode, restart from saved initial state
+  if(window.dailyMode && window.dailyInitialState) {
+    stacks = deepCopy(window.dailyInitialState);
+    selected = null;
+    undoStack = [];
+    moves = 0;
+    stopTimer();
+    stopLevelTimer();
+    timeEl.textContent = '0:00';
+    if(currentLevel > 1) {
+      startLevelTimer();
+    }
+    render();
+    syncFullBadges();
+    updateMaxDepthDisplay();
+    console.log('Reset daily puzzle to initial state');
+  } else {
+    stacks = deepCopy(stacks0);
+    selected = null;
+    undoStack = [];
+    moves = 0;
+    stopTimer();
+    timeEl.textContent = '0:00';
+    render();
+    syncFullBadges();
+    updateMaxDepthDisplay();
+  }
+});
+
+pauseBtn.addEventListener('click', function(e){
+  console.log('🟣 Pause button clicked', e);
+  if(isAnimating) {
+    console.log('⚠️ Skipping - animation in progress');
+    return;
+  }
+  if(!isPaused){
+    // Pause the game
+    isPaused = true;
+    pauseBtn.textContent = 'Continue';
+    // Save current elapsed time
+    if(timerId){
+      pausedTime = Date.now() - t0;
+      stopTimer();
+    }
+    if(levelTimer){
+      stopLevelTimer();
+    }
+  } else {
+    // Continue the game
+    isPaused = false;
+    pauseBtn.textContent = 'Pause';
+    // Resume timer from where it was paused
+    if(pausedTime > 0 && currentLevel === 1){
+      t0 = Date.now() - pausedTime;
+      timerId = setInterval(function(){ var s=Math.floor((Date.now()-t0)/1000); var m=Math.floor(s/60); var ss=('0'+(s%60)).slice(-2); timeEl.textContent=m+':'+ss; }, 250);
+    } else if(currentLevel > 1){
+      startLevelTimer();
+    }
+  }
+});
+
+function shuffleGame(maxMoves){
+  undoStack=[]; if(!maxMoves) maxMoves=500; // increased for better randomization
+  // Collect all tiles from all chambers
+  var allTiles = [];
+  for(var r=0; r<CONFIG.rows; r++){
+    for(var c=0; c<CONFIG.cols; c++){
+      while(stacks[r][c].length > 0){
+        allTiles.push(stacks[r][c].pop());
+      }
+    }
+  }
+  // Shuffle the tiles array (Fisher-Yates shuffle)
+  for(var i=allTiles.length-1; i>0; i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var temp=allTiles[i]; allTiles[i]=allTiles[j]; allTiles[j]=temp;
+  }
+  // Redistribute tiles randomly to chambers, respecting max depth
+  var tileIndex = 0;
+  while(tileIndex < allTiles.length){
+    var r = Math.floor(Math.random() * CONFIG.rows);
+    var c = Math.floor(Math.random() * CONFIG.cols);
+    if(stacks[r][c].length < CONFIG.maxDepth){
+      stacks[r][c].push(allTiles[tileIndex]);
+      tileIndex++;
+    }
+  }
+  moves=0; stopTimer(); stopLevelTimer(); gameWon=false;
+  if(currentLevel === 1){
+    timeEl.textContent='0:00';
+  } else {
+    startLevelTimer(); // Start 120-second timer for Levels 2-4
+  }
+  selected=null; render(); syncFullBadges(); updateMaxDepthDisplay();
+}
+
+function hideCongrats(){ congratsWrap.classList.remove('show'); }
+againBtn.addEventListener('click', function(){
+  hideCongrats();
+  gameWon=false;
+
+  // Auto-advance to next level if requirements met
+  if(currentLevel === 1 && getCoins() >= 3){
+    switchToLevel2();
+    shuffleGame();
+  } else if(currentLevel === 2 && getRings() >= 2){
+    switchToLevel3();
+    shuffleGame();
+  } else if(currentLevel === 3 && getGolds() >= 1){
+    switchToLevel4();
+    shuffleGame();
+  } else if(currentLevel === 4 && getDiamonds() >= 1){
+    switchToLevel5();
+    shuffleGame();
+  } else {
+    shuffleGame();
+  }
+});
+uniformBtn.addEventListener('click', function(){ hideCongrats(); gameWon=false; stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); timeEl.textContent='0:00'; render(); syncFullBadges(); updateMaxDepthDisplay(); });
+congratsBackdrop.addEventListener('click', hideCongrats);
+
+// Level Drop function - show warning then drop level
+function dropLevel(){
+  // Don't drop levels in daily mode
+  if(window.dailyMode) {
+    console.log('⚠️ Level drop disabled in daily mode');
+    return;
+  }
+
+  timeExpiredWrap.classList.remove('show');
+  levelDropWrap.classList.add('show');
+}
+
+// Level Drop modal handler
+if(levelDropOkBtn){
+  levelDropOkBtn.addEventListener('click', function(){
+    levelDropWrap.classList.remove('show');
+    hideCongrats();
+
+    // Drop to lower level and restart
+    // Reset win counts but keep coins earned
+    if(currentLevel === 2){
+      setCoins(0); // Reset Level 1 wins to 0/3
+      switchToLevel1();
+      shuffleGame();
+    } else if(currentLevel === 3){
+      setRings(0); // Reset Level 2 wins to 0/2
+      switchToLevel2();
+      shuffleGame();
+    } else if(currentLevel === 4){
+      setGolds(0); // Reset Level 3 wins to 0
+      switchToLevel3();
+      shuffleGame();
+    } else if(currentLevel === 5){
+      setDiamonds(0); // Reset Level 4 wins to 0
+      switchToLevel4();
+      shuffleGame();
+    }
+  });
+}
+
+// Time Expired modal handlers
+if(timeExpiredGiveUpBtn){
+  timeExpiredGiveUpBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Give Up clicked - showing level drop warning');
+    dropLevel();
+  });
+}
+
+if(timeExpiredContinueBtn){
+  timeExpiredContinueBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Continue clicked');
+    // Check if user has enough coins
+    if(getTotalBronzeEquivalent() < 3){
+      console.log('Not enough coins - showing level drop warning');
+      dropLevel();
+      return;
+    }
+    // Spend 3 bronze coins
+    spendBronzeCoins(3);
+    timeExpiredWrap.classList.remove('show');
+    // Give fresh board with 120 seconds
+    shuffleGame();
+  });
+}
+
+if(timeExpiredBackdrop){
+  timeExpiredBackdrop.addEventListener('click', function(e){
+    console.log('Backdrop clicked - showing level drop warning');
+    dropLevel();
+  });
+}
+
+// Dragon modal handlers
+dragonOkBtn.addEventListener('click', function(){
+  // Reset Level 4 progress
+  setDiamonds(0);
+  dragonWrap.classList.remove('show');
+  // Start a new Level 4 game
+  shuffleGame();
+});
+dragonBackdrop.addEventListener('click', function(){
+  setDiamonds(0);
+  dragonWrap.classList.remove('show');
+  shuffleGame();
+});
+
+// Start Over functionality
+var startOverBtnProcessing = false;
+
+startOverBtn.addEventListener('click', function(e){
+  e.preventDefault();
+  e.stopPropagation();
+
+  if(startOverBtnProcessing) {
+    console.log('⚠️ Start Over - already processing');
+    return;
+  }
+
+  console.log('🔴 Start Over button clicked');
+
+  startOverBtnProcessing = true;
+  setTimeout(function() { startOverBtnProcessing = false; }, 300);
+
+  // In daily mode, just restart the puzzle without showing the warning modal
+  if(window.dailyMode && window.dailyInitialState) {
+    console.log('🔄 Restarting daily puzzle (Start Over)');
+    hideCongrats();
+    gameWon = false;
+    isPaused = false;
+    pausedTime = 0;
+    document.getElementById('pauseBtn').textContent = 'Pause';
+
+    // Restart from saved initial state
+    stacks = deepCopy(window.dailyInitialState);
+    selected = null;
+    undoStack = [];
+    moves = 0;
+    stopTimer();
+    stopLevelTimer();
+    timeEl.textContent = '0:00';
+    if(currentLevel > 1) {
+      startLevelTimer();
+    }
+    render();
+    syncFullBadges();
+    updateMaxDepthDisplay();
+    console.log('✅ Daily puzzle restarted successfully (Start Over)');
+  } else {
+    console.log('⚠️ Showing Start Over warning modal');
+    // In normal mode, show the warning modal
+    startOverWrap.classList.add('show');
+  }
+});
+cancelStartOverBtn.addEventListener('click', function(){ startOverWrap.classList.remove('show'); });
+startOverBackdrop.addEventListener('click', function(){ startOverWrap.classList.remove('show'); });
+confirmStartOverBtn.addEventListener('click', function(){
+  // Clear all localStorage
+  localStorage.removeItem(WINS_KEY);
+  localStorage.removeItem(COINS_KEY);
+  localStorage.removeItem(BRONZE_KEY);
+  localStorage.removeItem(RINGS_KEY);
+  localStorage.removeItem(SILVER_KEY);
+  localStorage.removeItem(GOLDS_KEY);
+  localStorage.removeItem(DIAMONDS_KEY);
+  localStorage.removeItem(GOLD_UNLOCK_KEY);
+  localStorage.removeItem(BRONZE_COINS_KEY);
+  localStorage.removeItem(SILVER_COINS_KEY);
+  localStorage.removeItem(GOLD_COINS_KEY);
+  // Reset to Level 1
+  currentLevel = 1;
+  CONFIG = { rows: 3, cols: 3, defaultDepth: 3, maxDepth: 5, palette:["c-blue","c-red","c-yellow"] };
+  LAYERS_TOP_TO_BOTTOM = ["c-blue","c-red","c-yellow"];
+  levelLabelEl.textContent='Level 1';
+  stacks0 = buildInitialStacks(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth);
+  stacks = deepCopy(stacks0);
+  selected = null; undoStack = []; moves = 0; gameWon = false;
+  stopTimer(); stopLevelTimer(); timeEl.textContent = '0:00';
+  boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+  boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+  // Reset UI
+  setWins(0); initAwardsUI(); initCoinDisplays();
+  render(); syncFullBadges(); updateMaxDepthDisplay();
+  startOverWrap.classList.remove('show');
+  hideCongrats();
+});
+
+// Level Guide modal handlers
+var levelGuideWrap = document.getElementById('levelGuideWrap');
+var levelGuideBackdrop = document.getElementById('levelGuideBackdrop');
+var levelGuideIcon = document.getElementById('levelGuideIcon');
+var levelGuideCloseBtn = document.getElementById('levelGuideCloseBtn');
+
+if(levelGuideIcon){
+  levelGuideIcon.addEventListener('click', function(){ levelGuideWrap.classList.add('show'); });
+}
+if(levelGuideCloseBtn){
+  levelGuideCloseBtn.addEventListener('click', function(){ levelGuideWrap.classList.remove('show'); });
+}
+if(levelGuideBackdrop){
+  levelGuideBackdrop.addEventListener('click', function(){ levelGuideWrap.classList.remove('show'); });
+}
+
+// Tester mode: Click Level Guide title 5 times within 5 seconds to toggle
+var levelGuideTitleEl = document.getElementById('levelGuideTitle');
+var testerClickTimes = [];
+var TESTER_MODE_KEY = 'jbx:testerMode';
+
+console.log('Tester mode setup - levelGuideTitleEl found:', levelGuideTitleEl);
+
+if(levelGuideTitleEl){
+  console.log('Attaching click listener to Level Guide title');
+  levelGuideTitleEl.addEventListener('click', function(){
+    console.log('Level Guide title clicked!');
+    var now = Date.now();
+
+    // Flash effect on every click
+    levelGuideTitleEl.classList.remove('title-flash');
+    void levelGuideTitleEl.offsetWidth; // Force reflow
+    levelGuideTitleEl.classList.add('title-flash');
+    console.log('Flash animation triggered');
+
+    // Keep only clicks from last 5 seconds
+    testerClickTimes = testerClickTimes.filter(function(t){ return now - t < 5000; });
+    testerClickTimes.push(now);
+
+    // Check if we have 5 clicks within 5 seconds
+    if(testerClickTimes.length >= 5){
+      // Toggle tester mode
+      var currentMode = localStorage.getItem(TESTER_MODE_KEY) === 'true';
+      var newMode = !currentMode;
+      localStorage.setItem(TESTER_MODE_KEY, String(newMode));
+
+      // Update visual indicators
+      if(newMode){
+        levelGuideTitleEl.classList.add('tester-active');
+        if(levelGuideIcon) levelGuideIcon.classList.add('tester-active');
+        alert('🧪 Tester mode enabled - No time limits!');
+      } else {
+        levelGuideTitleEl.classList.remove('tester-active');
+        if(levelGuideIcon) levelGuideIcon.classList.remove('tester-active');
+        alert('Tester mode disabled - Normal timers restored.');
+      }
+
+      testerClickTimes = []; // Reset clicks
+
+      // If we're currently in a level, update the timer display
+      if(timeEl && currentLevel >= 2 && currentLevel <= 5){
+        if(newMode){
+          clearInterval(timerInterval);
+          timeEl.textContent = '∞';
+          timeEl.style.color = '#10b981';
+        } else {
+          // Restart normal timer
+          startLevelTimer();
+        }
+      }
+    }
+  });
+}
+
+// --- AWARDS / LEVELS ---
+function svgCoin(){ return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="g" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#fde68a"/><stop offset="60%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#b45309"/></radialGradient></defs><circle cx="16" cy="16" r="14" fill="url(#g)" stroke="#78350f" stroke-width="2"/><circle cx="16" cy="16" r="8" fill="rgba(255,255,255,.15)"/></svg>'; }
+function svgBronze(){ return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bronze" cx="50%" cy="35%" r="65%"><stop offset="0%" stop-color="#f4d4a6"/><stop offset="30%" stop-color="#e0a878"/><stop offset="60%" stop-color="#cd7f32"/><stop offset="100%" stop-color="#996515"/></radialGradient><radialGradient id="bronzeInner" cx="45%" cy="35%" r="40%"><stop offset="0%" stop-color="rgba(255,255,255,0.4)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></radialGradient></defs><circle cx="16" cy="16" r="14" fill="url(#bronze)" stroke="#7a4f1f" stroke-width="2.5"/><circle cx="16" cy="16" r="9" fill="url(#bronzeInner)"/><circle cx="16" cy="16" r="11" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/></svg>'; }
+function svgSilver(){ return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="silver" cx="50%" cy="35%" r="65%"><stop offset="0%" stop-color="#f8fafc"/><stop offset="30%" stop-color="#cbd5e1"/><stop offset="60%" stop-color="#94a3b8"/><stop offset="100%" stop-color="#64748b"/></radialGradient><radialGradient id="silverInner" cx="45%" cy="30%" r="40%"><stop offset="0%" stop-color="rgba(255,255,255,0.6)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></radialGradient></defs><circle cx="16" cy="16" r="14" fill="url(#silver)" stroke="#475569" stroke-width="2.5"/><circle cx="16" cy="16" r="9" fill="url(#silverInner)"/><circle cx="16" cy="16" r="11" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1"/></svg>'; }
+function svgRing(){ return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rg" x1="0" x2="1"><stop offset="0%" stop-color="#fde68a"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><circle cx="16" cy="16" r="12" fill="none" stroke="url(#rg)" stroke-width="6"/><circle cx="16" cy="16" r="6" fill="none" stroke="#0b1220" stroke-width="6"/></svg>'; }
+function getCoins(){ return parseInt(localStorage.getItem(COINS_KEY)||'0',10)||0; }
+function setCoins(n){ localStorage.setItem(COINS_KEY, String(n)); coinCountEl.textContent=n; renderCoinSlots(n); checkBronzeAward(); updateUnlocks(); }
+function getBronze(){ return localStorage.getItem(BRONZE_KEY)==='true'; }
+function setBronze(earned){ localStorage.setItem(BRONZE_KEY, String(earned)); bronzeStatusEl.textContent = getBronzeCoins(); bronzeStatusEl.style.color = '#cd7f32'; updateUnlocks(); }
+function getRings(){ return parseInt(localStorage.getItem(RINGS_KEY)||'0',10)||0; }
+function setRings(n){ localStorage.setItem(RINGS_KEY, String(n)); ringCountEl.textContent=n; renderRingSlots(n); checkSilverAward(); updateUnlocks(); }
+function getSilver(){ return localStorage.getItem(SILVER_KEY)==='true'; }
+function setSilver(earned){ localStorage.setItem(SILVER_KEY, String(earned)); silverStatusEl.textContent = getSilverCoins(); silverStatusEl.style.color = '#94a3b8'; updateUnlocks(); }
+function getGolds(){ return parseInt(localStorage.getItem(GOLDS_KEY)||'0',10)||0; }
+function setGolds(n){ localStorage.setItem(GOLDS_KEY, String(n)); goldCountEl.textContent=n; renderGoldSlots(n); checkGoldUnlock(); updateUnlocks(); }
+function getDiamonds(){ return parseInt(localStorage.getItem(DIAMONDS_KEY)||'0',10)||0; }
+function setDiamonds(n){ localStorage.setItem(DIAMONDS_KEY, String(n)); diamondCountEl.textContent=n; renderDiamondSlots(n); }
+function renderCoinSlots(n){ coinSlots.innerHTML=''; for(var i=0;i<Math.min(n,6);i++){ var s=document.createElement('span'); s.className='icon'; s.innerHTML='<img src="bronzecoin.png" style="width:22px;height:22px;object-fit:contain;">'; coinSlots.appendChild(s);} }
+function renderRingSlots(n){ ringSlots.innerHTML=''; for(var i=0;i<Math.min(n,6);i++){ var s=document.createElement('span'); s.className='icon'; s.innerHTML='<img src="silvercoin.png" style="width:22px;height:22px;object-fit:contain;">'; ringSlots.appendChild(s);} }
+function renderGoldSlots(n){ goldSlots.innerHTML=''; for(var i=0;i<Math.min(n,6);i++){ var s=document.createElement('span'); s.className='icon'; s.innerHTML='<img src="goldcoin.png" style="width:22px;height:22px;object-fit:contain;">'; goldSlots.appendChild(s);} }
+function renderDiamondSlots(n){ diamondSlots.innerHTML=''; for(var i=0;i<Math.min(n,6);i++){ var s=document.createElement('span'); s.className='icon'; s.innerHTML='<img src="goldcoin.png" style="width:22px;height:22px;object-fit:contain;filter:brightness(1.2) contrast(1.1);">'; diamondSlots.appendChild(s);} }
+function initAwardsUI(){
+  bronzeIcon.innerHTML='<img src="bronzecoin.png" style="width:22px;height:22px;object-fit:contain;">';
+  silverIcon.innerHTML='<img src="silvercoin.png" style="width:22px;height:22px;object-fit:contain;">';
+  setCoins(getCoins()); setRings(getRings()); setGolds(getGolds()); setDiamonds(getDiamonds()); setBronze(getBronze()); setSilver(getSilver()); updateUnlocks();
+}
+function awardCoin(){ var n=getCoins()+1; setCoins(n); }
+function awardRing(){ var n=getRings()+1; setRings(n); }
+function awardGold(){ var n=getGolds()+1; setGolds(n); }
+function awardDiamond(){ var n=getDiamonds()+1; setDiamonds(n); }
+function checkBronzeAward(){ if(!getBronze() && getCoins()>=3){ setBronze(true); showBronzeCoinAnimation(); } }
+function checkSilverAward(){ if(!getSilver() && getRings()>=2){ setSilver(true); showSilverCoinAnimation(); } }
+function checkGoldUnlock(){
+  var unlocked = localStorage.getItem(GOLD_UNLOCK_KEY)==='true';
+  if(!unlocked && getGolds()>=4){
+    localStorage.setItem(GOLD_UNLOCK_KEY, 'true');
+    showGoldCoinAnimation();
+  }
+}
+function updateUnlocks(){
+  // Note: Level buttons removed - progression now automatic
+}
+function showBronzeCoinAnimation(){ bronzeCoinLarge.innerHTML = '<img src="bronzecoin.png" alt="Bronze Coin">'; bronzeCoinOverlay.classList.add('show'); setTimeout(function(){ bronzeCoinOverlay.classList.remove('show'); }, 3000); }
+function showSilverCoinAnimation(){ silverCoinLarge.innerHTML = '<img src="silvercoin.png" alt="Silver Coin">'; silverCoinOverlay.classList.add('show'); setTimeout(function(){ silverCoinOverlay.classList.remove('show'); }, 2000); }
+function showGoldCoinAnimation(){ goldCoinLarge.innerHTML = '<img src="goldcoin.png" alt="Gold Coin">'; goldCoinOverlay.classList.add('show'); setTimeout(function(){ goldCoinOverlay.classList.remove('show'); }, 5000); }
+function switchToLevel1(){ hideCongrats(); currentLevel=1; gameWon=false;
+  CONFIG={ rows:3, cols:3, defaultDepth:3, maxDepth:5, palette:["c-blue","c-red","c-yellow"] };
+  LAYERS_TOP_TO_BOTTOM=["c-blue","c-red","c-yellow"];
+  levelLabelEl.textContent='Level 1';
+  stacks0=buildInitialStacks(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth); stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer(); timeEl.textContent='0:00';
+  boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+  boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+  render(); syncFullBadges(); updateMaxDepthDisplay(); }
+
+// Reset all progress after Level 5 win (keep Gold Cubes only)
+function resetAllProgress(){
+  hideCongrats();
+  // Clear all level progress
+  localStorage.removeItem(WINS_KEY);
+  localStorage.removeItem(COINS_KEY);
+  localStorage.removeItem(BRONZE_KEY);
+  localStorage.removeItem(RINGS_KEY);
+  localStorage.removeItem(SILVER_KEY);
+  localStorage.removeItem(GOLDS_KEY);
+  localStorage.removeItem(DIAMONDS_KEY);
+  localStorage.removeItem(GOLD_UNLOCK_KEY);
+
+  // Clear all coins
+  localStorage.removeItem(BRONZE_COINS_KEY);
+  localStorage.removeItem(SILVER_COINS_KEY);
+  localStorage.removeItem(GOLD_COINS_KEY);
+
+  // Reset Level 5 attempts
+  resetLevel5Attempts();
+
+  // Keep GOLD_CUBES_KEY - it persists!
+
+  // Return to Level 1
+  switchToLevel1();
+  shuffleGame();
+  initAwardsUI();
+}
+function switchToLevel2(){ hideCongrats(); currentLevel=2; gameWon=false;
+  CONFIG={ rows:3, cols:3, defaultDepth:4, maxDepth:6, palette:["c-blue","c-red","c-yellow","c-green"] };
+  LAYERS_TOP_TO_BOTTOM=["c-blue","c-red","c-yellow","c-green"]; ensurePaletteStyles();
+  levelLabelEl.textContent='Level 2';
+  stacks0=buildInitialStacks(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth); stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
+  boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+  boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+  render(); syncFullBadges(); updateMaxDepthDisplay(); }
+function switchToLevel3(){ hideCongrats(); currentLevel=3; gameWon=false;
+  CONFIG={ rows:4, cols:4, defaultDepth:4, maxDepth:6, palette:["c-blue","c-red","c-yellow","c-green"] };
+  LAYERS_TOP_TO_BOTTOM=["c-blue","c-red","c-yellow","c-green"]; ensurePaletteStyles();
+  levelLabelEl.textContent='Level 3';
+  stacks0=buildInitialStacks(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth); stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
+  boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+  boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+  render(); syncFullBadges(); updateMaxDepthDisplay(); }
+function switchToLevel4(){ hideCongrats(); currentLevel=4; gameWon=false;
+  CONFIG={ rows:4, cols:4, defaultDepth:4, maxDepth:6, palette:["c-blue","c-red","c-yellow","c-green"], specialTiles: true };
+  LAYERS_TOP_TO_BOTTOM=["c-blue","c-red","c-yellow","c-green"]; ensurePaletteStyles();
+  levelLabelEl.textContent='Level 4';
+  stacks0=buildInitialStacksWithSpecialTiles(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth); stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
+  boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+  boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+  render(); syncFullBadges(); updateMaxDepthDisplay(); }
+function switchToLevel5(){ hideCongrats(); currentLevel=5; gameWon=false;
+  CONFIG={ rows:4, cols:4, defaultDepth:4, maxDepth:6, palette:["c-blue","c-red","c-yellow","c-green","c-purple"], specialTiles: true };
+  LAYERS_TOP_TO_BOTTOM=["c-blue","c-red","c-yellow","c-green","c-purple"]; ensurePaletteStyles();
+  levelLabelEl.textContent='Level 5';
+  stacks0=buildInitialStacksWithSpecialTilesLevel5(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth); stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
+  boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
+  boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
+  render(); syncFullBadges(); updateMaxDepthDisplay(); }
+function ensurePaletteStyles(){ if(!document.getElementById('level2Styles')){ var st=document.createElement('style'); st.id='level2Styles'; st.textContent='.c-green{background:#22c55e}.c-purple{background:#a855f7}'; document.head.appendChild(st);} }
+
+// --- HELPERS ---
+function peekTop(stack){ return stack.length ? stack[stack.length-1] : null; }
+function neighborsOf(p, diag){ var ns=[]; if(p.r>0) ns.push({r:p.r-1,c:p.c}); if(p.r<CONFIG.rows-1) ns.push({r:p.r+1,c:p.c}); if(p.c>0) ns.push({r:p.r,c:p.c-1}); if(p.c<CONFIG.cols-1) ns.push({r:p.r,c:p.c+1}); if(diag){ if(p.r>0 && p.c>0) ns.push({r:p.r-1,c:p.c-1}); if(p.r>0 && p.c<CONFIG.cols-1) ns.push({r:p.r-1,c:p.c+1}); if(p.r<CONFIG.rows-1 && p.c>0) ns.push({r:p.r+1,c:p.c-1}); if(p.r<CONFIG.rows-1 && p.c<CONFIG.cols-1) ns.push({r:p.r+1,c:p.c+1}); } return ns; }
+function randomNonEmpty(){ var list=[]; for(var r=0;r<CONFIG.rows;r++){ for(var c=0;c<CONFIG.cols;c++){ if(stacks[r][c].length) list.push({r:r,c:c}); } } return list[Math.floor(Math.random()*list.length)]||{r:0,c:0}; }
+function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
+function pretty(s){ return s.replace(/\b\w/g, function(m){ return m.toUpperCase(); }); }
+function checkAllSameVisible(){ var color=null; for(var r=0;r<CONFIG.rows;r++){ for(var c=0;c<CONFIG.cols;c++){ var top=peekTop(stacks[r][c]); if(!top) return false; if(color===null) color=top.color; else if(top.color!==color) return false; } } return true; }
+
+// Show target color banner for daily mode
+function showTargetColorBanner() {
+  // Count frequency of each color on top
+  var colorCounts = {};
+  for(var r=0; r<CONFIG.rows; r++) {
+    for(var c=0; c<CONFIG.cols; c++) {
+      var top = peekTop(stacks[r][c]);
+      if(top && top.color) {
+        colorCounts[top.color] = (colorCounts[top.color] || 0) + 1;
+      }
+    }
+  }
+
+  // Find most common color
+  var maxCount = 0;
+  var targetColor = null;
+  for(var color in colorCounts) {
+    if(colorCounts[color] > maxCount) {
+      maxCount = colorCounts[color];
+      targetColor = color;
+    }
+  }
+
+  if(targetColor) {
+    // Map color classes to names and background colors
+    var colorMap = {
+      'c-blue': { name: 'Blue', bg: '#3b82f6' },
+      'c-red': { name: 'Red', bg: '#ef4444' },
+      'c-yellow': { name: 'Yellow', bg: '#eab308' },
+      'c-green': { name: 'Green', bg: '#22c55e' },
+      'c-purple': { name: 'Purple', bg: '#a855f7' }
+    };
+
+    var colorInfo = colorMap[targetColor] || { name: 'Unknown', bg: '#64748b' };
+
+    // Update banner content
+    var banner = document.getElementById('targetColorBanner');
+    var icon = document.getElementById('targetColorIcon');
+    var text = document.getElementById('targetColorText');
+
+    if(banner && icon && text) {
+      icon.style.backgroundColor = colorInfo.bg;
+      text.textContent = 'Target Color: ' + colorInfo.name;
+      banner.style.display = 'block';
+      console.log('🎯 Target color banner shown:', colorInfo.name);
+    }
+  }
+}
+
+function getCellEl(r,c){ return boardEl.querySelector('.cell[data-r="'+r+'"][data-c="'+c+'"]'); }
+function isAdjacent(a,b,diag){ var dr=Math.abs(a.r-b.r), dc=Math.abs(a.c-b.c); if(diag) return (dr<=1 && dc<=1 && !(dr===0 && dc===0)); return (dr+dc===1); }
+function vibrate(ms){ if(navigator.vibrate) navigator.vibrate(ms); }
+function beepGood(){ if(!fxOn) return; ensureAC(); tone(680,120); vibrate(12); }
+function beepBad(){ if(!fxOn) return; ensureAC(); tone(220,140); vibrate(20); }
+var ac=null; function ensureAC(){ if(!ac) try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+function tone(freq, ms){ if(!ac) return; var now=ac.currentTime; var o=ac.createOscillator(); var g=ac.createGain(); o.frequency.value=freq; o.type='sine'; o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(0.001, now); g.gain.exponentialRampToValueAtTime(0.12, now+0.01); g.gain.exponentialRampToValueAtTime(0.001, now+ms/1000); o.start(now); o.stop(now+ms/1000); }
+
+// --- INITIALIZE GAME ---
+console.log('🎮 JushBox game.html loaded!');
+console.log('🔍 Waiting for seed:', window.waitingForSeed);
+console.log('🔍 Daily mode:', window.dailyMode);
+
+// Only auto-start if not waiting for seed injection from Swift
+if (!window.waitingForSeed) {
+  console.log('⚡ Auto-starting game (not waiting for seed)');
+  initGame();
+} else {
+  console.log('⏳ Waiting for Swift to inject seed and call startDailyGame()');
+}
+
+// --- TESTS ---
+(function runLayoutTests(){
+  function assert(name, cond){ if(!cond){ console.error('❌ Test failed:', name); throw new Error('Test failed: '+name); } else { console.log('✅', name); } }
+  // After init, board should have correct number of cells
+  var expectedCells = CONFIG.rows * CONFIG.cols;
+  assert('board has correct cells after initial render', document.querySelectorAll('#board .cell').length === expectedCells);
+  var cols = getComputedStyle(boardEl).getPropertyValue('grid-template-columns');
+  assert('grid has correct columns', cols.split(' ').length === CONFIG.cols);
+  console.log('%cLayout tests passed','color:#a78bfa;font-weight:bold');
+})();
+
+(function runAdjacencyTests(){
+  function assert(name, cond){ if(!cond){ console.error('❌ Test failed:', name); throw new Error('Test failed: '+name); } else { console.log('✅', name); } }
+  assert('adjacent up',   isAdjacent({r:1,c:1},{r:0,c:1},false)===true);
+  assert('adjacent down', isAdjacent({r:1,c:1},{r:2,c:1},false)===true);
+  assert('adjacent left', isAdjacent({r:1,c:1},{r:1,c:0},false)===true);
+  assert('adjacent right',isAdjacent({r:1,c:1},{r:1,c:2},false)===true);
+  assert('diagonal off', isAdjacent({r:1,c:1},{r:2,c:2},false)===false);
+  assert('diagonal on',  isAdjacent({r:1,c:1},{r:2,c:2},true)===true);
+  assert('same cell not adjacent', isAdjacent({r:1,c:1},{r:1,c:1},false)===false);
+  console.log('%cAdjacency tests passed','color:#22c55e;font-weight:bold');
+})();
+
+(function runInitTests(){
+  function assert(name, cond){ if(!cond){ console.error('❌ Test failed:', name); throw new Error('Test failed: '+name); } else { console.log('✅', name); } }
+  for(var r=0;r<CONFIG.rows;r++){
+    for(var c=0;c<CONFIG.cols;c++){
+      assert('start depth matches config at ['+r+','+c+']', stacks0[r][c].length === CONFIG.defaultDepth);
+      assert('capacity not exceeded at start ['+r+','+c+']', stacks0[r][c].length <= CONFIG.maxDepth);
+      // Skip color check for Level 4 which has special tiles
+      if(currentLevel !== 4) {
+        assert('uniform top BLUE at ['+r+','+c+']', stacks0[r][c][CONFIG.defaultDepth-1].color === 'c-blue');
+      }
+    }
+  }
+  console.log('%cInit tests passed','color:#38bdf8;font-weight:bold');
+})();
+</script>
+</body>
+</html>

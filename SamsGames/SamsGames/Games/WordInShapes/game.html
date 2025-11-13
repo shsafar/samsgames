@@ -32,17 +32,18 @@
   .toast.show { opacity:1; }
   /* iPad responsive sizing */
   @media (min-width: 768px) {
-    :root { --cell:48px; }
-    body { padding:16px; }
-    h1 { font-size: 42px; margin: 8px 0; }
-    #hud { font-size:20px; gap:24px; margin: 10px 0 12px; }
-    .board { gap:7px; }
-    .cell { font-size:20px; }
-    .controls { margin:16px 0; gap:12px; }
-    button { padding:12px 24px; font-size:16px; border-radius:10px; }
-    .current { font-size:30px; min-height:36px; }
-    .wordlist { gap:10px; }
-    .wordlist .row { padding:12px 14px; font-size:36px; border-radius:10px; }
+    :root { --cell:70px; }
+    body { padding:20px; }
+    h1 { font-size: 56px; margin: 12px 0; }
+    #hud { font-size:28px; gap:32px; margin: 14px 0 16px; }
+    .board { gap:10px; }
+    .cell { font-size:28px; border:2px solid #aaa; }
+    .controls { margin:20px 0; gap:16px; }
+    button { padding:16px 32px; font-size:22px; border-radius:12px; }
+    .current { font-size:44px; min-height:50px; margin:8px 0 0; }
+    .wordlist { gap:14px; width:min(500px,96vw); }
+    .wordlist .row { padding:16px 20px; font-size:50px; border-radius:12px; gap:8px; }
+    .toast { font-size:22px; padding:18px 24px; }
   }
   /* Modal */
   .modal{ position:fixed; inset:0; display:none; z-index:1000; }

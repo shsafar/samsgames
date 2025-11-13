@@ -158,6 +158,42 @@ struct WebGameViewRepresentable: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Inject iPad-specific CSS if on iPad
+            let isIPad = UIDevice.current.userInterfaceIdiom == .pad
+
+            if isIPad {
+                let iPadCSSScript = """
+                (function() {
+                    console.log('iPad detected, injecting large screen styles');
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        :root { --cell:38px !important; }
+                        body { padding:12px !important; }
+                        h1 { font-size: 32px !important; margin: 6px 0 !important; }
+                        #hud { font-size:16px !important; gap:18px !important; margin: 8px 0 10px !important; }
+                        .board { gap:5px !important; }
+                        .cell { font-size:16px !important; border:1px solid #aaa !important; }
+                        .controls { margin:12px 0 !important; gap:8px !important; }
+                        button { padding:10px 20px !important; font-size:15px !important; border-radius:8px !important; }
+                        .current { font-size:24px !important; min-height:28px !important; margin:6px 0 0 !important; }
+                        .wordlist { gap:8px !important; width:min(380px,96vw) !important; }
+                        .wordlist .row { padding:10px 12px !important; font-size:28px !important; border-radius:8px !important; gap:5px !important; }
+                        .toast { font-size:18px !important; padding:14px 18px !important; }
+                    `;
+                    document.head.appendChild(style);
+                    console.log('iPad styles injected successfully');
+                })();
+                """
+
+                webView.evaluateJavaScript(iPadCSSScript) { _, error in
+                    if let error = error {
+                        print("❌ Error injecting iPad CSS: \(error)")
+                    } else {
+                        print("✅ iPad CSS injected")
+                    }
+                }
+            }
+
             // Inject the seed after the page loads, then start the game
             let script = """
             if (window.setSeed && window.newGame) {

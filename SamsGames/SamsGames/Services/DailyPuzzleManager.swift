@@ -11,6 +11,7 @@ import Combine
 enum GameType: String, CaseIterable, Codable, Identifiable {
     case xNumbers = "X-Numbers"
     case wordInShapes = "Word In Shapes"
+    case jushBox = "JushBox"
 
     var id: String { self.rawValue }
 
@@ -19,6 +20,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .xNumbers: return "xnumbersicon"
         case .wordInShapes: return "WordInShapesIcon"
+        case .jushBox: return "jushboxicon"
         }
     }
 
@@ -27,6 +29,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .xNumbers: return "number.square.fill"
         case .wordInShapes: return "textformat.abc"
+        case .jushBox: return "cube.fill"
         }
     }
 
@@ -34,6 +37,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .xNumbers: return "Solve the cross-sum puzzle"
         case .wordInShapes: return "Find words hidden in shapes"
+        case .jushBox: return "Sliding-stack puzzle"
         }
     }
 }
@@ -100,12 +104,35 @@ class DailyPuzzleManager: ObservableObject {
         return getLevelForDate(currentDate)
     }
 
+    /// Get JushBox level based on day of week
+    /// Monday/Wed/Fri: L1 (Easy), Tue/Thu: L2 (Medium), Sat: L3 (Hard), Sun: L4 (Expert)
+    func getJushBoxLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 1: return 4  // Sunday: L4 (Expert)
+        case 2: return 1  // Monday: L1 (Easy)
+        case 3: return 2  // Tuesday: L2 (Medium)
+        case 4: return 1  // Wednesday: L1 (Easy)
+        case 5: return 2  // Thursday: L2 (Medium)
+        case 6: return 1  // Friday: L1 (Easy)
+        case 7: return 3  // Saturday: L3 (Hard)
+        default: return 1
+        }
+    }
+
+    /// Get today's JushBox level
+    func getTodayJushBoxLevel() -> Int {
+        return getJushBoxLevelForDate(currentDate)
+    }
+
     /// Get difficulty name for level
     func getDifficultyName(for level: Int) -> String {
         switch level {
         case 1: return "Easy"
         case 2: return "Medium"
         case 3: return "Hard"
+        case 4: return "Expert"
         default: return "Easy"
         }
     }
@@ -116,6 +143,7 @@ class DailyPuzzleManager: ObservableObject {
         case 1: return "🟢"
         case 2: return "🟡"
         case 3: return "🔴"
+        case 4: return "🟣"
         default: return "🟢"
         }
     }

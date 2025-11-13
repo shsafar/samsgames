@@ -11,10 +11,16 @@ struct MainMenuView: View {
     @EnvironmentObject var dailyPuzzleManager: DailyPuzzleManager
     @EnvironmentObject var statisticsManager: StatisticsManager
     @State private var selectedGame: GameType?
+    @State private var showJushBox = false
     @State private var showArchive = false
     @State private var showStatistics = false
     @State private var showSettings = false
     @State private var showInstructions: GameType?
+
+    // Detect if running on iPad
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
 
     var body: some View {
         NavigationView {
@@ -38,13 +44,19 @@ struct MainMenuView: View {
                             dailyPuzzleManager: dailyPuzzleManager
                         )
                         .onTapGesture {
-                            selectedGame = gameType
+                            if gameType == .jushBox {
+                                showJushBox = true
+                            } else {
+                                selectedGame = gameType
+                            }
                         }
                     }
 
                     Spacer(minLength: 50)
                 }
                 .padding()
+                .frame(maxWidth: 600) // Limit width on iPad
+                .frame(maxWidth: .infinity) // Center it
             }
             .background(Color(UIColor.systemGroupedBackground))
             .navigationBarTitleDisplayMode(.inline)
@@ -67,7 +79,25 @@ struct MainMenuView: View {
                 }
             }
             .sheet(item: $selectedGame) { gameType in
-                gameView(for: gameType)
+                if gameType != .jushBox {
+                    if isIPad {
+                        // iPad: Full screen cover-like presentation
+                        gameView(for: gameType)
+                            .presentationDetents([.large])
+                            .presentationDragIndicator(.hidden)
+                            .interactiveDismissDisabled(false)
+                    } else {
+                        // iPhone: Standard sheet
+                        gameView(for: gameType)
+                            .presentationDetents([.large])
+                            .presentationDragIndicator(.hidden)
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showJushBox) {
+                WebJushBoxGameView()
+                    .environmentObject(dailyPuzzleManager)
+                    .environmentObject(statisticsManager)
             }
             .sheet(isPresented: $showArchive) {
                 ArchiveView()
@@ -82,6 +112,7 @@ struct MainMenuView: View {
                 GameInstructionsView(gameType: gameType)
             }
         }
+        .navigationViewStyle(.stack) // Force single column on iPad
     }
 
     // MARK: - Subviews
@@ -118,6 +149,9 @@ struct MainMenuView: View {
             WebWordInShapesGameView()
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .jushBox:
+            // JushBox uses fullScreenCover instead, not this sheet
+            EmptyView()
         }
     }
 }
@@ -174,6 +208,21 @@ struct GameCard: View {
                 // Show difficulty for X-Numbers
                 if gameType == .xNumbers {
                     let level = dailyPuzzleManager.getTodayLevel()
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption)
+                        Text("\(name) (Level \(level))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for JushBox
+                if gameType == .jushBox {
+                    let level = dailyPuzzleManager.getTodayJushBoxLevel()
                     let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
                     let name = dailyPuzzleManager.getDifficultyName(for: level)
 

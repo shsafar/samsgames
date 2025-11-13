@@ -4,6 +4,7 @@ struct FixedXNumbersGame: View {
     @EnvironmentObject var game: XNumbersGameModel
     @StateObject private var progressManager = ProgressManager.shared
     @Environment(\.presentationMode) var presentationMode
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var showingCongratulations = false
     @State private var timerFlash = false
     @State private var showStats = false
@@ -329,6 +330,7 @@ struct FixedXNumbersGame: View {
                 )
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             // Start flashing animation when time is low (only in free play mode)
             if !game.dailyPuzzleMode {
@@ -429,9 +431,12 @@ struct GameBoardLayout: View {
         GeometryReader { geometry in
             let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
             let isLandscape = geometry.size.width > geometry.size.height
-            let scale: CGFloat = isLandscape
+            // Detect iPad by checking if running on iPad device
+            let isIPad = UIDevice.current.userInterfaceIdiom == .pad
+            let iPadMultiplier: CGFloat = isIPad ? 1.4 : 1.0
+            let scale: CGFloat = (isLandscape
                 ? min(geometry.size.width, geometry.size.height) / 850  // Adjusted for bigger nodes
-                : min(geometry.size.width, geometry.size.height) / 650  // Adjusted for bigger nodes
+                : min(geometry.size.width, geometry.size.height) / 650) * iPadMultiplier  // Adjusted for bigger nodes
 
             ZStack {
                 // Draw lines to sum squares

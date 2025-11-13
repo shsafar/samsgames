@@ -17,9 +17,26 @@ struct XNumbersGameView: View {
     @State private var showInstructions = false
 
     init() {
-        // Initialize with today's seed for daily puzzle
-        let seed = UInt64(bitPattern: Int64(Date().timeIntervalSince1970 / 86400))  // Simple date-based seed
-        _game = StateObject(wrappedValue: XNumbersGameModel(seed: seed, dailyPuzzleMode: true))
+        // Initialize with today's seed and level for daily puzzle
+        let today = Date()
+        let seed = UInt64(bitPattern: Int64(today.timeIntervalSince1970 / 86400))
+
+        // Calculate level based on day of week
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: today)
+        let level: Int
+        switch weekday {
+        case 1: level = 3  // Sunday: L3
+        case 2: level = 1  // Monday: L1
+        case 3: level = 2  // Tuesday: L2
+        case 4: level = 1  // Wednesday: L1
+        case 5: level = 2  // Thursday: L2
+        case 6: level = 1  // Friday: L1
+        case 7: level = 3  // Saturday: L3
+        default: level = 1
+        }
+
+        _game = StateObject(wrappedValue: XNumbersGameModel(seed: seed, dailyPuzzleMode: true, dailyLevel: level))
     }
 
     var body: some View {

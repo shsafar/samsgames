@@ -1683,12 +1683,14 @@ class XNumbersGameModel: ObservableObject {
     var gameSeed: UInt64?
     var onDailyPuzzleComplete: (() -> Void)?  // Callback for daily puzzle completion
 
-    init(seed: UInt64? = nil, dailyPuzzleMode: Bool = false) {
+    init(seed: UInt64? = nil, dailyPuzzleMode: Bool = false, dailyLevel: Int? = nil) {
         self.dailyPuzzleMode = dailyPuzzleMode
         self.gameSeed = seed
 
-        // Load the current level from UserDefaults, default to 1
-        if UserDefaults.standard.object(forKey: "currentGameLevel") != nil {
+        // In daily puzzle mode, use provided level; otherwise load from UserDefaults
+        if dailyPuzzleMode, let level = dailyLevel {
+            currentLevel = level
+        } else if UserDefaults.standard.object(forKey: "currentGameLevel") != nil {
             currentLevel = UserDefaults.standard.integer(forKey: "currentGameLevel")
         } else {
             // If no saved level, determine the appropriate starting level

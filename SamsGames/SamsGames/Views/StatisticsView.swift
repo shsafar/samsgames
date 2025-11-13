@@ -18,9 +18,16 @@ struct StatisticsView: View {
                     Section(header: Text(gameType.rawValue)) {
                         let stats = statisticsManager.getStatistics(for: gameType)
 
-                        StatRow(label: "Games Played", value: "\(stats.gamesPlayed)")
-                        StatRow(label: "Current Streak", value: "\(stats.currentStreak)", highlight: stats.currentStreak > 0)
-                        StatRow(label: "Longest Streak", value: "\(stats.longestStreak)")
+                        StatRow(label: "Games Completed", value: "\(stats.gamesPlayed)")
+                        StatRow(
+                            label: "Current Streak",
+                            value: "\(stats.currentStreak) \(stats.currentStreak == 1 ? "day" : "days")",
+                            highlight: stats.currentStreak > 0
+                        )
+                        StatRow(
+                            label: "Longest Streak",
+                            value: "\(stats.longestStreak) \(stats.longestStreak == 1 ? "day" : "days")"
+                        )
                     }
                 }
             }

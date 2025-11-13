@@ -36,7 +36,8 @@ struct ArchiveView: View {
                             ArchiveGameRow(
                                 gameType: gameType,
                                 date: date,
-                                isCompleted: statisticsManager.isCompleted(for: gameType, on: date)
+                                isCompleted: statisticsManager.isCompleted(for: gameType, on: date),
+                                dailyPuzzleManager: dailyPuzzleManager
                             )
                             .onTapGesture {
                                 selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
@@ -105,10 +106,6 @@ struct ArchiveView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
 
-                    Text("(Game integration coming soon)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
                     Spacer()
                 }
                 .padding()
@@ -121,6 +118,7 @@ struct ArchiveGameRow: View {
     let gameType: GameType
     let date: Date
     let isCompleted: Bool
+    let dailyPuzzleManager: DailyPuzzleManager
 
     var body: some View {
         HStack {
@@ -137,8 +135,25 @@ struct ArchiveGameRow: View {
                     .frame(width: 32, height: 32)
             }
 
-            Text(gameType.rawValue)
-                .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(gameType.rawValue)
+                    .foregroundColor(.primary)
+
+                // Show difficulty for X-Numbers
+                if gameType == .xNumbers {
+                    let level = dailyPuzzleManager.getLevelForDate(date)
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption2)
+                        Text("\(name) (L\(level))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
 
             Spacer()
 

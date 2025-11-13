@@ -78,6 +78,48 @@ class DailyPuzzleManager: ObservableObject {
         return dateString.hash
     }
 
+    /// Get X-Numbers level based on day of week
+    /// Monday/Wed/Fri: L1 (Easy), Tue/Thu: L2 (Medium), Sat/Sun: L3 (Hard)
+    func getLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 1: return 3  // Sunday: L3
+        case 2: return 1  // Monday: L1
+        case 3: return 2  // Tuesday: L2
+        case 4: return 1  // Wednesday: L1
+        case 5: return 2  // Thursday: L2
+        case 6: return 1  // Friday: L1
+        case 7: return 3  // Saturday: L3
+        default: return 1
+        }
+    }
+
+    /// Get today's X-Numbers level
+    func getTodayLevel() -> Int {
+        return getLevelForDate(currentDate)
+    }
+
+    /// Get difficulty name for level
+    func getDifficultyName(for level: Int) -> String {
+        switch level {
+        case 1: return "Easy"
+        case 2: return "Medium"
+        case 3: return "Hard"
+        default: return "Easy"
+        }
+    }
+
+    /// Get difficulty emoji for level
+    func getDifficultyEmoji(for level: Int) -> String {
+        switch level {
+        case 1: return "🟢"
+        case 2: return "🟡"
+        case 3: return "🔴"
+        default: return "🟢"
+        }
+    }
+
     /// Check if a game was completed today
     func isCompletedToday(_ gameType: GameType) -> Bool {
         return completedToday.contains(gameType)

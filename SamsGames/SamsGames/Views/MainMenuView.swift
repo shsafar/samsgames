@@ -34,7 +34,8 @@ struct MainMenuView: View {
                             currentStreak: statisticsManager.getCurrentStreak(for: gameType),
                             onInfoTapped: {
                                 showInstructions = gameType
-                            }
+                            },
+                            dailyPuzzleManager: dailyPuzzleManager
                         )
                         .onTapGesture {
                             selectedGame = gameType
@@ -128,6 +129,7 @@ struct GameCard: View {
     let isCompleted: Bool
     let currentStreak: Int
     let onInfoTapped: () -> Void
+    let dailyPuzzleManager: DailyPuzzleManager
 
     var body: some View {
         HStack(spacing: 15) {
@@ -168,6 +170,21 @@ struct GameCard: View {
                 Text(gameType.description)
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                // Show difficulty for X-Numbers
+                if gameType == .xNumbers {
+                    let level = dailyPuzzleManager.getTodayLevel()
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption)
+                        Text("\(name) (Level \(level))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
 
                 if currentStreak > 0 {
                     HStack(spacing: 4) {

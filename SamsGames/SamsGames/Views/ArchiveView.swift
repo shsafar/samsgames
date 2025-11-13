@@ -66,15 +66,50 @@ struct ArchiveView: View {
 
     @ViewBuilder
     private func archiveGameView(for gameType: GameType, date: Date) -> some View {
-        VStack {
-            Text("Playing \(gameType.rawValue)")
-                .font(.title)
-            Text("Date: \(formatDate(date))")
-                .font(.subheadline)
-            Text("(Game integration coming soon)")
-                .font(.caption)
-                .foregroundColor(.secondary)
+        ZStack {
+            Color(UIColor.systemGroupedBackground)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Custom header bar with Back button
+                HStack {
+                    Button(action: {
+                        selectedGame = nil
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(.system(size: 17))
+                        }
+                        .foregroundColor(.blue)
+                    }
+
+                    Spacer()
+                }
                 .padding()
+                .background(Color(UIColor.systemBackground))
+
+                // Content
+                VStack(spacing: 20) {
+                    Spacer()
+
+                    Text("Playing \(gameType.rawValue)")
+                        .font(.title)
+                        .foregroundColor(.primary)
+
+                    Text("Date: \(formatDate(date))")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+
+                    Text("(Game integration coming soon)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+                }
+                .padding()
+            }
         }
     }
 }

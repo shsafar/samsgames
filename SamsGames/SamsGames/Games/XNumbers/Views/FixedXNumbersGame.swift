@@ -38,8 +38,8 @@ struct FixedXNumbersGame: View {
                         Text(game.formattedTime)
                             .font(.system(size: 22, weight: .bold, design: .monospaced))
                             .foregroundColor(game.timeColor)
-                            .scaleEffect(game.timeElapsed >= 50 && timerFlash ? 1.1 : 1.0)
-                            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: timerFlash)
+                            .scaleEffect(game.timeElapsed >= 50 && timerFlash && !game.dailyPuzzleMode ? 1.1 : 1.0)
+                            .animation(game.dailyPuzzleMode ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: timerFlash)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
@@ -55,57 +55,59 @@ struct FixedXNumbersGame: View {
 
                     Spacer()
 
-                    // Stats Button
-                    Button(action: {
-                        showStats = true
-                    }) {
-                        VStack(spacing: 2) {
-                            Image(systemName: "chart.bar.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(.blue)
-                            Text("Stats")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
-                    )
-
-                    Spacer()
-
-                    // Awards Button
-                    Button(action: {
-                        showAwards = true
-                    }) {
-                        VStack(spacing: 2) {
-                            Image(systemName: "rosette")
-                                .font(.system(size: 20))
-                                .foregroundColor(.orange)
-                            HStack(spacing: 2) {
-                                Text("\(progressManager.totalTokens)")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.orange)
-                                Image("token")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 14, height: 14)
+                    // Stats Button (hidden in daily puzzle mode)
+                    if !game.dailyPuzzleMode {
+                        Button(action: {
+                            showStats = true
+                        }) {
+                            VStack(spacing: 2) {
+                                Image(systemName: "chart.bar.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.blue)
+                                Text("Stats")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.gray)
                             }
                         }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white)
-                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
-                    )
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
+                        )
 
-                    Spacer()
+                        Spacer()
+
+                        // Awards Button
+                        Button(action: {
+                            showAwards = true
+                        }) {
+                            VStack(spacing: 2) {
+                                Image(systemName: "rosette")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.orange)
+                                HStack(spacing: 2) {
+                                    Text("\(progressManager.totalTokens)")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.orange)
+                                    Image("token")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 14, height: 14)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
+                        )
+
+                        Spacer()
+                    }
 
                     // Revealed counter and Copyright - Larger
                     VStack(alignment: .trailing, spacing: 4) {
@@ -328,9 +330,11 @@ struct FixedXNumbersGame: View {
             }
         }
         .onAppear {
-            // Start flashing animation when time is low
-            withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) {
-                timerFlash = true
+            // Start flashing animation when time is low (only in free play mode)
+            if !game.dailyPuzzleMode {
+                withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) {
+                    timerFlash = true
+                }
             }
 
             // Set up coin celebration handler

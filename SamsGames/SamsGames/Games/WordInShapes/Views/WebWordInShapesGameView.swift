@@ -16,6 +16,7 @@ struct WebWordInShapesGameView: View {
     @State private var showCompletionAlert = false
     @State private var gameTime: String = ""
     @State private var gameScore: Int = 0
+    @State private var showInstructions = false
 
     var body: some View {
         ZStack {
@@ -23,7 +24,7 @@ struct WebWordInShapesGameView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Top bar with back button
+                // Top bar with back button and help button
                 HStack {
                     Button(action: { dismiss() }) {
                         HStack(spacing: 4) {
@@ -36,6 +37,12 @@ struct WebWordInShapesGameView: View {
                     }
 
                     Spacer()
+
+                    Button(action: { showInstructions = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.purple)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
@@ -55,6 +62,9 @@ struct WebWordInShapesGameView: View {
             }
         } message: {
             Text("Great job! You completed today's Word In Shapes puzzle!\n\nScore: \(gameScore)\nTime: \(gameTime)")
+        }
+        .sheet(isPresented: $showInstructions) {
+            GameInstructionsView(gameType: .wordInShapes)
         }
     }
 

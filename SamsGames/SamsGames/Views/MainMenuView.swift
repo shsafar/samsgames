@@ -14,6 +14,7 @@ struct MainMenuView: View {
     @State private var showArchive = false
     @State private var showStatistics = false
     @State private var showSettings = false
+    @State private var showInstructions: GameType?
 
     var body: some View {
         NavigationView {
@@ -30,7 +31,10 @@ struct MainMenuView: View {
                         GameCard(
                             gameType: gameType,
                             isCompleted: dailyPuzzleManager.isCompletedToday(gameType),
-                            currentStreak: statisticsManager.getCurrentStreak(for: gameType)
+                            currentStreak: statisticsManager.getCurrentStreak(for: gameType),
+                            onInfoTapped: {
+                                showInstructions = gameType
+                            }
                         )
                         .onTapGesture {
                             selectedGame = gameType
@@ -72,6 +76,9 @@ struct MainMenuView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsMenuView()
+            }
+            .sheet(item: $showInstructions) { gameType in
+                GameInstructionsView(gameType: gameType)
             }
         }
     }
@@ -120,6 +127,7 @@ struct GameCard: View {
     let gameType: GameType
     let isCompleted: Bool
     let currentStreak: Int
+    let onInfoTapped: () -> Void
 
     var body: some View {
         HStack(spacing: 15) {
@@ -144,9 +152,18 @@ struct GameCard: View {
 
             // Game Info
             VStack(alignment: .leading, spacing: 4) {
-                Text(gameType.rawValue)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+                HStack(spacing: 6) {
+                    Text(gameType.rawValue)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    Button(action: onInfoTapped) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 16))
+                            .foregroundColor(.blue)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
 
                 Text(gameType.description)
                     .font(.caption)

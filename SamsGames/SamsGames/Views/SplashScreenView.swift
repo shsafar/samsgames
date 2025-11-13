@@ -46,6 +46,11 @@ struct SplashScreenView: View {
                     .font(.system(size: 20, weight: .medium, design: .rounded))
                     .foregroundColor(.white.opacity(0.9))
                     .opacity(opacity)
+
+                Text("zYouSoft, Inc.")
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundColor(.white.opacity(0.8))
+                    .opacity(opacity)
             }
         }
         .onAppear {

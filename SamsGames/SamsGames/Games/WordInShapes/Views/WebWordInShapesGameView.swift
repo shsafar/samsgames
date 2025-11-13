@@ -99,6 +99,14 @@ struct WebGameViewRepresentable: UIViewRepresentable {
         // Use modern API for JavaScript (iOS 14+)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
 
+        // Inject script to set waitingForSeed flag BEFORE page loads
+        let waitingScript = WKUserScript(
+            source: "window.waitingForSeed = true;",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        configuration.userContentController.addUserScript(waitingScript)
+
         // Add message handler for game completion
         configuration.userContentController.add(context.coordinator, name: "gameCompleted")
 
@@ -150,13 +158,20 @@ struct WebGameViewRepresentable: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // Inject the seed after the page loads
-            let script = "if (window.setSeed) { window.setSeed(\(seed)); console.log('Seed set to: \(seed)'); }"
+            // Inject the seed after the page loads, then start the game
+            let script = """
+            if (window.setSeed && window.newGame) {
+                window.setSeed(\(seed));
+                console.log('Seed set to: \(seed)');
+                window.newGame();
+                console.log('Game started with seed');
+            }
+            """
             webView.evaluateJavaScript(script) { _, error in
                 if let error = error {
-                    print("❌ Error setting seed: \(error)")
+                    print("❌ Error setting seed and starting game: \(error)")
                 } else {
-                    print("✅ Seed injected: \(self.seed)")
+                    print("✅ Seed injected and game started: \(self.seed)")
                 }
             }
         }

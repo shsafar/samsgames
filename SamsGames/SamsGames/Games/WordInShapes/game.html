@@ -209,8 +209,12 @@
     return rngState / 0x7fffffff;
   }
 
-  // Expose setSeed globally for Swift to call
+  // Expose setSeed and newGame globally for Swift to call
   window.setSeed = setSeed;
+  window.newGame = newGame;
+
+  // Flag to control auto-start (set by Swift before loading)
+  window.waitingForSeed = false;
 
   // helpers
   const randInt = (a,b)=>Math.floor(seededRandom()*(b-a+1))+a;
@@ -713,7 +717,10 @@
   }
 
   // boot
-  newGame();
+  // Only auto-start if not waiting for seed injection from Swift
+  if (!window.waitingForSeed) {
+    newGame();
+  }
   runTests();
 })();
 </script>

@@ -12,10 +12,16 @@ struct ArchiveView: View {
     @EnvironmentObject var statisticsManager: StatisticsManager
     @Environment(\.dismiss) var dismiss
 
-    @State private var selectedDate: Date?
-    @State private var selectedGame: GameType?
+    @State private var selectedArchiveItem: ArchiveItem?
 
     private let availableDates: [Date]
+
+    // Struct to hold both date and game type together
+    struct ArchiveItem: Identifiable {
+        let id = UUID()
+        let date: Date
+        let gameType: GameType
+    }
 
     init() {
         self.availableDates = DailyPuzzleManager().getAvailableDates(count: 30)
@@ -33,8 +39,7 @@ struct ArchiveView: View {
                                 isCompleted: statisticsManager.isCompleted(for: gameType, on: date)
                             )
                             .onTapGesture {
-                                selectedDate = date
-                                selectedGame = gameType
+                                selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
                             }
                         }
                     }
@@ -49,10 +54,8 @@ struct ArchiveView: View {
                     }
                 }
             }
-            .sheet(item: $selectedGame) { gameType in
-                if let date = selectedDate {
-                    archiveGameView(for: gameType, date: date)
-                }
+            .sheet(item: $selectedArchiveItem) { item in
+                archiveGameView(for: item.gameType, date: item.date)
             }
         }
     }
@@ -74,7 +77,7 @@ struct ArchiveView: View {
                 // Custom header bar with Back button
                 HStack {
                     Button(action: {
-                        selectedGame = nil
+                        selectedArchiveItem = nil
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")

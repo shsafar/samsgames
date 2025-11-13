@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Words In Shapes</title>
+<style>
+  :root { --cell:30px; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#fff; color:#222; overflow-x: hidden; }
+  body { display:flex; flex-direction:column; align-items:center; padding:4px; max-width: 100vw; }
+  h1 { margin: 0 0 2px; font-size: 24px; line-height:1.1; }
+  #hud { display:flex; gap:8px; align-items:center; font-weight:800; margin: 2px 0 4px; font-size:11px; flex-wrap: wrap; justify-content: center; }
+  .wrap { position:relative; max-width: 100%; }
+  .board { display:grid; gap:3px; --n:10; grid-template-columns:repeat(var(--n), var(--cell)); justify-content:center; }
+  .cell { width:var(--cell); height:var(--cell); border-radius:50%; background:#ddd; border:1px solid #aaa; display:grid; place-items:center; font-weight:800; cursor:pointer; user-select:none; font-size:14px; }
+  .cell:hover { background:#cfcfcf; }
+  .cell.chosen { background:#3b82f6; color:#fff; }
+  .cell.locked { background:#2ea44f; color:#fff; }
+  .cell.shared { background:#dc2626; color:#fff; cursor:pointer; }
+  .controls { margin:4px 0; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  button { background:#3b6ea8; color:#fff; border:none; padding:6px 10px; border-radius:6px; font-weight:700; cursor:pointer; font-size:11px; }
+  button:hover { filter: brightness(1.05); }
+  .current { font-size:16px; font-weight:900; margin:2px 0 0; min-height:18px; }
+  .wordlist { width:min(340px,96vw); display:grid; grid-template-columns:repeat(2,1fr); gap:4px; }
+  .wordlist .row { background:#f3f3f3; padding:4px 6px; border-radius:6px; display:flex; align-items:center; gap:4px; font-weight:700; font-size:20px; }
+  .wordlist .row.found { background:#e4f5e7; text-decoration: line-through; }
+  svg#overlay, svg#hints { position:absolute; inset:0; pointer-events:none; }
+  svg#overlay { z-index:2; }
+  svg#hints { z-index:1; opacity:0.25; }
+  .toast { position:fixed; left:50%; top:14%; transform:translateX(-50%); background:#111827; color:#fff; padding:14px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.25); font-weight:800; opacity:0; pointer-events:none; transition:opacity .25s ease; z-index:999; }
+  .toast.show { opacity:1; }
+  /* iPad responsive sizing */
+  @media (min-width: 768px) {
+    :root { --cell:48px; }
+    body { padding:16px; }
+    h1 { font-size: 42px; margin: 8px 0; }
+    #hud { font-size:20px; gap:24px; margin: 10px 0 12px; }
+    .board { gap:7px; }
+    .cell { font-size:20px; }
+    .controls { margin:16px 0; gap:12px; }
+    button { padding:12px 24px; font-size:16px; border-radius:10px; }
+    .current { font-size:30px; min-height:36px; }
+    .wordlist { gap:10px; }
+    .wordlist .row { padding:12px 14px; font-size:36px; border-radius:10px; }
+  }
+  /* Modal */
+  .modal{ position:fixed; inset:0; display:none; z-index:1000; }
+  .modal[aria-hidden="false"]{ display:block; }
+  .modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.35); }
+  .modal-content{ position:relative; margin:6vh auto; width:min(720px, 92vw); background:#fff; color:#111; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.25); overflow:hidden; }
+  .modal-header{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#f3f4f6; border-bottom:1px solid #e5e7eb; }
+  .modal-header h2{ margin:0; font-size:20px; }
+  .modal-close{ background:transparent; border:none; font-size:24px; line-height:1; cursor:pointer; padding:4px 8px; }
+  .modal-body{ padding:16px 18px; line-height:1.5; }
+</style>
+</head>
+<body>
+  <h1>Words In Shapes</h1>
+  <div id="hud">
+    <span>Score: <span id="score">0</span></span>
+    <span>Streak: <span id="streak">0</span></span>
+    <span>Time: <span id="time">0:00</span></span>
+    <span>Hint Penalty: <span id="penalty" style="color:#dc2626; font-weight:bold;">0</span></span>
+  </div>
+
+  <div class="wrap">
+    <svg id="overlay"></svg>
+    <svg id="hints"></svg>
+    <div id="board" class="board" style="--n:10"></div>
+  </div>
+
+  <div style="text-align:center; font-size:9px; color:#666; margin:3px 0 2px;">
+    Color Guide: <span style="color:#2ea44f;">●</span> Locked  <span style="color:#dc2626;">●</span> Shared  <span style="color:#aaa;">●</span> Available
+  </div>
+
+  <div class="controls">
+    <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:center;">
+      <button id="newGameBtn">New Game</button>
+      <button id="hintBtn">Show Hints</button>
+      <button id="soundBtn">Sound: On</button>
+      <button id="statsBtn">Stats</button>
+    </div>
+    <div id="currentGuess" class="current">—</div>
+  </div>
+
+  <div class="wordlist" id="wordList"></div>
+  <div id="toast" class="toast">Well done! Solved it!</div>
+
+  <!-- How to Play modal -->
+  <div id="helpModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content" role="document">
+      <div class="modal-header">
+        <h2 id="helpTitle">How to Play — Words In Shapes</h2>
+        <button class="modal-close" title="Close" aria-label="Close" data-close>&times;</button>
+      </div>
+      <div class="modal-body">
+        <ol>
+          <li><strong>Goal:</strong> Find all hidden words listed under the board. Each word's length defines a shape: 3 letters = triangle, 4 letters = square, 5 letters = pentagon, 6 letters = hexagon.</li>
+          <li><strong>Select letters:</strong> Click circles on the grid to trace the word in order. Letters can be in any direction across the grid; the path you draw between selected vertices is rendered as a line for feedback.</li>
+          <li><strong>Valid shapes:</strong>
+            <ul>
+              <li><strong>3 letters (triangle):</strong> Any <em>axis-aligned right isosceles triangle</em>. Letters don't need to be adjacent as long as the three selected points form that triangle.</li>
+              <li><strong>4 letters (square):</strong> An axis-aligned square. Rotations and mirror order are accepted.</li>
+              <li><strong>5 & 6 letters:</strong> Follow the exact polygon outline shown when hints are on (strict path).</li>
+            </ul>
+          </li>
+          <li><strong>Lock in a word:</strong> When your selected letters spell a word (in the correct sequence or a valid rotation/reverse where allowed) and the shape condition is met, the letters lock and the word is crossed off.</li>
+          <li><strong>Scoring:</strong> Each word = <code>5 × length</code> points. Consecutive finds increase your <em>streak</em> for bonus points. Using a hint deducts <strong>5 points</strong> each time you reveal them.</li>
+          <li><strong>Hints:</strong> Click <em>Show Hints</em> to overlay light outlines of each word's shape on the grid. Click again to hide. Costs 5 points each time you turn hints on.</li>
+          <li><strong>Sound:</strong> Toggle sounds on/off with the <em>Sound</em> button.</li>
+          <li><strong>Win:</strong> Find all words. A toast and popup will celebrate your victory; your final score and time are shown.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats modal -->
+  <div id="statsModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="statsTitle" aria-modal="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content" role="document">
+      <div class="modal-header">
+        <h2 id="statsTitle">Statistics</h2>
+        <button class="modal-close" title="Close" aria-label="Close" data-close>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 10px 0;">
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #3b82f6;" id="statsGamesCompleted">0</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">Games Completed</div>
+          </div>
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #10b981;" id="statsBestTime">--:--</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">Best Time</div>
+          </div>
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #f59e0b;" id="statsHighScore">0</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">High Score</div>
+          </div>
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #8b5cf6;" id="statsAvgTime">--:--</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">Average Time</div>
+          </div>
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #ec4899;" id="statsTotalPlayTime">0h 0m</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">Total Play Time</div>
+          </div>
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #06b6d4;" id="statsPerfectGames">0</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">Perfect Games</div>
+          </div>
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #14b8a6;" id="statsWinStreak">0</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">Current Win Streak</div>
+          </div>
+          <div style="text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px;">
+            <div style="font-size: 36px; font-weight: 900; color: #84cc16;" id="statsTotalWords">0</div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 600;">Total Words Found</div>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+          <button data-close style="background: #6b7280; padding: 10px 32px; font-size: 15px;">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const N = 10, MAX_WORDS = 7;
+  let SHOW_HINTS = false, SOUND_ON = true;
+
+  const boardEl = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const hints   = document.getElementById('hints');
+  const wordListEl = document.getElementById('wordList');
+  const currentGuessEl = document.getElementById('currentGuess');
+  const scoreEl = document.getElementById('score');
+  const streakEl = document.getElementById('streak');
+  const timeEl = document.getElementById('time');
+  const penaltyEl = document.getElementById('penalty');
+
+  // 50 words per length (3–6)
+  const WORDS = {
+    3:["ANT","APE","ASH","BAT","BEE","BOA","BOG","BOX","BUG","CAT","COW","CUP","DEN","DIG","DOG","DOT","EEL","EGG","ELK","ELF","FAN","FIG","FOX","GEM","GUM","GUN","HEN","HOG","ICE","INK","JAM","JET","KEY","LOG","MAP","MUD","NAP","NUT","OAK","ORE","OWL","PEA","PIG","PIN","RAM","RAT","RUG","SEA","SKY","SUN"],
+    4:["TREE","MOON","SALT","FIRE","WIND","RAIN","SNOW","STAR","LEAF","SEED","ROOT","ROCK","SAND","BIRD","FISH","LION","WOLF","BEAR","DEER","FROG","CRAB","WORM","MOTH","BEAN","CORN","GOLD","IRON","WOOD","LAKE","RISE","SAGE","TIDE","WAVE","DUNE","HILL","PATH","ROAD","DOOR","ROOF","SEAL","DUST","MINT","CLAY","BOLT","RING","NOTE","BOOK","GAME","TOOL","SHIP"],
+    5:["APPLE","WATER","HOUSE","STONE","GRAPE","BREAD","LIGHT","PLANT","CLOUD","RIVER","EARTH","METAL","FLAME","SHORE","BEACH","SUGAR","HONEY","PEACH","PEARL","OLIVE","BERRY","MOUSE","HORSE","SHEEP","TIGER","ZEBRA","EAGLE","OTTER","PLANE","FIELD","CHAIR","TABLE","SPOON","KNIFE","BRICK","CLOCK","MUSIC","NOTES","PIANO","DREAM","NIGHT","SOUND","LEAFY","GRASS","BRUSH","WHEAT","BLOOM","RANCH","SMILE","ROUND"],
+    6:["PLANET","STREAM","FLOWER","SILVER","ORANGE","PURPLE","WINDOW","GARDEN","BRIDGE","CANDLE","BREEZE","MEADOW","OCEANS","DESERT","FOREST","ANIMAL","INSECT","TOMATO","POTATO","CHEESE","BUTTER","OXYGEN","CARBON","COPPER","GOLDEN","CLOVER","PEBBLE","RIVERS","BRANCH","SPRING","BOTTLE","CAMERA","CANVAS","CASTLE","MARKET","POCKET","PUZZLE","QUARTZ","SHELLS","SPIDER","SPRINT","THRIVE","TUNNEL","VESSEL","VELVET","WILLOW","WINTER","YELLOW","ZEPHYR","PACKET"]
+  };
+
+  // Seeded random number generator for daily puzzles
+  let SEED = null;
+  let rngState = 0;
+
+  function setSeed(seed) {
+    SEED = seed;
+    rngState = seed;
+  }
+
+  function seededRandom() {
+    if (SEED === null) {
+      return Math.random(); // Fallback to regular random if no seed
+    }
+    // Simple LCG (Linear Congruential Generator)
+    rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
+    return rngState / 0x7fffffff;
+  }
+
+  // Expose setSeed globally for Swift to call
+  window.setSeed = setSeed;
+
+  // helpers
+  const randInt = (a,b)=>Math.floor(seededRandom()*(b-a+1))+a;
+  const choice  = a=>a[Math.floor(seededRandom()*a.length)];
+  const idx     = (x,y)=>y*N+x;
+  const randLetter = ()=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[randInt(0,25)];
+
+  let state, timerId, startTime=0, lastFindTime=0;
+
+  function emptyGrid(){ return Array.from({length:N},()=>Array(N).fill(null)); }
+  function canPlace(pts){ return pts.every(p=>p.x>=0&&p.x<N&&p.y>=0&&p.y<N && !state.grid[p.y][p.x]); }
+  function squareVertices(k,x,y){ return [{x,y},{x:x+k,y},{x:x+k,y:y+k},{x,y:y+k}]; }
+  function rightTriVariants(k,x,y){
+    return [
+      [{x,y},{x:x+k,y},{x,y:y+k}],
+      [{x:x+k,y},{x:x+k,y:y+k},{x,y:y+k}],
+      [{x,y},{x,y:y+k},{x:x+k,y}],
+      [{x,y:y+k},{x:x+k,y:y+k},{x:x+k,y}],
+    ];
+  }
+  function regularPolygon(n){
+    const out=[], rot=-Math.PI/2;
+    for(let i=0;i<n;i++){ const a=rot+i*2*Math.PI/n; out.push([Math.cos(a),Math.sin(a)]); }
+    return out;
+  }
+  const UNIT = {5:regularPolygon(5), 6:regularPolygon(6)};
+
+  function placeWord(w){
+    const L=w.length;
+    if(L===4){
+      for(let t=0;t<400;t++){
+        const k=randInt(2,4), x=randInt(0,N-1-k), y=randInt(0,N-1-k);
+        const pts=squareVertices(k,x,y);
+        if(!canPlace(pts)) continue;
+        pts.forEach((p,i)=>state.grid[p.y][p.x]=w[i]);
+        state.words.push({word:w,len:L,points:pts,shape:"square"});
+        return true;
+      }
+      return false;
+    }
+    if(L===3){
+      for(let t=0;t<400;t++){
+        const k=randInt(2,4), x=randInt(0,N-1-k), y=randInt(0,N-1-k);
+        const pts=choice(rightTriVariants(k,x,y));
+        if(!canPlace(pts)) continue;
+        pts.forEach((p,i)=>state.grid[p.y][p.x]=w[i]);
+        state.words.push({word:w,len:L,points:pts,shape:"tri"});
+        return true;
+      }
+      return false;
+    }
+    // 5/6 polygons snapped to grid
+    const unit = UNIT[L]; if(!unit) return false;
+    for(let t=0;t<500;t++){
+      const span=6, half=span/2, offX=randInt(1,N-1-Math.ceil(span)), offY=randInt(1,N-1-Math.ceil(span));
+      const pts = unit.map(([ux,uy])=>({x:Math.round(ux*half+half+offX), y:Math.round(uy*half+half+offY)}));
+      const uniq=new Set(pts.map(p=>p.x+','+p.y)); if(uniq.size!==L) continue;
+      if(!canPlace(pts)) continue;
+      pts.forEach((p,i)=>state.grid[p.y][p.x]=w[i]);
+      state.words.push({word:w,len:L,points:pts,shape:"poly"});
+      return true;
+    }
+    return false;
+  }
+
+  function generate(){
+    state.words=[];
+    const lengths=[3,4,5,6];
+    let guard=0;
+    while(state.words.length<MAX_WORDS && guard++<3000){
+      const L=choice(lengths);
+      const w=choice(WORDS[L]);
+      if(state.words.some(v=>v.word===w)) continue;
+      if(placeWord(w)) continue;
+    }
+  }
+
+  function renderBoard(){
+    // fill empty cells
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++) if(!state.grid[y][x]) state.grid[y][x]=randLetter();
+    // build
+    boardEl.innerHTML=''; state.cells=[];
+    for(let y=0;y<N;y++){
+      for(let x=0;x<N;x++){
+        const d=document.createElement('div');
+        d.className='cell'; d.textContent=state.grid[y][x];
+        d.addEventListener('click',()=>onCell(x,y,d));
+        state.cells[idx(x,y)]=d; boardEl.appendChild(d);
+      }
+    }
+    requestAnimationFrame(()=>{ sizeOverlay(); if(SHOW_HINTS) drawHints(); else hints.innerHTML=''; });
+  }
+  function sizeOverlay(){
+    const r=boardEl.getBoundingClientRect();
+    for(const svg of [overlay,hints]){ svg.setAttribute('width', r.width); svg.setAttribute('height', r.height); }
+  }
+  function centerOf(x,y){
+    const br=boardEl.getBoundingClientRect();
+    const r=state.cells[idx(x,y)].getBoundingClientRect();
+    return {x:r.left-br.left+r.width/2, y:r.top-br.top+r.height/2};
+  }
+  function drawHints(){
+    hints.innerHTML=''; if(!SHOW_HINTS) return; sizeOverlay();
+    for(const w of state.words){
+      const pts=w.points.map(p=>centerOf(p.x,p.y)); if(pts.length<2) continue;
+      const d=pts.map((p,i)=>(i?'L':'M')+p.x+','+p.y).join(' ')+' Z';
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',d); path.setAttribute('fill','none'); path.setAttribute('stroke','#3b82f6'); path.setAttribute('stroke-width','4');
+      path.setAttribute('stroke-linejoin','round'); path.setAttribute('stroke-linecap','round');
+      hints.appendChild(path);
+    }
+  }
+  function renderWordList(){
+    wordListEl.innerHTML='';
+    for(const w of state.words){
+      const row=document.createElement('div');
+      row.className='row'+(w.found?' found':'');
+
+      // Add shape icon based on word length
+      const shapeIcon = getShapeIcon(w.word.length);
+      row.innerHTML = shapeIcon + ' ' + w.word;
+
+      wordListEl.appendChild(row);
+    }
+  }
+
+  // Get shape icon (emoji or symbol) based on word length
+  function getShapeIcon(length){
+    switch(length){
+      case 3: return '▲'; // Triangle (filled)
+      case 4: return '■'; // Square (filled)
+      case 5: return '⬟'; // Pentagon (filled)
+      case 6: return '⬢'; // Hexagon (filled) - changed from ⬡ to ⬢
+      default: return '●';
+    }
+  }
+
+  function seqEqual(a,b){ for(let i=0;i<a.length;i++){ if(a[i].x!==b[i].x || a[i].y!==b[i].y) return false; } return true; }
+  function rotate(arr,o){ const n=arr.length; const out=new Array(n); for(let i=0;i<n;i++){ out[i]=arr[(i+o)%n]; } return out; }
+
+  function triangleOrSquareMatches(chosen, target){
+    const n = target.length; // 3 or 4
+    for(let o=0;o<n;o++){
+      if(seqEqual(chosen, rotate(target,o))) return true;
+      const rev=[...chosen].reverse(); if(seqEqual(rev, rotate(target,o))) return true;
+    }
+    return false;
+  }
+  function isRightIsoTriangle(pts){
+    if(pts.length!==3) return false;
+    const [a,b,c] = pts;
+
+    // Check if the three points form a valid triangle (not collinear)
+    // Using the cross product formula: if area = 0, points are collinear
+    // Area = 0.5 * |x1(y2-y3) + x2(y3-y1) + x3(y1-y2)|
+    const area = Math.abs(
+      a.x * (b.y - c.y) +
+      b.x * (c.y - a.y) +
+      c.x * (a.y - b.y)
+    );
+
+    // If area is 0 (or very close to 0), points are collinear (not a valid triangle)
+    // If area > 0, it's a valid triangle!
+    return area > 0.5; // Minimum area threshold to avoid very flat triangles
+  }
+
+  function onCell(x,y,el){
+    // Only block clicking on locked (green) cells, not shared (red) cells
+    if(el.classList.contains('locked')) return;
+    const key=x+','+y;
+    const i=state.chosen.findIndex(p=>p.key===key);
+    if(i>=0){
+      for(let k=state.chosen.length-1;k>=i;k--){
+        state.cells[idx(state.chosen[k].x,state.chosen[k].y)].classList.remove('chosen');
+      }
+      state.chosen=state.chosen.slice(0,i);
+      updateGuess();
+      return;
+    }
+    el.classList.add('chosen');
+    state.chosen.push({x,y,key,letter:el.textContent});
+    updateGuess();
+
+    const guess = state.chosen.map(p=>p.letter).join('');
+    const rev   = [...state.chosen].reverse().map(p=>p.letter).join('');
+
+    const hit = state.words.find(w=>{
+      if(w.found) return false;
+      if(w.len<=4){
+        // For 3-letter words: accept exact sequence only (no rotations/reverses)
+        // For 4-letter words: accept rotations and reverses
+        const rotations=[w.word];
+        if(w.len===4){
+          rotations.push(w.word.slice(1)+w.word[0], w.word.slice(2)+w.word.slice(0,2), w.word.slice(3)+w.word.slice(0,3));
+          const revWord = w.word.split('').reverse().join('');
+          rotations.push(revWord);
+        }
+        const wordsOK = rotations.includes(guess);
+
+        // First check if path matches the original shape
+        let pathOK = triangleOrSquareMatches(state.chosen, w.points);
+        let isAlternateTriangle = false;
+
+        // For triangles: also accept ANY valid right triangle if letters spell the word in exact sequence
+        if(!pathOK && w.len===3 && guess===w.word) {
+          // Check if the selected positions form a valid right isosceles triangle
+          const trianglePoints = state.chosen.map(p => ({x: p.x, y: p.y}));
+          pathOK = isRightIsoTriangle(trianglePoints);
+
+          if(pathOK) {
+            isAlternateTriangle = true;
+            console.log('✅ Accepted alternate triangle for:', w.word, trianglePoints);
+          } else {
+            console.log('❌ Not a valid right triangle:', w.word, trianglePoints);
+          }
+        }
+
+        if(wordsOK && pathOK) {
+          // Store whether this is an alternate triangle for later use
+          w.isAlternateTriangle = isAlternateTriangle;
+          return true;
+        }
+        return false;
+      }
+      // strict for 5/6
+      return (w.word===guess && seqEqual(state.chosen, w.points)) ||
+             (w.word===rev   && seqEqual([...state.chosen].reverse(), w.points));
+    });
+
+    if(hit){
+      // If it's an alternate triangle, mark as "shared" (red) instead of "locked" (green)
+      const isAlternate = hit.isAlternateTriangle;
+
+      state.chosen.forEach(p=>{
+        const c=state.cells[idx(p.x,p.y)];
+        c.classList.remove('chosen');
+
+        if(isAlternate) {
+          // Mark as shared (red) - can still be used by other words
+          c.classList.add('shared');
+        } else {
+          // Mark as locked (green) - cannot be reused
+          // If it was previously shared (red), upgrade it to locked (green)
+          c.classList.remove('shared');
+          c.classList.add('locked');
+        }
+      });
+      hit.found=true; if(SOUND_ON) snd.solve();
+      overlay.innerHTML=''; state.chosen=[]; updateGuess(); renderWordList();
+
+      const base=hit.len*5; const now=Date.now(); const within10=(now-lastFindTime)<=10000;
+      if(within10) state.streak++; else state.streak=1; lastFindTime=now;
+      state.score+=Math.round(base*(1+(state.streak-1)*0.25));
+      scoreEl.textContent=state.score; streakEl.textContent=state.streak;
+
+      if(state.words.every(w=>w.found)){
+        clearInterval(timerId); if(SOUND_ON) snd.win();
+        const finalTime = Math.floor((Date.now()-startTime)/1000);
+        stats.update(finalTime, state.score, state.words.length, state.penalty);
+        toast('Well done! Solved it!');
+
+        // Notify Swift app that game is completed
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameCompleted) {
+          window.webkit.messageHandlers.gameCompleted.postMessage({
+            score: state.score,
+            time: timeEl.textContent
+          });
+        }
+
+        setTimeout(()=>alert(`All found! Score ${state.score} in ${timeEl.textContent}`),100);
+      }
+    }
+  }
+
+  function updateGuess(){ currentGuessEl.textContent = state.chosen.map(p=>p.letter).join('') || '—'; drawPath(); }
+  function drawPath(){
+    overlay.innerHTML=''; if(state.chosen.length<2) return; sizeOverlay();
+    const pts=state.chosen.map(p=>centerOf(p.x,p.y));
+    const d=pts.map((p,i)=>(i?'L':'M')+p.x+','+p.y).join(' ');
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d); path.setAttribute('fill','none'); path.setAttribute('stroke','#3b82f6'); path.setAttribute('stroke-width','4');
+    path.setAttribute('stroke-linejoin','round'); path.setAttribute('stroke-linecap','round');
+    overlay.appendChild(path);
+  }
+
+  function startTimer(){
+    startTime=lastFindTime=Date.now(); clearInterval(timerId);
+    timerId=setInterval(()=>{
+      const t=Math.floor((Date.now()-startTime)/1000);
+      const m=Math.floor(t/60), s=t%60;
+      timeEl.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    },200);
+  }
+
+  function newGame(){
+    state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
+    scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
+    SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';
+    document.getElementById('hintBtn').textContent='Show Hints';
+    generate(); renderBoard(); renderWordList(); updateGuess(); startTimer();
+  }
+
+  // Sounds
+  const snd=(function(){
+    let ctx;
+    function ac(){
+      if(!ctx){
+        try { ctx=new (window.AudioContext||window.webkitAudioContext)(); }
+        catch(e){ SOUND_ON=false; return null; }
+      }
+      return ctx;
+    }
+    function tone(freq=880,dur=0.12,type='sine',gain=0.07){
+      if(!SOUND_ON) return; const c=ac(); if(!c) return;
+      const o=c.createOscillator(), g=c.createGain();
+      o.type=type; o.frequency.value=freq; g.gain.value=gain;
+      o.connect(g).connect(c.destination); const t=c.currentTime; o.start(t); o.stop(t+dur);
+    }
+    return {
+      solve(){ tone(740,0.08,'triangle',0.06); setTimeout(()=>tone(988,0.12,'triangle',0.06),90); },
+      win(){ tone(660,0.12,'sine',0.07); setTimeout(()=>tone(880,0.14,'sine',0.07),140); setTimeout(()=>tone(1320,0.18,'sine',0.07),320); },
+      hint(){ tone(300,0.08,'sawtooth',0.05); },
+      toggleOn(){ tone(520,0.08,'square',0.05); }
+    };
+  })();
+
+  // Stats tracking (using localStorage)
+  const stats = {
+    load(){
+      try {
+        const data = localStorage.getItem('wordsinshapes_stats');
+        if(data) {
+          const parsed = JSON.parse(data);
+          return {
+            gamesCompleted: parsed.gamesCompleted || 0,
+            bestTime: parsed.bestTime || null,
+            highScore: parsed.highScore || 0,
+            totalTime: parsed.totalTime || 0,
+            totalWords: parsed.totalWords || 0,
+            perfectGames: parsed.perfectGames || 0,
+            currentStreak: parsed.currentStreak || 0,
+            lastPlayDate: parsed.lastPlayDate || null
+          };
+        }
+      } catch(e) { console.warn('Failed to load stats:', e); }
+      return {
+        gamesCompleted: 0,
+        bestTime: null,
+        highScore: 0,
+        totalTime: 0,
+        totalWords: 0,
+        perfectGames: 0,
+        currentStreak: 0,
+        lastPlayDate: null
+      };
+    },
+    save(data){
+      try {
+        localStorage.setItem('wordsinshapes_stats', JSON.stringify(data));
+      } catch(e) { console.warn('Failed to save stats:', e); }
+    },
+    update(timeSeconds, score, wordsFound, penalty){
+      const current = this.load();
+      const today = new Date().toDateString();
+
+      // Update games completed
+      current.gamesCompleted++;
+
+      // Update best time
+      if(!current.bestTime || timeSeconds < current.bestTime) {
+        current.bestTime = timeSeconds;
+      }
+
+      // Update high score
+      if(score > current.highScore) {
+        current.highScore = score;
+      }
+
+      // Update total play time
+      current.totalTime += timeSeconds;
+
+      // Update total words found
+      current.totalWords += wordsFound;
+
+      // Update perfect games (no hints used)
+      if(penalty === 0) {
+        current.perfectGames++;
+      }
+
+      // Update win streak
+      if(current.lastPlayDate === today) {
+        // Same day, streak continues
+      } else if(current.lastPlayDate) {
+        const lastDate = new Date(current.lastPlayDate);
+        const todayDate = new Date(today);
+        const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+
+        if(diffDays === 1) {
+          // Consecutive day
+          current.currentStreak++;
+        } else if(diffDays > 1) {
+          // Streak broken
+          current.currentStreak = 1;
+        }
+      } else {
+        // First game ever
+        current.currentStreak = 1;
+      }
+
+      current.lastPlayDate = today;
+      this.save(current);
+    },
+    display(){
+      const data = this.load();
+
+      // Games Completed
+      document.getElementById('statsGamesCompleted').textContent = data.gamesCompleted;
+
+      // Best Time
+      if(data.bestTime) {
+        const m = Math.floor(data.bestTime / 60);
+        const s = data.bestTime % 60;
+        document.getElementById('statsBestTime').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+      } else {
+        document.getElementById('statsBestTime').textContent = '--:--';
+      }
+
+      // High Score
+      document.getElementById('statsHighScore').textContent = data.highScore;
+
+      // Average Time
+      if(data.gamesCompleted > 0) {
+        const avgSeconds = Math.floor(data.totalTime / data.gamesCompleted);
+        const m = Math.floor(avgSeconds / 60);
+        const s = avgSeconds % 60;
+        document.getElementById('statsAvgTime').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+      } else {
+        document.getElementById('statsAvgTime').textContent = '--:--';
+      }
+
+      // Total Play Time
+      const totalHours = Math.floor(data.totalTime / 3600);
+      const totalMinutes = Math.floor((data.totalTime % 3600) / 60);
+      document.getElementById('statsTotalPlayTime').textContent = `${totalHours}h ${totalMinutes}m`;
+
+      // Perfect Games
+      document.getElementById('statsPerfectGames').textContent = data.perfectGames;
+
+      // Current Win Streak
+      document.getElementById('statsWinStreak').textContent = data.currentStreak;
+
+      // Total Words Found
+      document.getElementById('statsTotalWords').textContent = data.totalWords;
+    }
+  };
+
+  // UI handlers
+  document.getElementById('newGameBtn').addEventListener('click', newGame);
+  document.getElementById('hintBtn').addEventListener('click', ()=>{
+    SHOW_HINTS=!SHOW_HINTS;
+    document.getElementById('hintBtn').textContent = SHOW_HINTS? 'Hide Hints' : 'Show Hints';
+    if(SHOW_HINTS){ state.score-=5; state.penalty+=5; scoreEl.textContent=state.score; penaltyEl.textContent=state.penalty; if(SOUND_ON) snd.hint(); }
+    if(!SHOW_HINTS) hints.innerHTML='';
+    drawHints();
+  });
+  document.getElementById('soundBtn').addEventListener('click', ()=>{
+    SOUND_ON=!SOUND_ON;
+    document.getElementById('soundBtn').textContent = `Sound: ${SOUND_ON?'On':'Off'}`;
+    if(SOUND_ON) snd.toggleOn();
+  });
+
+  // Stats button handler
+  const statsModal = document.getElementById('statsModal');
+  const statsBtn = document.getElementById('statsBtn');
+  const statsCloseEls = statsModal.querySelectorAll('[data-close]');
+  function openStats(){ stats.display(); statsModal.setAttribute('aria-hidden','false'); }
+  function closeStats(){ statsModal.setAttribute('aria-hidden','true'); }
+  statsBtn.addEventListener('click', openStats);
+  statsCloseEls.forEach(el=>el.addEventListener('click', closeStats));
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && statsModal.getAttribute('aria-hidden')==='false') closeStats(); });
+
+  // Help modal removed - instructions are on splash screen
+
+  function toast(msg){
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'),1500);
+  }
+
+  // Smoke tests (non-mutating)
+  function runTests(){
+    console.group('Words In Shapes – tests');
+    console.assert(state.words.length>0 && state.words.length<=7, 'Expected 1..7 words');
+    const used=new Set();
+    for(const w of state.words){ for(const p of w.points){ const k=p.x+','+p.y; console.assert(!used.has(k),'Overlap at',k); used.add(k);} }
+    let allFilled=true; for(let y=0;y<N;y++){ for(let x=0;x<N;x++){ if(!state.grid[y][x]) allFilled=false; }}
+    console.assert(allFilled, 'Grid should be fully filled with letters');
+    console.assert(!SHOW_HINTS, 'Hints should be OFF at start');
+    console.assert(hints.innerHTML==='' || hints.childNodes.length===0, 'Hints SVG empty on load');
+    console.groupEnd();
+  }
+
+  // boot
+  newGame();
+  runTests();
+})();
+</script>
+</body>
+</html>

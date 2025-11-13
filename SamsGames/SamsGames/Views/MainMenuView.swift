@@ -1,0 +1,185 @@
+//
+//  MainMenuView.swift
+//  Sam's Games
+//
+//  Main menu showing all available games (NYT Games style)
+//
+
+import SwiftUI
+
+struct MainMenuView: View {
+    @EnvironmentObject var dailyPuzzleManager: DailyPuzzleManager
+    @EnvironmentObject var statisticsManager: StatisticsManager
+    @State private var selectedGame: GameType?
+    @State private var showArchive = false
+    @State private var showStatistics = false
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
+                    headerView
+
+                    // Today's Date
+                    todayDateView
+
+                    // Game Cards
+                    ForEach(GameType.allCases, id: \.id) { gameType in
+                        GameCard(
+                            gameType: gameType,
+                            isCompleted: dailyPuzzleManager.isCompletedToday(gameType),
+                            currentStreak: statisticsManager.getCurrentStreak(for: gameType)
+                        )
+                        .onTapGesture {
+                            selectedGame = gameType
+                        }
+                    }
+
+                    Spacer(minLength: 50)
+                }
+                .padding()
+            }
+            .background(Color(UIColor.systemGroupedBackground))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showStatistics = true }) {
+                        Image(systemName: "chart.bar.fill")
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showArchive = true }) {
+                        Image(systemName: "calendar")
+                    }
+                }
+            }
+            .sheet(item: $selectedGame) { gameType in
+                gameView(for: gameType)
+            }
+            .sheet(isPresented: $showArchive) {
+                ArchiveView()
+            }
+            .sheet(isPresented: $showStatistics) {
+                StatisticsView()
+            }
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var headerView: some View {
+        VStack(spacing: 8) {
+            Text("Sam's Games")
+                .font(.system(size: 36, weight: .bold))
+                .foregroundColor(.primary)
+
+            Text("Daily Puzzles")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .padding(.top, 20)
+        .padding(.bottom, 10)
+    }
+
+    private var todayDateView: some View {
+        Text(dailyPuzzleManager.getTodayString())
+            .font(.headline)
+            .foregroundColor(.secondary)
+            .padding(.bottom, 10)
+    }
+
+    @ViewBuilder
+    private func gameView(for gameType: GameType) -> some View {
+        switch gameType {
+        case .xNumbers:
+            XNumbersGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        case .wordInShapes:
+            WebWordInShapesGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        }
+    }
+}
+
+// MARK: - Game Card Component
+
+struct GameCard: View {
+    let gameType: GameType
+    let isCompleted: Bool
+    let currentStreak: Int
+
+    var body: some View {
+        HStack(spacing: 15) {
+            // Game Icon
+            ZStack {
+                if let customIcon = gameType.customIcon {
+                    // Use custom asset image
+                    Image(customIcon)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(8)
+                } else {
+                    // Fallback to SF Symbol
+                    Image(systemName: gameType.icon)
+                        .font(.system(size: 40))
+                        .foregroundColor(isCompleted ? .green : .blue)
+                }
+            }
+            .frame(width: 60, height: 60)
+            .background(isCompleted ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
+            .cornerRadius(12)
+
+            // Game Info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(gameType.rawValue)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                Text(gameType.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                if currentStreak > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                        Text("\(currentStreak) day streak")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Completion Status
+            if isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.green)
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(.body)
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+    }
+}
+
+// MARK: - Preview
+
+struct MainMenuView_Previews: PreviewProvider {
+    static var previews: some View {
+        MainMenuView()
+            .environmentObject(DailyPuzzleManager())
+            .environmentObject(StatisticsManager())
+    }
+}

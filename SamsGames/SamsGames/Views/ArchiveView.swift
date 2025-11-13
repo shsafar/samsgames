@@ -1,0 +1,113 @@
+//
+//  ArchiveView.swift
+//  Sam's Games
+//
+//  View to browse and play previous days' puzzles
+//
+
+import SwiftUI
+
+struct ArchiveView: View {
+    @EnvironmentObject var dailyPuzzleManager: DailyPuzzleManager
+    @EnvironmentObject var statisticsManager: StatisticsManager
+    @Environment(\.dismiss) var dismiss
+
+    @State private var selectedDate: Date?
+    @State private var selectedGame: GameType?
+
+    private let availableDates: [Date]
+
+    init() {
+        self.availableDates = DailyPuzzleManager().getAvailableDates(count: 30)
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(availableDates, id: \.self) { date in
+                    Section(header: Text(formatDate(date))) {
+                        ForEach(GameType.allCases, id: \.id) { gameType in
+                            ArchiveGameRow(
+                                gameType: gameType,
+                                date: date,
+                                isCompleted: statisticsManager.isCompleted(for: gameType, on: date)
+                            )
+                            .onTapGesture {
+                                selectedDate = date
+                                selectedGame = gameType
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Archive")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(item: $selectedGame) { gameType in
+                if let date = selectedDate {
+                    archiveGameView(for: gameType, date: date)
+                }
+            }
+        }
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    @ViewBuilder
+    private func archiveGameView(for gameType: GameType, date: Date) -> some View {
+        VStack {
+            Text("Playing \(gameType.rawValue)")
+                .font(.title)
+            Text("Date: \(formatDate(date))")
+                .font(.subheadline)
+            Text("(Game integration coming soon)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding()
+        }
+    }
+}
+
+struct ArchiveGameRow: View {
+    let gameType: GameType
+    let date: Date
+    let isCompleted: Bool
+
+    var body: some View {
+        HStack {
+            // Use custom icon if available, otherwise SF Symbol
+            if let customIcon = gameType.customIcon {
+                Image(customIcon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 32, height: 32)
+            } else {
+                Image(systemName: gameType.icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(isCompleted ? .green : .gray)
+                    .frame(width: 32, height: 32)
+            }
+
+            Text(gameType.rawValue)
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            if isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+            }
+        }
+    }
+}

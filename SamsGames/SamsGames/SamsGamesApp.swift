@@ -12,12 +12,21 @@ import SwiftUI
 struct SamsGamesApp: App {
     @StateObject private var dailyPuzzleManager = DailyPuzzleManager()
     @StateObject private var statisticsManager = StatisticsManager()
+    @State private var showSplash = true
 
     var body: some Scene {
         WindowGroup {
-            MainMenuView()
-                .environmentObject(dailyPuzzleManager)
-                .environmentObject(statisticsManager)
+            ZStack {
+                if showSplash {
+                    SplashScreenView(isPresented: $showSplash)
+                        .transition(.opacity)
+                } else {
+                    MainMenuView()
+                        .environmentObject(dailyPuzzleManager)
+                        .environmentObject(statisticsManager)
+                        .transition(.opacity)
+                }
+            }
         }
     }
 }

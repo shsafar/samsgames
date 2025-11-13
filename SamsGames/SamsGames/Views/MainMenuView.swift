@@ -13,6 +13,7 @@ struct MainMenuView: View {
     @State private var selectedGame: GameType?
     @State private var showArchive = false
     @State private var showStatistics = false
+    @State private var showSettings = false
 
     var body: some View {
         NavigationView {
@@ -44,8 +45,14 @@ struct MainMenuView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showStatistics = true }) {
-                        Image(systemName: "chart.bar.fill")
+                    HStack(spacing: 16) {
+                        Button(action: { showSettings = true }) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.title3)
+                        }
+                        Button(action: { showStatistics = true }) {
+                            Image(systemName: "chart.bar.fill")
+                        }
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -62,6 +69,9 @@ struct MainMenuView: View {
             }
             .sheet(isPresented: $showStatistics) {
                 StatisticsView()
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsMenuView()
             }
         }
     }

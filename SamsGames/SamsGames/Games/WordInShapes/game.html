@@ -53,6 +53,8 @@
   .modal-header h2{ margin:0; font-size:20px; }
   .modal-close{ background:transparent; border:none; font-size:24px; line-height:1; cursor:pointer; padding:4px 8px; }
   .modal-body{ padding:16px 18px; line-height:1.5; }
+  /* Hide New Game button for daily puzzle mode */
+  #newGameBtn { display: none; }
 </style>
 </head>
 <body>
@@ -477,8 +479,7 @@
             time: timeEl.textContent
           });
         }
-
-        setTimeout(()=>alert(`All found! Score ${state.score} in ${timeEl.textContent}`),100);
+        // Swift app will show the completion alert
       }
     }
   }

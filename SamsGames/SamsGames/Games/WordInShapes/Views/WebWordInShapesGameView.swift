@@ -17,15 +17,12 @@ struct WebWordInShapesGameView: View {
     @State private var gameTime: String = ""
     @State private var gameScore: Int = 0
     @State private var showInstructions = false
+    @State private var currentSeed: Int = 0
 
     // Archive mode support
     var archiveMode: Bool = false
     var archiveDate: Date? = nil
     var archiveSeed: Int? = nil
-
-    private var effectiveSeed: Int {
-        archiveSeed ?? dailyPuzzleManager.getSeedForToday()
-    }
 
     var body: some View {
         ZStack {
@@ -59,10 +56,10 @@ struct WebWordInShapesGameView: View {
 
                 // WebView for the game
                 WebGameViewRepresentable(
-                    seed: effectiveSeed,
+                    seed: currentSeed,
                     onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion
                 )
-                .id(effectiveSeed) // Force recreation when seed changes (new day)
+                .id(currentSeed) // Force recreation when seed changes (new day)
             }
         }
         .navigationBarHidden(true)
@@ -79,6 +76,15 @@ struct WebWordInShapesGameView: View {
         .onAppear {
             // Check if new day when view appears
             dailyPuzzleManager.checkForNewDay()
+
+            // Set initial seed
+            currentSeed = archiveSeed ?? dailyPuzzleManager.getSeedForToday()
+        }
+        .onChange(of: dailyPuzzleManager.currentDate) { _ in
+            // Update seed when current date changes (new day)
+            if !archiveMode {
+                currentSeed = dailyPuzzleManager.getSeedForToday()
+            }
         }
     }
 

@@ -160,6 +160,10 @@ struct WebGameViewRepresentable: UIViewRepresentable {
             // Reload game with new seed
             let script = """
             if (window.setSeed && window.newGame) {
+                // Clear any saved game state from localStorage
+                localStorage.clear();
+                console.log('LocalStorage cleared for new day');
+
                 window.setSeed(\(seed));
                 console.log('Seed updated to: \(seed)');
                 window.newGame();
@@ -237,6 +241,10 @@ struct WebGameViewRepresentable: UIViewRepresentable {
             // Inject the seed after the page loads, then start the game
             let script = """
             if (window.setSeed && window.newGame) {
+                // Clear any saved game state from localStorage
+                localStorage.clear();
+                console.log('LocalStorage cleared for fresh daily puzzle');
+
                 window.setSeed(\(seed));
                 console.log('Seed set to: \(seed)');
                 window.newGame();

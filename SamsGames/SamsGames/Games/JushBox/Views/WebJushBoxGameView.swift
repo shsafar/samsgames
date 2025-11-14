@@ -16,6 +16,7 @@ struct WebJushBoxGameView: View {
     @State private var showCompletionAlert = false
     @State private var showInstructions = false
     @State private var splashPhase = 0 // 0 = first splash, 1 = second splash, 2 = game
+    @State private var isPulsing = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -129,6 +130,12 @@ struct WebJushBoxGameView: View {
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 20)
+                        .scaleEffect(isPulsing ? 1.05 : 1.0)
+                        .animation(
+                            .easeInOut(duration: 1.2)
+                            .repeatForever(autoreverses: true),
+                            value: isPulsing
+                        )
                 } else {
                     // Placeholder when image not found
                     ZStack {
@@ -150,6 +157,9 @@ struct WebJushBoxGameView: View {
 
                 Spacer()
             }
+        }
+        .onAppear {
+            isPulsing = true
         }
     }
 

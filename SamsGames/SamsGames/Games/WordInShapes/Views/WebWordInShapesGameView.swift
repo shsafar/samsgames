@@ -78,12 +78,18 @@ struct WebWordInShapesGameView: View {
             dailyPuzzleManager.checkForNewDay()
 
             // Set initial seed
-            currentSeed = archiveSeed ?? dailyPuzzleManager.getSeedForToday()
+            let newSeed = archiveSeed ?? dailyPuzzleManager.getSeedForToday()
+            print("🎮 WordInShapes appeared - setting seed to: \(newSeed)")
+            print("🎮 Archive mode: \(archiveMode)")
+            print("🎮 Current date: \(dailyPuzzleManager.getTodayString())")
+            currentSeed = newSeed
         }
         .onChange(of: dailyPuzzleManager.currentDate) { _ in
             // Update seed when current date changes (new day)
             if !archiveMode {
-                currentSeed = dailyPuzzleManager.getSeedForToday()
+                let newSeed = dailyPuzzleManager.getSeedForToday()
+                print("🔄 Date changed! Updating WordInShapes seed to: \(newSeed)")
+                currentSeed = newSeed
             }
         }
     }
@@ -114,7 +120,18 @@ struct WebGameViewRepresentable: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
+        print("🌐 Creating WebView for seed: \(seed)")
+
+        // Clear ALL WebView data first to ensure fresh game
+        let dataStore = WKWebsiteDataStore.default()
+        let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
+        print("🧹 Clearing all WebView data (cookies, cache, localStorage)...")
+        dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date(timeIntervalSince1970: 0)) {
+            print("✅ WebView data cleared")
+        }
+
         let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = dataStore
 
         // Use modern API for JavaScript (iOS 14+)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true

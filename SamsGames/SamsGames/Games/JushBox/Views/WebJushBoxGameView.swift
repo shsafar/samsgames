@@ -17,14 +17,28 @@ struct WebJushBoxGameView: View {
     @State private var showInstructions = false
     @State private var splashPhase = 0 // 0 = first splash, 1 = second splash, 2 = game
 
-    // Calculate seed and level for today
+    // Archive mode support
+    var archiveMode: Bool = false
+    var archiveDate: Date? = nil
+    var archiveSeed: Int? = nil
+
+    // Calculate seed and level
     private let seed: Int
     private let level: Int
 
-    init() {
+    init(archiveMode: Bool = false, archiveDate: Date? = nil, archiveSeed: Int? = nil) {
+        self.archiveMode = archiveMode
+        self.archiveDate = archiveDate
+        self.archiveSeed = archiveSeed
+
         let manager = DailyPuzzleManager()
-        self.seed = manager.getSeedForToday()
-        self.level = manager.getTodayJushBoxLevel()
+        if let archiveSeed = archiveSeed, let archiveDate = archiveDate {
+            self.seed = archiveSeed
+            self.level = manager.getJushBoxLevelForDate(archiveDate)
+        } else {
+            self.seed = manager.getSeedForToday()
+            self.level = manager.getTodayJushBoxLevel()
+        }
     }
 
     var body: some View {
@@ -154,11 +168,14 @@ struct WebJushBoxGameView: View {
     }
 
     private func handleGameCompletion() {
-        // Mark as completed in daily puzzle manager
-        dailyPuzzleManager.markCompleted(.jushBox)
+        // Only mark as completed if not in archive mode
+        if !archiveMode {
+            // Mark as completed in daily puzzle manager
+            dailyPuzzleManager.markCompleted(.jushBox)
 
-        // Record completion in statistics
-        statisticsManager.recordCompletion(.jushBox)
+            // Record completion in statistics
+            statisticsManager.recordCompletion(.jushBox)
+        }
 
         // Show completion alert after 2 seconds so user can see the solution
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {

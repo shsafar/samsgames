@@ -70,46 +70,21 @@ struct ArchiveView: View {
 
     @ViewBuilder
     private func archiveGameView(for gameType: GameType, date: Date) -> some View {
-        ZStack {
-            Color(UIColor.systemGroupedBackground)
-                .ignoresSafeArea()
+        let seed = dailyPuzzleManager.getSeedForDate(date)
 
-            VStack(spacing: 0) {
-                // Custom header bar with Back button
-                HStack {
-                    Button(action: {
-                        selectedArchiveItem = nil
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Back")
-                                .font(.system(size: 17))
-                        }
-                        .foregroundColor(.blue)
-                    }
-
-                    Spacer()
-                }
-                .padding()
-                .background(Color(UIColor.systemBackground))
-
-                // Content
-                VStack(spacing: 20) {
-                    Spacer()
-
-                    Text("Playing \(gameType.rawValue)")
-                        .font(.title)
-                        .foregroundColor(.primary)
-
-                    Text("Date: \(formatDate(date))")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-                }
-                .padding()
-            }
+        switch gameType {
+        case .xNumbers:
+            XNumbersGameView(archiveMode: true, archiveDate: date)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        case .wordInShapes:
+            WebWordInShapesGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        case .jushBox:
+            WebJushBoxGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

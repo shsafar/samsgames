@@ -10,7 +10,7 @@ import Combine
 
 enum GameType: String, CaseIterable, Codable, Identifiable {
     case xNumbers = "X-Numbers"
-    case wordInShapes = "Word In Shapes"
+    case wordInShapes = "Words In Shapes"
     case jushBox = "JushBox"
 
     var id: String { self.rawValue }

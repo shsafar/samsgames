@@ -16,14 +16,21 @@ struct XNumbersGameView: View {
     @State private var showCompletionAlert = false
     @State private var showInstructions = false
 
-    init() {
-        // Initialize with today's seed and level for daily puzzle
-        let today = Date()
-        let seed = UInt64(bitPattern: Int64(today.timeIntervalSince1970 / 86400))
+    // Archive mode support
+    var archiveMode: Bool = false
+    var archiveDate: Date? = nil
+
+    init(archiveMode: Bool = false, archiveDate: Date? = nil) {
+        self.archiveMode = archiveMode
+        self.archiveDate = archiveDate
+
+        // Use archiveDate or today
+        let date = archiveDate ?? Date()
+        let seed = UInt64(bitPattern: Int64(date.timeIntervalSince1970 / 86400))
 
         // Calculate level based on day of week
         let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: today)
+        let weekday = calendar.component(.weekday, from: date)
         let level: Int
         switch weekday {
         case 1: level = 3  // Sunday: L3
@@ -92,11 +99,14 @@ struct XNumbersGameView: View {
 
     private func setupCompletionHandler() {
         game.onDailyPuzzleComplete = { [self] in
-            // Mark as completed in daily puzzle manager
-            dailyPuzzleManager.markCompleted(.xNumbers)
+            // Only mark as completed if not in archive mode
+            if !archiveMode {
+                // Mark as completed in daily puzzle manager
+                dailyPuzzleManager.markCompleted(.xNumbers)
 
-            // Record completion in statistics
-            statisticsManager.recordCompletion(.xNumbers)
+                // Record completion in statistics
+                statisticsManager.recordCompletion(.xNumbers)
+            }
 
             // Show completion alert
             showCompletionAlert = true

@@ -18,6 +18,15 @@ struct WebWordInShapesGameView: View {
     @State private var gameScore: Int = 0
     @State private var showInstructions = false
 
+    // Archive mode support
+    var archiveMode: Bool = false
+    var archiveDate: Date? = nil
+    var archiveSeed: Int? = nil
+
+    private var effectiveSeed: Int {
+        archiveSeed ?? dailyPuzzleManager.getSeedForToday()
+    }
+
     var body: some View {
         ZStack {
             Color(UIColor.systemGroupedBackground)
@@ -50,8 +59,8 @@ struct WebWordInShapesGameView: View {
 
                 // WebView for the game
                 WebGameViewRepresentable(
-                    seed: dailyPuzzleManager.getSeedForToday(),
-                    onGameCompleted: handleGameCompletion
+                    seed: effectiveSeed,
+                    onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion
                 )
             }
         }
@@ -133,12 +142,32 @@ struct WebGameViewRepresentable: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // No updates needed
+        // Update seed if it changed (new day)
+        if context.coordinator.seed != seed {
+            context.coordinator.seed = seed
+
+            // Reload game with new seed
+            let script = """
+            if (window.setSeed && window.newGame) {
+                window.setSeed(\(seed));
+                console.log('Seed updated to: \(seed)');
+                window.newGame();
+                console.log('Game restarted with new seed');
+            }
+            """
+            webView.evaluateJavaScript(script) { _, error in
+                if let error = error {
+                    print("❌ Error updating seed: \(error)")
+                } else {
+                    print("✅ Seed updated and game restarted: \(seed)")
+                }
+            }
+        }
     }
 
     // Coordinator to handle JavaScript messages and navigation
     class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
-        let seed: Int
+        var seed: Int
         let onGameCompleted: (Int, String) -> Void
 
         init(seed: Int, onGameCompleted: @escaping (Int, String) -> Void) {

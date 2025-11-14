@@ -187,15 +187,23 @@ class DailyPuzzleManager: ObservableObject {
     }
 
     /// Check if it's a new day, reset completed if so
-    private func checkForNewDay() {
+    func checkForNewDay() {
+        let newDate = Date()
         let todayString = getTodayString()
+        let newDateString: String = {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.timeZone = TimeZone.current
+            return formatter.string(from: newDate)
+        }()
         let lastCheckString = userDefaults.string(forKey: lastCheckDateKey)
 
-        if todayString != lastCheckString {
-            // New day! Reset completed
+        if newDateString != lastCheckString {
+            // New day! Update current date and reset completed
+            self.currentDate = newDate
             completedToday.removeAll()
             saveCompletedToday()
-            userDefaults.set(todayString, forKey: lastCheckDateKey)
+            userDefaults.set(newDateString, forKey: lastCheckDateKey)
         }
     }
 }

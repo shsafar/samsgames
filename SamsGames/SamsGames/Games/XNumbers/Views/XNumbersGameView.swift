@@ -95,6 +95,10 @@ struct XNumbersGameView: View {
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .xNumbers)
         }
+        .onAppear {
+            // Check if new day when view appears
+            dailyPuzzleManager.checkForNewDay()
+        }
     }
 
     private func setupCompletionHandler() {

@@ -62,6 +62,7 @@ struct WebWordInShapesGameView: View {
                     seed: effectiveSeed,
                     onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion
                 )
+                .id(effectiveSeed) // Force recreation when seed changes (new day)
             }
         }
         .navigationBarHidden(true)
@@ -74,6 +75,10 @@ struct WebWordInShapesGameView: View {
         }
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .wordInShapes)
+        }
+        .onAppear {
+            // Check if new day when view appears
+            dailyPuzzleManager.checkForNewDay()
         }
     }
 

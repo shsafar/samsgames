@@ -55,6 +55,8 @@ struct WebJushBoxGameView: View {
             }
         }
         .onAppear {
+            // Check if new day when view appears
+            dailyPuzzleManager.checkForNewDay()
             startSplashSequence()
         }
         .navigationBarHidden(true)

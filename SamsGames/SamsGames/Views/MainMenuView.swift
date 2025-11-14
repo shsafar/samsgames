@@ -113,6 +113,10 @@ struct MainMenuView: View {
             }
         }
         .navigationViewStyle(.stack) // Force single column on iPad
+        .onAppear {
+            // Check if new day when main menu appears
+            dailyPuzzleManager.checkForNewDay()
+        }
     }
 
     // MARK: - Subviews

@@ -166,8 +166,16 @@ struct WebJushBoxGameView: View {
     private func startSplashSequence() {
         // Show first splash for 3 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            // Reset pulsing for smooth transition to second splash
+            isPulsing = false
+
             withAnimation {
                 splashPhase = 1
+            }
+
+            // Restart pulsing after a brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isPulsing = true
             }
 
             // Show second splash for 3 seconds

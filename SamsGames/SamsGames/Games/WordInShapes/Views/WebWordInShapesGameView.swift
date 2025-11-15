@@ -25,14 +25,10 @@ struct WebWordInShapesGameView: View {
 
     // Computed seed - properly initialized BEFORE WebView creation
     private var seed: Int {
-        // 🧪 TESTING: Force a completely different seed to verify puzzle changes
-        return 999999999  // Test seed - will generate DIFFERENT words
-
-        // PRODUCTION CODE (restore after testing):
-        // if let archiveSeed = archiveSeed {
-        //     return archiveSeed
-        // }
-        // return dailyPuzzleManager.getSeedForToday()
+        if let archiveSeed = archiveSeed {
+            return archiveSeed
+        }
+        return dailyPuzzleManager.getSeedForToday()
     }
 
     var body: some View {

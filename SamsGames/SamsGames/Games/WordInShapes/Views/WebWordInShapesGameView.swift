@@ -25,10 +25,14 @@ struct WebWordInShapesGameView: View {
 
     // Computed seed - properly initialized BEFORE WebView creation
     private var seed: Int {
-        if let archiveSeed = archiveSeed {
-            return archiveSeed
-        }
-        return dailyPuzzleManager.getSeedForToday()
+        // 🧪 TESTING: Force a completely different seed to verify puzzle changes
+        return 999999999  // Test seed - will generate DIFFERENT words
+
+        // PRODUCTION CODE (restore after testing):
+        // if let archiveSeed = archiveSeed {
+        //     return archiveSeed
+        // }
+        // return dailyPuzzleManager.getSeedForToday()
     }
 
     var body: some View {
@@ -229,14 +233,17 @@ struct WebGameViewRepresentable: UIViewRepresentable {
             // Inject the seed after the page loads, then start the game
             let script = """
             if (window.setSeed && window.newGame) {
-                // Clear any saved game state from localStorage
+                // AGGRESSIVE CLEAR: Remove all localStorage
                 localStorage.clear();
-                console.log('LocalStorage cleared for fresh daily puzzle');
+                sessionStorage.clear();
+                console.log('🧹 ALL storage cleared (localStorage + sessionStorage)');
 
                 window.setSeed(\(seed));
-                console.log('Seed set to: \(seed)');
+                console.log('🎲 Seed set to: \(seed)');
                 window.newGame();
-                console.log('Game started with seed');
+                console.log('🎮 Game started with seed: \(seed)');
+            } else {
+                console.error('❌ setSeed or newGame not found!');
             }
             """
             webView.evaluateJavaScript(script) { _, error in

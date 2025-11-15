@@ -76,6 +76,7 @@
 
   <div class="controls">
     <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+      <button id="newGameBtn">New Game</button>
       <button id="hintBtn">Show Hints</button>
       <button id="soundBtn">Sound: On</button>
       <button id="statsBtn">Stats</button>
@@ -193,9 +194,11 @@
   let rngState = Date.now();
 
   function setSeed(seed) {
-    console.log('Setting seed to:', seed);
+    console.log('🔧 setSeed() called with:', seed);
     SEED = seed;
     rngState = seed;
+    console.log('✅ SEED set to:', SEED);
+    console.log('✅ rngState set to:', rngState);
   }
 
   function seededRandom() {
@@ -279,6 +282,7 @@
   }
 
   function generate(){
+    console.log('🎲 generate() starting - will select words using seeded random');
     state.words=[];
     const lengths=[3,4,5,6];
     let guard=0;
@@ -288,6 +292,7 @@
       if(state.words.some(v=>v.word===w)) continue;
       if(placeWord(w)) continue;
     }
+    console.log('🎲 Selected words:', state.words.map(w => w.word).join(', '));
   }
 
   function renderBoard(){
@@ -499,6 +504,10 @@
   }
 
   function newGame(){
+    console.log('🎮 newGame() called');
+    console.log('🎲 Current SEED:', SEED);
+    console.log('🎲 Current rngState:', rngState);
+
     state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';
@@ -661,8 +670,7 @@
   };
 
   // UI handlers
-  // New Game button removed for daily puzzles
-  // document.getElementById('newGameBtn').addEventListener('click', newGame);
+  document.getElementById('newGameBtn').addEventListener('click', newGame);
   document.getElementById('hintBtn').addEventListener('click', ()=>{
     SHOW_HINTS=!SHOW_HINTS;
     document.getElementById('hintBtn').textContent = SHOW_HINTS? 'Hide Hints' : 'Show Hints';
@@ -708,9 +716,16 @@
   }
 
   // boot
+  console.log('📦 game.html loaded');
+  console.log('🔍 window.waitingForSeed:', window.waitingForSeed);
+  console.log('🔍 SEED at boot:', SEED);
+
   // Only auto-start if not waiting for seed injection from Swift
   if (!window.waitingForSeed) {
+    console.log('⚡ Auto-starting game (not waiting for seed from Swift)');
     newGame();
+  } else {
+    console.log('⏳ Waiting for Swift to inject seed and call newGame()');
   }
   runTests();
 })();

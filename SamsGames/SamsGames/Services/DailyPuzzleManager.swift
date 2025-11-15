@@ -69,8 +69,14 @@ class DailyPuzzleManager: ObservableObject {
 
     /// Get seed for today's puzzle (same for all users in same timezone on same day)
     func getSeedForToday() -> Int {
-        let dateString = getTodayString()
+        // TESTING: Simulate tomorrow's puzzle to verify different seeds work
+        let dateString = "2025-11-16"  // Force tomorrow's date for testing
+        print("🧪 TEST MODE: Using simulated date: \(dateString)")
         return dateString.hash
+
+        // PRODUCTION CODE (restore this after testing):
+        // let dateString = getTodayString()
+        // return dateString.hash
     }
 
     /// Get seed for specific date

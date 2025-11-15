@@ -17,12 +17,19 @@ struct WebWordInShapesGameView: View {
     @State private var gameTime: String = ""
     @State private var gameScore: Int = 0
     @State private var showInstructions = false
-    @State private var currentSeed: Int = 0
 
     // Archive mode support
     var archiveMode: Bool = false
     var archiveDate: Date? = nil
     var archiveSeed: Int? = nil
+
+    // Computed seed - properly initialized BEFORE WebView creation
+    private var seed: Int {
+        if let archiveSeed = archiveSeed {
+            return archiveSeed
+        }
+        return dailyPuzzleManager.getSeedForToday()
+    }
 
     var body: some View {
         ZStack {
@@ -56,10 +63,10 @@ struct WebWordInShapesGameView: View {
 
                 // WebView for the game
                 WebGameViewRepresentable(
-                    seed: currentSeed,
+                    seed: seed,
                     onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion
                 )
-                .id(currentSeed) // Force recreation when seed changes (new day)
+                .id(seed) // Force recreation when seed changes (new day)
             }
         }
         .navigationBarHidden(true)
@@ -76,21 +83,9 @@ struct WebWordInShapesGameView: View {
         .onAppear {
             // Check if new day when view appears
             dailyPuzzleManager.checkForNewDay()
-
-            // Set initial seed
-            let newSeed = archiveSeed ?? dailyPuzzleManager.getSeedForToday()
-            print("🎮 WordInShapes appeared - setting seed to: \(newSeed)")
+            print("🎮 WordInShapes appeared - using seed: \(seed)")
             print("🎮 Archive mode: \(archiveMode)")
             print("🎮 Current date: \(dailyPuzzleManager.getTodayString())")
-            currentSeed = newSeed
-        }
-        .onChange(of: dailyPuzzleManager.currentDate) { _ in
-            // Update seed when current date changes (new day)
-            if !archiveMode {
-                let newSeed = dailyPuzzleManager.getSeedForToday()
-                print("🔄 Date changed! Updating WordInShapes seed to: \(newSeed)")
-                currentSeed = newSeed
-            }
         }
     }
 
@@ -170,31 +165,7 @@ struct WebGameViewRepresentable: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // Update seed if it changed (new day)
-        if context.coordinator.seed != seed {
-            context.coordinator.seed = seed
-
-            // Reload game with new seed
-            let script = """
-            if (window.setSeed && window.newGame) {
-                // Clear any saved game state from localStorage
-                localStorage.clear();
-                console.log('LocalStorage cleared for new day');
-
-                window.setSeed(\(seed));
-                console.log('Seed updated to: \(seed)');
-                window.newGame();
-                console.log('Game restarted with new seed');
-            }
-            """
-            webView.evaluateJavaScript(script) { _, error in
-                if let error = error {
-                    print("❌ Error updating seed: \(error)")
-                } else {
-                    print("✅ Seed updated and game restarted: \(seed)")
-                }
-            }
-        }
+        // No updates needed - .id(seed) handles recreation on seed change
     }
 
     // Coordinator to handle JavaScript messages and navigation

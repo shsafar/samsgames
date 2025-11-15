@@ -83,9 +83,6 @@ struct WebWordInShapesGameView: View {
         .onAppear {
             // Check if new day when view appears
             dailyPuzzleManager.checkForNewDay()
-            print("🎮 WordInShapes appeared - using seed: \(seed)")
-            print("🎮 Archive mode: \(archiveMode)")
-            print("🎮 Current date: \(dailyPuzzleManager.getTodayString())")
         }
     }
 
@@ -115,15 +112,10 @@ struct WebGameViewRepresentable: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        print("🌐 Creating WebView for seed: \(seed)")
-
         // Clear ALL WebView data first to ensure fresh game
         let dataStore = WKWebsiteDataStore.default()
         let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
-        print("🧹 Clearing all WebView data (cookies, cache, localStorage)...")
-        dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date(timeIntervalSince1970: 0)) {
-            print("✅ WebView data cleared")
-        }
+        dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date(timeIntervalSince1970: 0)) { }
 
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = dataStore
@@ -229,26 +221,13 @@ struct WebGameViewRepresentable: UIViewRepresentable {
             // Inject the seed after the page loads, then start the game
             let script = """
             if (window.setSeed && window.newGame) {
-                // AGGRESSIVE CLEAR: Remove all localStorage
                 localStorage.clear();
                 sessionStorage.clear();
-                console.log('🧹 ALL storage cleared (localStorage + sessionStorage)');
-
                 window.setSeed(\(seed));
-                console.log('🎲 Seed set to: \(seed)');
                 window.newGame();
-                console.log('🎮 Game started with seed: \(seed)');
-            } else {
-                console.error('❌ setSeed or newGame not found!');
             }
             """
-            webView.evaluateJavaScript(script) { _, error in
-                if let error = error {
-                    print("❌ Error setting seed and starting game: \(error)")
-                } else {
-                    print("✅ Seed injected and game started: \(self.seed)")
-                }
-            }
+            webView.evaluateJavaScript(script, completionHandler: nil)
         }
     }
 }

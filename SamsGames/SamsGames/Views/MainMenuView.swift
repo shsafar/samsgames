@@ -115,10 +115,7 @@ struct MainMenuView: View {
         .navigationViewStyle(.stack) // Force single column on iPad
         .onAppear {
             // Check if new day when main menu appears
-            print("📅 MainMenuView appeared - checking for new day")
             dailyPuzzleManager.checkForNewDay()
-            print("📅 Current date: \(dailyPuzzleManager.getTodayString())")
-            print("📅 Current seed: \(dailyPuzzleManager.getSeedForToday())")
         }
     }
 

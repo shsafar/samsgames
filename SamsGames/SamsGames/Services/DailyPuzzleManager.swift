@@ -189,7 +189,6 @@ class DailyPuzzleManager: ObservableObject {
     /// Check if it's a new day, reset completed if so
     func checkForNewDay() {
         let newDate = Date()
-        let todayString = getTodayString()
         let newDateString: String = {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
@@ -198,23 +197,12 @@ class DailyPuzzleManager: ObservableObject {
         }()
         let lastCheckString = userDefaults.string(forKey: lastCheckDateKey)
 
-        print("🔍 checkForNewDay() called")
-        print("🔍 Current stored date: \(todayString)")
-        print("🔍 New date from system: \(newDateString)")
-        print("🔍 Last check date: \(lastCheckString ?? "nil")")
-
         if newDateString != lastCheckString {
             // New day! Update current date and reset completed
-            print("🎉 NEW DAY DETECTED! Resetting puzzles...")
             self.currentDate = newDate
             completedToday.removeAll()
             saveCompletedToday()
             userDefaults.set(newDateString, forKey: lastCheckDateKey)
-            print("✅ Date updated to: \(newDateString)")
-            print("✅ Completed games reset")
-            print("✅ New seed: \(getSeedForToday())")
-        } else {
-            print("ℹ️ Same day - no reset needed")
         }
     }
 }

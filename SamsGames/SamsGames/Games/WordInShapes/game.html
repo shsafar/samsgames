@@ -194,11 +194,8 @@
   let rngState = Date.now();
 
   function setSeed(seed) {
-    console.log('🔧 setSeed() called with:', seed);
     SEED = seed;
     rngState = seed;
-    console.log('✅ SEED set to:', SEED);
-    console.log('✅ rngState set to:', rngState);
   }
 
   function seededRandom() {
@@ -282,7 +279,6 @@
   }
 
   function generate(){
-    console.log('🎲 generate() starting - will select words using seeded random');
     state.words=[];
     const lengths=[3,4,5,6];
     let guard=0;
@@ -292,7 +288,6 @@
       if(state.words.some(v=>v.word===w)) continue;
       if(placeWord(w)) continue;
     }
-    console.log('🎲 Selected words:', state.words.map(w => w.word).join(', '));
   }
 
   function renderBoard(){
@@ -504,10 +499,6 @@
   }
 
   function newGame(){
-    console.log('🎮 newGame() called');
-    console.log('🎲 Current SEED:', SEED);
-    console.log('🎲 Current rngState:', rngState);
-
     state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';
@@ -716,16 +707,9 @@
   }
 
   // boot
-  console.log('📦 game.html loaded');
-  console.log('🔍 window.waitingForSeed:', window.waitingForSeed);
-  console.log('🔍 SEED at boot:', SEED);
-
   // Only auto-start if not waiting for seed injection from Swift
   if (!window.waitingForSeed) {
-    console.log('⚡ Auto-starting game (not waiting for seed from Swift)');
     newGame();
-  } else {
-    console.log('⏳ Waiting for Swift to inject seed and call newGame()');
   }
   runTests();
 })();

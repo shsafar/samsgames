@@ -221,9 +221,18 @@ struct WebGameViewRepresentable: UIViewRepresentable {
             // Inject the seed after the page loads, then start the game
             let script = """
             if (window.setSeed && window.newGame) {
+                // AGGRESSIVE RESET
                 localStorage.clear();
                 sessionStorage.clear();
+
+                // Clear any existing seed first
+                window.setSeed(null);
+
+                // Set the correct daily seed
                 window.setSeed(\(seed));
+
+                // Call newGame() TWICE to force complete reset
+                window.newGame();
                 window.newGame();
             }
             """

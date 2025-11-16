@@ -56,6 +56,8 @@
 </style>
 </head>
 <body>
+  <!-- Game content - hidden until seed is set and newGame() is called -->
+  <div id="gameContent" style="display:none;">
   <h1>Words In Shapes</h1>
   <div id="hud">
     <span>Score: <span id="score">0</span></span>
@@ -86,6 +88,7 @@
 
   <div class="wordlist" id="wordList"></div>
   <div id="toast" class="toast">Well done! Solved it!</div>
+  </div><!-- End gameContent -->
 
   <!-- How to Play modal -->
   <div id="helpModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
@@ -499,6 +502,9 @@
   }
 
   function newGame(){
+    // Show game content (was hidden until seed was set)
+    document.getElementById('gameContent').style.display = 'block';
+
     state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';
@@ -707,10 +713,8 @@
   }
 
   // boot
-  // Only auto-start if not waiting for seed injection from Swift
-  if (!window.waitingForSeed) {
-    newGame();
-  }
+  // NEVER auto-start - always wait for Swift to set seed and call newGame()
+  // Game content is hidden until newGame() is called
   runTests();
 })();
 </script>

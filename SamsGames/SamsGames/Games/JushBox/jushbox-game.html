@@ -964,7 +964,6 @@ function render(){
       if(top){
         // Check if chamber is full for red badge number
         var badgeStyle = count >= CONFIG.maxDepth ? ' style="color:#ef4444 !important;"' : '';
-        // Check for special tiles
         if(top.type === 'dragon'){
           tile.className = "tile";
           tile.style.background = 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #450a0a 100%)';
@@ -978,10 +977,10 @@ function render(){
           tile.style.boxShadow='0 8px 25px rgba(251,191,36,.6), inset 0 0 0 2px rgba(217,119,6,.4), 0 '+count+'px '+Math.min(18, count*2)+'px rgba(251,191,36,.3)';
           tile.addEventListener("pointerdown", (function(rr,cc){ return function(ev){ startDrag(ev, rr, cc); }; })(r,c));
         } else {
-          tile.className = "tile "+top.color;
-          tile.innerHTML = '<div class="label">'+pretty(top.label)+'</div>' + '<div class="badge"'+badgeStyle+'>'+count+'</div>';
-          tile.style.boxShadow='0 8px 20px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.25), 0 '+count+'px '+Math.min(18, count*2)+'px rgba(0,0,0,.25)';
-          tile.addEventListener("pointerdown", (function(rr,cc){ return function(ev){ startDrag(ev, rr, cc); }; })(r,c));
+        tile.className = "tile "+top.color;
+        tile.innerHTML = '<div class="label">'+pretty(top.label)+'</div>' + '<div class="badge"'+badgeStyle+'>'+count+'</div>';
+        tile.style.boxShadow='0 8px 20px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.25), 0 '+count+'px '+Math.min(18, count*2)+'px rgba(0,0,0,.25)';
+        tile.addEventListener("pointerdown", (function(rr,cc){ return function(ev){ startDrag(ev, rr, cc); }; })(r,c));
         }
       } else {
         tile.className = "tile c-empty";
@@ -1073,7 +1072,6 @@ function doMoveAnimated(src, dst){ if(isAnimating) return; if(stacks[src.r][src.
     if(moves===1) startTimer();
     if(fxOn){ beepGood(); vibrate(12); }
 
-    // Check for special tiles in Level 4
     if(currentLevel === 4){
       // Check if dragon tile was just moved/revealed
       var dstTop = peekTop(stacks[dst.r][dst.c]);
@@ -1755,18 +1753,30 @@ function switchToLevel3(){ hideCongrats(); currentLevel=3; gameWon=false;
   boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
   render(); syncFullBadges(); updateMaxDepthDisplay(); }
 function switchToLevel4(){ hideCongrats(); currentLevel=4; gameWon=false;
-  CONFIG={ rows:4, cols:4, defaultDepth:4, maxDepth:6, palette:["c-blue","c-red","c-yellow","c-green"], specialTiles: true };
+  CONFIG={ rows:4, cols:4, defaultDepth:4, maxDepth:6, specialTiles:!window.dailyMode, palette:["c-blue","c-red","c-yellow","c-green"] };
   LAYERS_TOP_TO_BOTTOM=["c-blue","c-red","c-yellow","c-green"]; ensurePaletteStyles();
   levelLabelEl.textContent='Level 4';
-  stacks0=buildInitialStacksWithSpecialTiles(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth); stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
+  // In daily mode: no special tiles (deterministic). In regular mode: special tiles enabled
+  if(window.dailyMode){
+    stacks0=buildInitialStacks(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth);
+  } else {
+    stacks0=buildInitialStacksWithSpecialTiles(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth);
+  }
+  stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
   boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
   boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
   render(); syncFullBadges(); updateMaxDepthDisplay(); }
 function switchToLevel5(){ hideCongrats(); currentLevel=5; gameWon=false;
-  CONFIG={ rows:4, cols:4, defaultDepth:4, maxDepth:6, palette:["c-blue","c-red","c-yellow","c-green","c-purple"], specialTiles: true };
+  CONFIG={ rows:4, cols:4, defaultDepth:4, maxDepth:6, specialTiles:!window.dailyMode, palette:["c-blue","c-red","c-yellow","c-green","c-purple"] };
   LAYERS_TOP_TO_BOTTOM=["c-blue","c-red","c-yellow","c-green","c-purple"]; ensurePaletteStyles();
   levelLabelEl.textContent='Level 5';
-  stacks0=buildInitialStacksWithSpecialTilesLevel5(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth); stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
+  // In daily mode: no special tiles (deterministic). In regular mode: special tiles enabled
+  if(window.dailyMode){
+    stacks0=buildInitialStacks(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth);
+  } else {
+    stacks0=buildInitialStacksWithSpecialTilesLevel5(CONFIG.rows, CONFIG.cols, CONFIG.defaultDepth);
+  }
+  stacks=deepCopy(stacks0); selected=null; undoStack=[]; moves=0; stopTimer(); stopLevelTimer();
   boardEl.style.gridTemplateColumns = 'repeat(' + CONFIG.cols + ', var(--cell))';
   boardEl.style.gridTemplateRows = 'repeat(' + CONFIG.rows + ', var(--cell))';
   render(); syncFullBadges(); updateMaxDepthDisplay(); }

@@ -12,6 +12,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case xNumbers = "X-Numbers"
     case wordInShapes = "Words In Shapes"
     case jushBox = "JushBox"
+    case doubleBubble = "Double Bubble"
 
     var id: String { self.rawValue }
 
@@ -21,6 +22,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .xNumbers: return "xnumbersicon"
         case .wordInShapes: return "WordInShapesIcon"
         case .jushBox: return "jushboxicon"
+        case .doubleBubble: return "doublebubbleicon"
         }
     }
 
@@ -30,6 +32,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .xNumbers: return "number.square.fill"
         case .wordInShapes: return "textformat.abc"
         case .jushBox: return "cube.fill"
+        case .doubleBubble: return "bubble.left.and.bubble.right.fill"
         }
     }
 
@@ -38,6 +41,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .xNumbers: return "Solve the cross-sum puzzle"
         case .wordInShapes: return "Find words hidden in shapes"
         case .jushBox: return "Sliding-stack puzzle"
+        case .doubleBubble: return "Pop bubbles to form words"
         }
     }
 }

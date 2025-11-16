@@ -156,6 +156,10 @@ struct MainMenuView: View {
         case .jushBox:
             // JushBox uses fullScreenCover instead, not this sheet
             EmptyView()
+        case .doubleBubble:
+            WebDoubleBubbleGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

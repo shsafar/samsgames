@@ -26,6 +26,8 @@ struct GameInstructionsView: View {
                     WordInShapesInstructionsView()
                 case .jushBox:
                     JushBoxInstructionsView()
+                case .doubleBubble:
+                    DoubleBubbleInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

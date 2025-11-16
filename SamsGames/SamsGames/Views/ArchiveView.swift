@@ -85,6 +85,10 @@ struct ArchiveView: View {
             WebJushBoxGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .doubleBubble:
+            WebDoubleBubbleGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

@@ -232,26 +232,17 @@ struct WebGameViewRepresentable: UIViewRepresentable {
                 }
             }
 
-            // Inject the seed after the page loads, then start the game
+            // Inject the seed after the page loads
             let script = """
-            if (window.setSeed && window.newGame) {
+            if (window.setSeed) {
                 // AGGRESSIVE RESET
                 localStorage.clear();
                 sessionStorage.clear();
 
-                // Clear any existing seed first
-                window.setSeed(null);
-
-                // Set the correct daily seed
+                // Set the daily seed (but don't auto-start game)
                 console.log('🎯 Setting seed to: \(seed)');
                 window.setSeed(\(seed));
-
-                // Call newGame() TWICE to force complete reset
-                console.log('🎮 Calling newGame() - first');
-                window.newGame();
-                console.log('🎮 Calling newGame() - second');
-                window.newGame();
-                console.log('✅ Game initialized with seed: \(seed)');
+                console.log('✅ Seed set. Click New Game button to start.');
             }
             """
             webView.evaluateJavaScript(script, completionHandler: nil)

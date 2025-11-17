@@ -185,6 +185,7 @@ struct GameCard: View {
     let currentStreak: Int
     let onInfoTapped: () -> Void
     let dailyPuzzleManager: DailyPuzzleManager
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         HStack(spacing: 15) {
@@ -282,7 +283,7 @@ struct GameCard: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }

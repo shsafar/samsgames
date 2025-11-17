@@ -12,6 +12,7 @@ struct WebJushBoxGameView: View {
     @EnvironmentObject var dailyPuzzleManager: DailyPuzzleManager
     @EnvironmentObject var statisticsManager: StatisticsManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
 
     @State private var showCompletionAlert = false
     @State private var showInstructions = false
@@ -117,7 +118,7 @@ struct WebJushBoxGameView: View {
 
     private func splashScreen(imageName: String, text: String) -> some View {
         ZStack {
-            Color.white
+            (colorScheme == .dark ? Color(red: 0.1, green: 0.1, blue: 0.15) : Color.white)
                 .ignoresSafeArea()
 
             VStack {

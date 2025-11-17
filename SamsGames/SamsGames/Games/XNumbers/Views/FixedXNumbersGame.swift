@@ -5,6 +5,7 @@ struct FixedXNumbersGame: View {
     @StateObject private var progressManager = ProgressManager.shared
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.colorScheme) var colorScheme
     @State private var showingCongratulations = false
     @State private var timerFlash = false
     @State private var showStats = false
@@ -17,9 +18,12 @@ struct FixedXNumbersGame: View {
 
     var body: some View {
         ZStack {
-            // Background
+            // Background - Adapts to dark mode
             LinearGradient(
-                gradient: Gradient(colors: [
+                gradient: Gradient(colors: colorScheme == .dark ? [
+                    Color(red: 0.15, green: 0.15, blue: 0.2),
+                    Color(red: 0.1, green: 0.1, blue: 0.15)
+                ] : [
                     Color.white,
                     Color(red: 0.95, green: 0.95, blue: 0.97)
                 ]),

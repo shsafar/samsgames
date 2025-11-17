@@ -12,6 +12,7 @@ struct WebWordInShapesGameView: View {
     @EnvironmentObject var dailyPuzzleManager: DailyPuzzleManager
     @EnvironmentObject var statisticsManager: StatisticsManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
 
     @State private var showCompletionAlert = false
     @State private var gameTime: String = ""
@@ -33,7 +34,7 @@ struct WebWordInShapesGameView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground)
+            (colorScheme == .dark ? Color(red: 0.1, green: 0.1, blue: 0.15) : Color(UIColor.systemGroupedBackground))
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -59,7 +60,7 @@ struct WebWordInShapesGameView: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
-                .background(Color(UIColor.systemBackground))
+                .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color(UIColor.systemBackground))
 
                 // WebView for the game
                 WebGameViewRepresentable(

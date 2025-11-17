@@ -505,6 +505,11 @@
     // Show game content (was hidden until seed was set)
     document.getElementById('gameContent').style.display = 'block';
 
+    // CRITICAL: Reset RNG state to original seed for consistent generation
+    if (SEED !== null) {
+      rngState = SEED;
+    }
+
     state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';

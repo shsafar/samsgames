@@ -32,42 +32,55 @@ struct WebWordInShapesGameView: View {
         return dailyPuzzleManager.getSeedForToday()
     }
 
+    // Check if already completed today (only for non-archive mode)
+    private var isAlreadyCompleted: Bool {
+        if archiveMode {
+            return false // Archive mode always allows play
+        }
+        return dailyPuzzleManager.isCompletedToday(.wordInShapes)
+    }
+
     var body: some View {
         ZStack {
             (colorScheme == .dark ? Color(red: 0.1, green: 0.1, blue: 0.15) : Color(UIColor.systemGroupedBackground))
                 .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // Top bar with back button and help button
-                HStack {
-                    Button(action: { dismiss() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.title3)
-                            Text("Back")
-                                .font(.body)
-                        }
-                        .foregroundColor(.purple)
-                    }
-
-                    Spacer()
-
-                    Button(action: { showInstructions = true }) {
-                        Image(systemName: "questionmark.circle")
-                            .font(.system(size: 20))
+            // Show either completed screen or game
+            if isAlreadyCompleted {
+                WordInShapesCompletedView()
+            } else {
+                VStack(spacing: 0) {
+                    // Top bar with back button and help button
+                    HStack {
+                        Button(action: { dismiss() }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .font(.title3)
+                                Text("Back")
+                                    .font(.body)
+                            }
                             .foregroundColor(.purple)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color(UIColor.systemBackground))
+                        }
 
-                // WebView for the game
-                WebGameViewRepresentable(
-                    seed: seed,
-                    onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion
-                )
-                .id(seed) // Force recreation when seed changes (new day)
+                        Spacer()
+
+                        Button(action: { showInstructions = true }) {
+                            Image(systemName: "questionmark.circle")
+                                .font(.system(size: 20))
+                                .foregroundColor(.purple)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color(UIColor.systemBackground))
+
+                    // WebView for the game
+                    WebGameViewRepresentable(
+                        seed: seed,
+                        onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion
+                    )
+                    .id(seed) // Force recreation when seed changes (new day)
+                }
             }
         }
         .navigationBarHidden(true)
@@ -239,6 +252,116 @@ struct WebGameViewRepresentable: UIViewRepresentable {
             """
             webView.evaluateJavaScript(script, completionHandler: nil)
         }
+    }
+}
+
+// MARK: - Already Completed View
+
+struct WordInShapesCompletedView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    @State private var timeUntilNext = ""
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ZStack {
+            // Purple gradient background
+            LinearGradient(
+                colors: [
+                    Color.purple.opacity(0.6),
+                    Color.purple.opacity(0.8)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Top bar with back button
+                HStack {
+                    Button(action: { dismiss() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.title3)
+                            Text("Back")
+                                .font(.body)
+                        }
+                        .foregroundColor(.white)
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                Spacer()
+
+                VStack(spacing: 30) {
+                    // Completion message
+                    VStack(spacing: 12) {
+                        Text("Puzzle Completed!")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Text("Great job! You've finished today's Word In Shapes puzzle.")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white.opacity(0.9))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+
+                    // Countdown
+                    VStack(spacing: 8) {
+                        Text("Next puzzle in:")
+                            .font(.system(size: 16))
+                            .foregroundColor(.white.opacity(0.8))
+
+                        Text(timeUntilNext)
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(.white)
+                            .monospacedDigit()
+                    }
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.2))
+                    )
+
+                    Text("Try past puzzles in the Archive!")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+
+                Spacer()
+            }
+        }
+        .onReceive(timer) { _ in
+            updateCountdown()
+        }
+        .onAppear {
+            updateCountdown()
+        }
+    }
+
+    private func updateCountdown() {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Get start of tomorrow
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
+              let startOfTomorrow = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: tomorrow) else {
+            timeUntilNext = "Soon!"
+            return
+        }
+
+        let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: startOfTomorrow)
+
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        let seconds = components.second ?? 0
+
+        timeUntilNext = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 }
 

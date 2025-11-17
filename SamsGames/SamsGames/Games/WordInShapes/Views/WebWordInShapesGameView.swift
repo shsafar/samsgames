@@ -243,11 +243,15 @@ struct WebGameViewRepresentable: UIViewRepresentable {
                 window.setSeed(null);
 
                 // Set the correct daily seed
+                console.log('🎯 Setting seed to: \(seed)');
                 window.setSeed(\(seed));
 
                 // Call newGame() TWICE to force complete reset
+                console.log('🎮 Calling newGame() - first');
                 window.newGame();
+                console.log('🎮 Calling newGame() - second');
                 window.newGame();
+                console.log('✅ Game initialized with seed: \(seed)');
             }
             """
             webView.evaluateJavaScript(script, completionHandler: nil)

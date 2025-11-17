@@ -78,20 +78,17 @@ struct MainMenuView: View {
                     }
                 }
             }
-            .sheet(item: $selectedGame) { gameType in
+            // Show games in fullscreen on iPad, sheet on iPhone
+            .fullScreenCover(item: isIPad ? $selectedGame : .constant(nil)) { gameType in
                 if gameType != .jushBox {
-                    if isIPad {
-                        // iPad: Full screen cover-like presentation
-                        gameView(for: gameType)
-                            .presentationDetents([.large])
-                            .presentationDragIndicator(.hidden)
-                            .interactiveDismissDisabled(false)
-                    } else {
-                        // iPhone: Standard sheet
-                        gameView(for: gameType)
-                            .presentationDetents([.large])
-                            .presentationDragIndicator(.hidden)
-                    }
+                    gameView(for: gameType)
+                }
+            }
+            .sheet(item: !isIPad ? $selectedGame : .constant(nil)) { gameType in
+                if gameType != .jushBox {
+                    gameView(for: gameType)
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.hidden)
                 }
             }
             .fullScreenCover(isPresented: $showJushBox) {
@@ -99,16 +96,32 @@ struct MainMenuView: View {
                     .environmentObject(dailyPuzzleManager)
                     .environmentObject(statisticsManager)
             }
-            .sheet(isPresented: $showArchive) {
+            // Archive - fullscreen on iPad, sheet on iPhone
+            .fullScreenCover(isPresented: isIPad ? $showArchive : .constant(false)) {
                 ArchiveView()
             }
-            .sheet(isPresented: $showStatistics) {
+            .sheet(isPresented: !isIPad ? $showArchive : .constant(false)) {
+                ArchiveView()
+            }
+            // Statistics - fullscreen on iPad, sheet on iPhone
+            .fullScreenCover(isPresented: isIPad ? $showStatistics : .constant(false)) {
                 StatisticsView()
             }
-            .sheet(isPresented: $showSettings) {
+            .sheet(isPresented: !isIPad ? $showStatistics : .constant(false)) {
+                StatisticsView()
+            }
+            // Settings - fullscreen on iPad, sheet on iPhone
+            .fullScreenCover(isPresented: isIPad ? $showSettings : .constant(false)) {
                 SettingsMenuView()
             }
-            .sheet(item: $showInstructions) { gameType in
+            .sheet(isPresented: !isIPad ? $showSettings : .constant(false)) {
+                SettingsMenuView()
+            }
+            // Instructions - fullscreen on iPad, sheet on iPhone
+            .fullScreenCover(item: isIPad ? $showInstructions : .constant(nil)) { gameType in
+                GameInstructionsView(gameType: gameType)
+            }
+            .sheet(item: !isIPad ? $showInstructions : .constant(nil)) { gameType in
                 GameInstructionsView(gameType: gameType)
             }
         }

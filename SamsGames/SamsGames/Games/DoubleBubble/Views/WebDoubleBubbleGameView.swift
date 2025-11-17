@@ -16,6 +16,9 @@ struct WebDoubleBubbleGameView: View {
     @State private var showCompletionAlert = false
     @State private var gameScore: Int = 0
     @State private var showInstructions = false
+    @State private var showSplash = true
+    @State private var splashScale: CGFloat = 0.5
+    @State private var splashOpacity: Double = 0.0
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -28,6 +31,14 @@ struct WebDoubleBubbleGameView: View {
             return archiveSeed
         }
         return dailyPuzzleManager.getSeedForToday()
+    }
+
+    // Check if already completed today (only for non-archive mode)
+    private var isAlreadyCompleted: Bool {
+        if archiveMode {
+            return false // Archive mode always allows play
+        }
+        return dailyPuzzleManager.isCompletedToday(.doubleBubble)
     }
 
     var body: some View {
@@ -60,12 +71,41 @@ struct WebDoubleBubbleGameView: View {
                 .padding(.vertical, 8)
                 .background(Color(UIColor.systemBackground))
 
-                // WebView for the game
-                WebDoubleBubbleGameViewRepresentable(
-                    seed: seed,
-                    onGameCompleted: archiveMode ? { _ in } : handleGameCompletion
-                )
-                .id(seed) // Force recreation when seed changes (new day)
+                // Show either completed screen or game
+                if isAlreadyCompleted {
+                    AlreadyCompletedView()
+                } else {
+                    // WebView for the game
+                    WebDoubleBubbleGameViewRepresentable(
+                        seed: seed,
+                        onGameCompleted: archiveMode ? { _ in } : handleGameCompletion
+                    )
+                    .id(seed) // Force recreation when seed changes (new day)
+                }
+            }
+
+            // Splash screen overlay (only if not already completed)
+            if showSplash && !isAlreadyCompleted {
+                ZStack {
+                    // Teal gradient background
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.56, green: 0.9, blue: 0.9),
+                            Color(red: 0.3, green: 0.72, blue: 0.72)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+
+                    // DB Icon with animation
+                    Image("dbicon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 200, height: 200)
+                        .scaleEffect(splashScale)
+                        .opacity(splashOpacity)
+                }
             }
         }
         .navigationBarHidden(true)
@@ -82,6 +122,21 @@ struct WebDoubleBubbleGameView: View {
         .onAppear {
             // Check if new day when view appears
             dailyPuzzleManager.checkForNewDay()
+
+            // Animate splash screen (only if not already completed)
+            if !isAlreadyCompleted {
+                withAnimation(.easeOut(duration: 0.6)) {
+                    splashScale = 1.0
+                    splashOpacity = 1.0
+                }
+
+                // Hide splash screen after animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation(.easeIn(duration: 0.4)) {
+                        showSplash = false
+                    }
+                }
+            }
         }
     }
 
@@ -97,6 +152,101 @@ struct WebDoubleBubbleGameView: View {
 
         // Show completion alert
         showCompletionAlert = true
+    }
+}
+
+// MARK: - Already Completed View
+struct AlreadyCompletedView: View {
+    @State private var timeUntilNext = ""
+
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ZStack {
+            // Teal gradient background
+            LinearGradient(
+                colors: [
+                    Color(red: 0.56, green: 0.9, blue: 0.9),
+                    Color(red: 0.3, green: 0.72, blue: 0.72)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 30) {
+                Spacer()
+
+                // Icon
+                Image("dbicon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
+
+                // Completed message
+                VStack(spacing: 12) {
+                    Text("Puzzle Completed!")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white)
+
+                    Text("Great job! You've finished today's Double Bubble puzzle.")
+                        .font(.system(size: 18))
+                        .foregroundColor(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+
+                // Countdown
+                VStack(spacing: 8) {
+                    Text("Next puzzle in:")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white.opacity(0.8))
+
+                    Text(timeUntilNext)
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(.white)
+                        .monospacedDigit()
+                }
+                .padding(.vertical, 20)
+                .padding(.horizontal, 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.2))
+                )
+
+                Text("Try past puzzles in the Archive!")
+                    .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.8))
+
+                Spacer()
+            }
+        }
+        .onReceive(timer) { _ in
+            updateCountdown()
+        }
+        .onAppear {
+            updateCountdown()
+        }
+    }
+
+    private func updateCountdown() {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Get start of tomorrow
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
+              let startOfTomorrow = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: tomorrow) else {
+            timeUntilNext = "Soon!"
+            return
+        }
+
+        let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: startOfTomorrow)
+
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        let seconds = components.second ?? 0
+
+        timeUntilNext = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 }
 

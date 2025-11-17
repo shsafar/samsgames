@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SettingsMenuView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var themeManager: AppThemeManager
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfUse = false
     @State private var showContactSupport = false
@@ -44,6 +45,13 @@ struct SettingsMenuView: View {
 
                     // Menu Items
                     VStack(spacing: 0) {
+                        // Dark Mode Toggle
+                        DarkModeToggle(isDarkMode: $themeManager.isDarkMode)
+
+                        Divider()
+                            .background(Color.white.opacity(0.2))
+                            .padding(.vertical, 10)
+
                         MenuButton(
                             icon: "shield.lefthalf.filled",
                             title: "Privacy Policy"
@@ -119,6 +127,36 @@ struct SettingsMenuView: View {
     }
 }
 
+struct DarkModeToggle: View {
+    @Binding var isDarkMode: Bool
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: isDarkMode ? "moon.fill" : "sun.max.fill")
+                .font(.system(size: 22))
+                .foregroundColor(.white)
+                .frame(width: 30)
+
+            Text("Dark Mode")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
+
+            Spacer()
+
+            Toggle("", isOn: $isDarkMode)
+                .labelsHidden()
+                .toggleStyle(SwitchToggleStyle(tint: .blue))
+        }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 20)
+        .background(
+            RoundedRectangle(cornerRadius: 15)
+                .fill(Color.white.opacity(0.05))
+        )
+        .padding(.vertical, 4)
+    }
+}
+
 struct MenuButton: View {
     let icon: String
     let title: String
@@ -156,4 +194,5 @@ struct MenuButton: View {
 
 #Preview {
     SettingsMenuView()
+        .environmentObject(AppThemeManager())
 }

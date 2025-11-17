@@ -12,6 +12,7 @@ import SwiftUI
 struct SamsGamesApp: App {
     @StateObject private var dailyPuzzleManager = DailyPuzzleManager()
     @StateObject private var statisticsManager = StatisticsManager()
+    @StateObject private var themeManager = AppThemeManager()
     @State private var showSplash = true
 
     var body: some Scene {
@@ -24,9 +25,11 @@ struct SamsGamesApp: App {
                     MainMenuView()
                         .environmentObject(dailyPuzzleManager)
                         .environmentObject(statisticsManager)
+                        .environmentObject(themeManager)
                         .transition(.opacity)
                 }
             }
+            .preferredColorScheme(themeManager.isDarkMode ? .dark : .light)
         }
     }
 }

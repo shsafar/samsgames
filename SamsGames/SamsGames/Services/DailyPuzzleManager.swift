@@ -22,7 +22,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .xNumbers: return "xnumbersicon"
         case .wordInShapes: return "WordInShapesIcon"
         case .jushBox: return "jushboxicon"
-        case .doubleBubble: return "doublebubbleicon"
+        case .doubleBubble: return "dbicon"
         }
     }
 

@@ -1908,7 +1908,7 @@ class XNumbersGameModel: ObservableObject {
         // Calculate correct sums based on generated values
         setupLines()
 
-        // Reset game state (timer will start on first move)
+        // Reset game state and start timer immediately
         isGameComplete = false
         showCompletionAlert = false
         timeElapsed = 0
@@ -1918,7 +1918,8 @@ class XNumbersGameModel: ObservableObject {
         showTooManyHintsAlert = false
         gameOver = false
         revealedNodes.removeAll() // Clear revealed nodes for new game
-        timerStarted = false // Timer will start when user makes first move
+        timerStarted = true
+        startTimer() // Start timer immediately when game begins
     }
 
     private func generateRandomValues() -> [Int] {
@@ -2119,24 +2120,12 @@ class XNumbersGameModel: ObservableObject {
             // Regular node - select it for number entry
             nodes[index].isSelected = true
             selectedNode = nodes[index]
-
-            // Start timer on first move
-            if !timerStarted {
-                timerStarted = true
-                startTimer()
-            }
         }
     }
 
     func placeNumber(_ number: Int) {
         guard let selected = selectedNode,
               let index = nodes.firstIndex(where: { $0.id == selected.id }) else { return }
-
-        // Start timer on first move (if not already started)
-        if !timerStarted {
-            timerStarted = true
-            startTimer()
-        }
 
         nodes[index].value = number
         nodes[index].isSelected = false
@@ -2308,13 +2297,7 @@ class XNumbersGameModel: ObservableObject {
             DispatchQueue.main.async {
                 if !self.isGameComplete && !self.gameOver {
                     self.timeElapsed += 1
-
-                    // Check for timeout
-                    if self.timeElapsed >= self.maxTime {
-                        self.showTimeoutAlert = true
-                        self.gameOver = true
-                        self.stopTimer()
-                    }
+                    // No timeout check - timer counts up indefinitely
                 }
             }
         }
@@ -2325,19 +2308,13 @@ class XNumbersGameModel: ObservableObject {
     }
 
     var formattedTime: String {
-        let remainingTime = max(0, maxTime - timeElapsed)
-        return String(format: "%02d:%02d", remainingTime / 60, remainingTime % 60)
+        // Count up from 00:00
+        return String(format: "%02d:%02d", timeElapsed / 60, timeElapsed % 60)
     }
 
     var timeColor: Color {
-        let remainingTime = maxTime - timeElapsed
-        if remainingTime <= 10 {
-            return .red
-        } else if remainingTime <= 20 {
-            return .orange
-        } else {
-            return .black
-        }
+        // Always black since we're counting up
+        return .black
     }
 
     func dismissAlert() {

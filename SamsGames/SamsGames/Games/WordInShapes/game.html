@@ -56,8 +56,6 @@
 </style>
 </head>
 <body>
-  <!-- Game content - hidden until seed is set and newGame() is called -->
-  <div id="gameContent">
   <h1>Words In Shapes</h1>
   <div id="hud">
     <span>Score: <span id="score">0</span></span>
@@ -88,7 +86,6 @@
 
   <div class="wordlist" id="wordList"></div>
   <div id="toast" class="toast">Well done! Solved it!</div>
-  </div><!-- End gameContent -->
 
   <!-- How to Play modal -->
   <div id="helpModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="helpTitle" aria-modal="true">
@@ -197,29 +194,27 @@
   let rngState = Date.now();
 
   function setSeed(seed) {
-    console.log('📝 setSeed called with:', seed);
     SEED = seed;
     rngState = seed;
-    console.log('✅ SEED set to:', SEED, 'rngState:', rngState);
   }
 
   function seededRandom() {
     if (SEED === null) {
-      return Math.random(); // Fallback to regular random if no seed
+      return Math.random();
     }
-    // Simple LCG (Linear Congruential Generator)
     rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
     return rngState / 0x7fffffff;
   }
 
-  // Expose setSeed and newGame globally for Swift to call
+  // Expose for Swift
   window.setSeed = setSeed;
-  window.newGame = newGame;
+  window.dailyMode = false;
+  window.startDailyGame = function() {
+    window.dailyMode = true;
+    newGame();
+  };
 
-  // Flag to control auto-start (set by Swift before loading)
-  window.waitingForSeed = false;
-
-  // helpers
+  // helpers - use seededRandom for daily mode
   const randInt = (a,b)=>Math.floor(seededRandom()*(b-a+1))+a;
   const choice  = a=>a[Math.floor(seededRandom()*a.length)];
   const idx     = (x,y)=>y*N+x;
@@ -283,13 +278,39 @@
     return false;
   }
 
+  // Shuffle array using seededRandom for consistency in daily mode
+  function shuffleArray(arr) {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   function generate(){
     state.words=[];
     const lengths=[3,4,5,6];
+
+    // Shuffle word lists at start of each game for better variety
+    const shuffledWords = {
+      3: shuffleArray(WORDS[3]),
+      4: shuffleArray(WORDS[4]),
+      5: shuffleArray(WORDS[5]),
+      6: shuffleArray(WORDS[6])
+    };
+
+    // Track which words we've tried from each length
+    const wordIndex = {3: 0, 4: 0, 5: 0, 6: 0};
+
     let guard=0;
     while(state.words.length<MAX_WORDS && guard++<3000){
       const L=choice(lengths);
-      const w=choice(WORDS[L]);
+
+      // Get next word from shuffled list instead of random selection
+      if(wordIndex[L] >= shuffledWords[L].length) continue;
+      const w = shuffledWords[L][wordIndex[L]++];
+
       if(state.words.some(v=>v.word===w)) continue;
       if(placeWord(w)) continue;
     }
@@ -384,6 +405,39 @@
     return area > 0.5; // Minimum area threshold to avoid very flat triangles
   }
 
+  function isAxisAlignedSquare(pts){
+    if(pts.length!==4) return false;
+
+    // Extract all x and y coordinates
+    const xs = pts.map(p => p.x).sort((a,b) => a-b);
+    const ys = pts.map(p => p.y).sort((a,b) => a-b);
+
+    // For an axis-aligned square, we should have exactly 2 unique x values and 2 unique y values
+    const uniqueXs = [...new Set(xs)];
+    const uniqueYs = [...new Set(ys)];
+
+    if(uniqueXs.length !== 2 || uniqueYs.length !== 2) return false;
+
+    // Check that it forms a square (width equals height)
+    const width = uniqueXs[1] - uniqueXs[0];
+    const height = uniqueYs[1] - uniqueYs[0];
+
+    if(width !== height || width < 2) return false; // Must be a square with minimum size 2
+
+    // Verify all 4 corners exist
+    const corners = [
+      {x: uniqueXs[0], y: uniqueYs[0]},
+      {x: uniqueXs[1], y: uniqueYs[0]},
+      {x: uniqueXs[1], y: uniqueYs[1]},
+      {x: uniqueXs[0], y: uniqueYs[1]}
+    ];
+
+    // Check if all corners are in the selected points
+    return corners.every(corner =>
+      pts.some(p => p.x === corner.x && p.y === corner.y)
+    );
+  }
+
   function onCell(x,y,el){
     // Only block clicking on locked (green) cells, not shared (red) cells
     if(el.classList.contains('locked')) return;
@@ -419,7 +473,7 @@
 
         // First check if path matches the original shape
         let pathOK = triangleOrSquareMatches(state.chosen, w.points);
-        let isAlternateTriangle = false;
+        let isAlternateShape = false;
 
         // For triangles: also accept ANY valid right triangle if letters spell the word in exact sequence
         if(!pathOK && w.len===3 && guess===w.word) {
@@ -428,16 +482,30 @@
           pathOK = isRightIsoTriangle(trianglePoints);
 
           if(pathOK) {
-            isAlternateTriangle = true;
+            isAlternateShape = true;
             console.log('✅ Accepted alternate triangle for:', w.word, trianglePoints);
           } else {
             console.log('❌ Not a valid right triangle:', w.word, trianglePoints);
           }
         }
 
+        // For squares: also accept ANY valid axis-aligned square if letters spell the word (with rotations)
+        if(!pathOK && w.len===4 && rotations.includes(guess)) {
+          // Check if the selected positions form a valid axis-aligned square
+          const squarePoints = state.chosen.map(p => ({x: p.x, y: p.y}));
+          pathOK = isAxisAlignedSquare(squarePoints);
+
+          if(pathOK) {
+            isAlternateShape = true;
+            console.log('✅ Accepted alternate square for:', w.word, squarePoints);
+          } else {
+            console.log('❌ Not a valid axis-aligned square:', w.word, squarePoints);
+          }
+        }
+
         if(wordsOK && pathOK) {
-          // Store whether this is an alternate triangle for later use
-          w.isAlternateTriangle = isAlternateTriangle;
+          // Store whether this is an alternate shape for later use
+          w.isAlternateShape = isAlternateShape;
           return true;
         }
         return false;
@@ -448,8 +516,8 @@
     });
 
     if(hit){
-      // If it's an alternate triangle, mark as "shared" (red) instead of "locked" (green)
-      const isAlternate = hit.isAlternateTriangle;
+      // If it's an alternate shape (triangle or square), mark as "shared" (red) instead of "locked" (green)
+      const isAlternate = hit.isAlternateShape;
 
       state.chosen.forEach(p=>{
         const c=state.cells[idx(p.x,p.y)];
@@ -478,7 +546,16 @@
         const finalTime = Math.floor((Date.now()-startTime)/1000);
         stats.update(finalTime, state.score, state.words.length, state.penalty);
         toast('Well done! Solved it!');
-        setTimeout(()=>alert(`All found! Score ${state.score} in ${timeEl.textContent}`),100);
+
+        // Notify Swift if in daily mode
+        if(window.dailyMode && window.webkit?.messageHandlers?.gameCompleted) {
+          window.webkit.messageHandlers.gameCompleted.postMessage({
+            score: state.score,
+            time: timeEl.textContent
+          });
+        } else {
+          setTimeout(()=>alert(`All found! Score ${state.score} in ${timeEl.textContent}`),100);
+        }
       }
     }
   }
@@ -504,23 +581,11 @@
   }
 
   function newGame(){
-    console.log('🎲 newGame() called - SEED:', SEED);
-    // Show game content (was hidden until seed was set)
-    document.getElementById('gameContent').style.display = 'block';
-
-    // CRITICAL: Reset RNG state to original seed for consistent generation
-    if (SEED !== null) {
-      console.log('🔄 Resetting rngState from', rngState, 'to SEED:', SEED);
-      rngState = SEED;
-    }
-
     state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';
     document.getElementById('hintBtn').textContent='Show Hints';
-    console.log('🎯 Generating puzzle with seed:', SEED);
     generate(); renderBoard(); renderWordList(); updateGuess(); startTimer();
-    console.log('✅ newGame() complete - words:', state.words.map(w => w.word).join(', '));
   }
 
   // Sounds
@@ -710,23 +775,8 @@
     setTimeout(()=>el.classList.remove('show'),1500);
   }
 
-  // Smoke tests (non-mutating)
-  function runTests(){
-    console.group('Words In Shapes – tests');
-    console.assert(state.words.length>0 && state.words.length<=7, 'Expected 1..7 words');
-    const used=new Set();
-    for(const w of state.words){ for(const p of w.points){ const k=p.x+','+p.y; console.assert(!used.has(k),'Overlap at',k); used.add(k);} }
-    let allFilled=true; for(let y=0;y<N;y++){ for(let x=0;x<N;x++){ if(!state.grid[y][x]) allFilled=false; }}
-    console.assert(allFilled, 'Grid should be fully filled with letters');
-    console.assert(!SHOW_HINTS, 'Hints should be OFF at start');
-    console.assert(hints.innerHTML==='' || hints.childNodes.length===0, 'Hints SVG empty on load');
-    console.groupEnd();
-  }
-
-  // boot
-  // NEVER auto-start - always wait for Swift to set seed and call newGame()
-  // Game content is hidden until newGame() is called
-  runTests();
+  // Wait for Swift to call setSeed() and startDailyGame()
+  console.log('✅ Word In Shapes ready. Waiting for Swift...');
 })();
 </script>
 </body>

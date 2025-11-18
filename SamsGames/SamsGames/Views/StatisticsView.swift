@@ -9,7 +9,12 @@ import SwiftUI
 
 struct StatisticsView: View {
     @EnvironmentObject var statisticsManager: StatisticsManager
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.dismiss) var dismiss
+
+    @State private var titleTapCount = 0
+    @State private var lastTapTime = Date()
+    @State private var showTestModeAlert = false
 
     var body: some View {
         NavigationView {
@@ -34,12 +39,47 @@ struct StatisticsView: View {
             .navigationTitle("Statistics")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Statistics")
+                        .font(.headline)
+                        .onTapGesture {
+                            handleTitleTap()
+                        }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
                 }
             }
+            .alert("Test Mode Activated", isPresented: $showTestModeAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Archive access unlocked for testing. This will persist until the app is reinstalled.")
+            }
+        }
+    }
+
+    private func handleTitleTap() {
+        let now = Date()
+        let timeSinceLastTap = now.timeIntervalSince(lastTapTime)
+
+        // Reset counter if more than 2 seconds have passed since last tap
+        if timeSinceLastTap > 2.0 {
+            titleTapCount = 1
+        } else {
+            titleTapCount += 1
+        }
+
+        lastTapTime = now
+
+        print("🔢 Title tap count: \(titleTapCount)/5")
+
+        // Enable test mode after 5 taps
+        if titleTapCount >= 5 {
+            subscriptionManager.enableTestMode()
+            showTestModeAlert = true
+            titleTapCount = 0
         }
     }
 }

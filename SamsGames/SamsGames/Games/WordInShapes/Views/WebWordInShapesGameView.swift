@@ -126,26 +126,8 @@ struct WebGameViewRepresentable: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        // Clear ALL WebView data first to ensure fresh game
-        let dataStore = WKWebsiteDataStore.default()
-        let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
-        dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date(timeIntervalSince1970: 0)) { }
-
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = dataStore
-
-        // Use modern API for JavaScript (iOS 14+)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
-
-        // Inject script to set waitingForSeed flag BEFORE page loads
-        let waitingScript = WKUserScript(
-            source: "window.waitingForSeed = true;",
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
-        )
-        configuration.userContentController.addUserScript(waitingScript)
-
-        // Add message handler for game completion
         configuration.userContentController.add(context.coordinator, name: "gameCompleted")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
@@ -232,17 +214,11 @@ struct WebGameViewRepresentable: UIViewRepresentable {
                 }
             }
 
-            // Inject the seed after the page loads
+            // Start game with seed
             let script = """
-            if (window.setSeed) {
-                // AGGRESSIVE RESET
-                localStorage.clear();
-                sessionStorage.clear();
-
-                // Set the daily seed (but don't auto-start game)
-                console.log('🎯 Setting seed to: \(seed)');
+            if (window.setSeed && window.startDailyGame) {
                 window.setSeed(\(seed));
-                console.log('✅ Seed set. Click New Game button to start.');
+                window.startDailyGame();
             }
             """
             webView.evaluateJavaScript(script, completionHandler: nil)

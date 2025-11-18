@@ -29,45 +29,45 @@
       width: 100vw;
     }
 
-    /* Mobile-optimized top bar */
+    /* Mobile-optimized top bar - LARGER */
     .top-bar {
       background: rgba(0,0,0,0.6);
-      padding: 12px;
+      padding: 18px 16px;
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
 
     .title-bar {
-      margin-bottom: 10px;
+      margin-bottom: 14px;
     }
 
     .title-bar h1 {
-      font-size: 2rem;
+      font-size: 2.4rem;
       font-weight: bold;
       color: #fff;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
     .title-bar .subline {
-      font-size: 1.1rem;
+      font-size: 1.3rem;
       color: rgba(255,255,255,0.85);
     }
 
     .controls {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 14px;
       align-items: center;
       justify-content: space-between;
     }
 
     .controls > div {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
     }
 
     .controls label {
-      font-size: 1.1rem;
+      font-size: 1.3rem;
       color: rgba(255,255,255,0.9);
       font-weight: 600;
     }
@@ -76,20 +76,20 @@
       background: rgba(255,255,255,0.15);
       border: 2px solid rgba(255,255,255,0.4);
       color: #fff;
-      padding: 10px 16px;
+      padding: 12px 18px;
       border-radius: 8px;
-      font-size: 1.1rem;
+      font-size: 1.3rem;
       font-weight: 600;
     }
 
     .controls button {
       background: #28a8ff;
       border: none;
-      padding: 12px 20px;
+      padding: 14px 24px;
       border-radius: 10px;
       color: #fff;
       font-weight: bold;
-      font-size: 1.1rem;
+      font-size: 1.3rem;
       cursor: pointer;
     }
 
@@ -97,16 +97,16 @@
       background: #1b88d0;
     }
 
-    /* Mobile-optimized score board */
+    /* Mobile-optimized score board - LARGER */
     .score-board {
       background: rgba(0,0,0,0.5);
-      padding: 14px 18px;
+      padding: 18px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
-      font-size: 1.2rem;
+      gap: 14px;
+      font-size: 1.4rem;
       border-bottom: 2px solid rgba(255,255,255,0.15);
       font-weight: 600;
     }
@@ -118,41 +118,41 @@
 
     .score-group {
       display: flex;
-      gap: 20px;
+      gap: 24px;
       align-items: center;
     }
 
     .target-display {
-      font-size: 1.15rem;
+      font-size: 1.4rem;
       background: rgba(255,228,91,0.2);
-      padding: 8px 16px;
-      border-radius: 14px;
+      padding: 10px 20px;
+      border-radius: 16px;
       border: 2px solid rgba(255,228,91,0.4);
     }
 
     .target-display span {
       font-weight: bold;
       color: #ffe45b;
-      font-size: 1.3rem;
+      font-size: 1.6rem;
     }
 
     .current-pick {
-      font-size: 13px;
+      font-size: 1.2rem;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
 
     #pick-letters {
       display: inline-block;
-      min-width: 32px;
-      padding: 4px 12px;
-      border-radius: 16px;
+      min-width: 40px;
+      padding: 6px 14px;
+      border-radius: 18px;
       background: linear-gradient(135deg, #7b2cbf, #9d4edd);
       border: 2px solid #c77dff;
       text-align: center;
       font-weight: bold;
-      font-size: 16px;
+      font-size: 1.3rem;
       color: #fff;
       letter-spacing: 1px;
     }
@@ -615,13 +615,36 @@
   const DIFFICULTY_SETTINGS = {
     easy:   { speedMin: 0.6, speedMax: 1.2, spawnChance: 0.55, bubbleCap: 10 },
     normal: { speedMin: 0.8, speedMax: 1.6, spawnChance: 0.8,  bubbleCap: 12 },
-    hard:   { speedMin: 2.4, speedMax: 4.0, spawnChance: 1.0,  bubbleCap: 14 }
+    hard:   { speedMin: 1.2, speedMax: 2.0, spawnChance: 1.0,  bubbleCap: 14 }
   };
 
   let currentDifficulty = 'normal';
   let WORD_DICTIONARY = DICTIONARIES.default.slice();
   let currentTheme = 'default';
   let targetWord = null;
+  let targetWordPairs = []; // Required 2-letter pairs for target word
+  let foundTargetPairs = new Set(); // Track which pairs have been found
+  let shuffledTargetPool = []; // Shuffled pool of target words
+  let targetWordIndex = 0; // Current index in shuffled pool
+
+  // Shuffle array using seededRandom for consistency in daily mode
+  function shuffleArray(arr) {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  // Initialize shuffled target word pool
+  function initTargetWordPool() {
+    const list = DICTIONARIES[currentTheme] || [];
+    const candidates = list.filter(w => w.length >= 4);
+    const pool = candidates.length > 0 ? candidates : list;
+    shuffledTargetPool = shuffleArray(pool);
+    targetWordIndex = 0;
+  }
 
   const FRAGMENT_LIMIT = 12;
   const TIMED_MODE_SECONDS = 60;
@@ -769,17 +792,60 @@
 
   // Target word
   function pickNewTargetWord() {
-    const list = DICTIONARIES[currentTheme] || [];
-    const candidates = list.filter(w => w.length >= 4);
-    const pool = candidates.length > 0 ? candidates : list;
-    if (pool.length === 0) {
+    // Initialize pool if empty or exhausted
+    if (shuffledTargetPool.length === 0 || targetWordIndex >= shuffledTargetPool.length) {
+      initTargetWordPool();
+    }
+
+    if (shuffledTargetPool.length === 0) {
       targetWord = null;
+      targetWordEl.textContent = "—";
+      targetWordPairs = [];
+      foundTargetPairs.clear();
+      return;
+    }
+
+    // Pick next word from shuffled pool
+    targetWord = shuffledTargetPool[targetWordIndex++];
+
+    // Calculate consecutive non-overlapping 2-letter pairs
+    targetWordPairs = [];
+    foundTargetPairs.clear();
+    for (let i = 0; i < targetWord.length - 1; i += 2) {
+      const pair = targetWord.substring(i, i + 2);
+      targetWordPairs.push(pair);
+    }
+
+    updateTargetWordDisplay();
+    log("New target word: " + targetWord + " (pairs: " + targetWordPairs.join(", ") + ")");
+  }
+
+  // Update target word display with highlighting
+  function updateTargetWordDisplay() {
+    if (!targetWord) {
       targetWordEl.textContent = "—";
       return;
     }
-    targetWord = pool[Math.floor(seededRandom() * pool.length)];
-    targetWordEl.textContent = targetWord;
-    log("New target word: " + targetWord);
+
+    // Build HTML with highlighted pairs
+    let html = '';
+    for (let i = 0; i < targetWord.length; i++) {
+      const pairIndex = Math.floor(i / 2);
+      const pair = targetWordPairs[pairIndex];
+      const isFound = foundTargetPairs.has(pair);
+
+      if (i % 2 === 0) {
+        // Start of a pair
+        html += `<span style="color: ${isFound ? '#4ade80' : 'inherit'}; font-weight: ${isFound ? 'bold' : 'normal'}">`;
+      }
+      html += targetWord[i];
+      if (i % 2 === 1) {
+        // End of a pair
+        html += '</span>';
+      }
+    }
+
+    targetWordEl.innerHTML = html;
   }
 
   // Staging display
@@ -947,10 +1013,39 @@
     const lenBonus = Math.max(0, wordText.length - 2) * 5;
     let newScore = base + lenBonus;
 
+    // Check if this is a 2-letter word that's part of the target word pairs
+    if (targetWord && wordText.length === 2 && targetWordPairs.includes(wordText)) {
+      if (!foundTargetPairs.has(wordText)) {
+        foundTargetPairs.add(wordText);
+        log(`Found target pair: "${wordText}" (${foundTargetPairs.size}/${targetWordPairs.length})`);
+        updateTargetWordDisplay();
+
+        // Check if all pairs are found
+        if (foundTargetPairs.size === targetWordPairs.length) {
+          const bonus = 30;
+          newScore += bonus;
+          log(`All target pairs found! Auto-completing "${targetWord}" (+${bonus} bonus)`);
+
+          // Add the target word as a completed word
+          const targetId = Date.now() + ":" + Math.random().toString(16).slice(2);
+          words.push({ id: targetId, text: targetWord });
+
+          const targetChip = document.createElement('div');
+          targetChip.className = 'chip word';
+          targetChip.textContent = targetWord;
+          targetChip.dataset.id = targetId;
+          targetChip.style.background = '#4ade80'; // Green highlight for target completion
+          wordsEl.appendChild(targetChip);
+
+          pickNewTargetWord();
+        }
+      }
+    }
+
     if (targetWord && wordText === targetWord) {
       const bonus = 30;
       newScore += bonus;
-      log(`TARGET word completed! "${wordText}" (+${bonus} bonus)`);
+      log(`TARGET word completed directly! "${wordText}" (+${bonus} bonus)`);
       pickNewTargetWord();
     }
 
@@ -1114,6 +1209,7 @@
     }
 
     overlay.classList.remove('visible');
+    initTargetWordPool(); // Shuffle target words for new game
     pickNewTargetWord();
     log("Game reset. Press Start.");
   }
@@ -1122,6 +1218,7 @@
     currentTheme = theme;
     gameArea.classList.remove('theme-default','theme-social','theme-scientific','theme-animals');
     WORD_DICTIONARY = DICTIONARIES[theme].slice();
+    initTargetWordPool(); // Re-shuffle for new theme
     switch (theme) {
       case 'social':
         gameArea.classList.add('theme-social');

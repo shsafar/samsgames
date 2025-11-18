@@ -10,10 +10,12 @@ import SwiftUI
 struct SettingsMenuView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var themeManager: AppThemeManager
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showPrivacyPolicy = false
     @State private var showTermsOfUse = false
     @State private var showContactSupport = false
     @State private var showQuitAlert = false
+    @State private var showPaywall = false
 
     var body: some View {
         NavigationView {
@@ -45,6 +47,54 @@ struct SettingsMenuView: View {
 
                     // Menu Items
                     VStack(spacing: 0) {
+                        // Subscription Status / Upgrade Button
+                        if subscriptionManager.isSubscribed {
+                            // Show Premium status
+                            HStack {
+                                Image(systemName: "crown.fill")
+                                    .foregroundColor(.yellow)
+                                Text("Premium Active")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            }
+                            .padding()
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                        } else {
+                            // Show Upgrade button
+                            Button(action: {
+                                showPaywall = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "crown.fill")
+                                        .foregroundColor(.yellow)
+                                    Text("Upgrade to Premium")
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                }
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.6)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(12)
+                            }
+                            .padding(.horizontal)
+                        }
+
+                        Divider()
+                            .background(Color.white.opacity(0.2))
+                            .padding(.vertical, 10)
+
                         // Dark Mode Toggle
                         DarkModeToggle(isDarkMode: $themeManager.isDarkMode)
 
@@ -105,6 +155,9 @@ struct SettingsMenuView: View {
                             .foregroundColor(.white)
                     }
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
             }
             .sheet(isPresented: $showPrivacyPolicy) {
                 PrivacyPolicyView()

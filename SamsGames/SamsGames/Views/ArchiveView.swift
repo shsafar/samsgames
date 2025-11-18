@@ -10,9 +10,11 @@ import SwiftUI
 struct ArchiveView: View {
     @EnvironmentObject var dailyPuzzleManager: DailyPuzzleManager
     @EnvironmentObject var statisticsManager: StatisticsManager
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.dismiss) var dismiss
 
     @State private var selectedArchiveItem: ArchiveItem?
+    @State private var showPaywall = false
 
     private let availableDates: [Date]
 
@@ -29,20 +31,69 @@ struct ArchiveView: View {
 
     var body: some View {
         NavigationView {
-            List {
-                ForEach(availableDates, id: \.self) { date in
-                    Section(header: Text(formatDate(date))) {
-                        ForEach(GameType.allCases, id: \.id) { gameType in
-                            ArchiveGameRow(
-                                gameType: gameType,
-                                date: date,
-                                isCompleted: statisticsManager.isCompleted(for: gameType, on: date),
-                                dailyPuzzleManager: dailyPuzzleManager
-                            )
-                            .onTapGesture {
-                                selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
+            ZStack {
+                if subscriptionManager.isSubscribedOrTestMode {
+                    // Premium or Test Mode: Show full archive
+                    List {
+                        ForEach(availableDates, id: \.self) { date in
+                            Section(header: Text(formatDate(date))) {
+                                ForEach(GameType.allCases, id: \.id) { gameType in
+                                    ArchiveGameRow(
+                                        gameType: gameType,
+                                        date: date,
+                                        isCompleted: statisticsManager.isCompleted(for: gameType, on: date),
+                                        dailyPuzzleManager: dailyPuzzleManager
+                                    )
+                                    .onTapGesture {
+                                        selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
+                                    }
+                                }
                             }
                         }
+                    }
+                } else {
+                    // Free: Show locked archive with upgrade prompt
+                    VStack(spacing: 30) {
+                        Spacer()
+
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 80))
+                            .foregroundColor(.purple.opacity(0.6))
+
+                        VStack(spacing: 12) {
+                            Text("Archive Locked")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.primary)
+
+                            Text("Upgrade to Premium to access past puzzles")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+
+                        Button(action: {
+                            showPaywall = true
+                        }) {
+                            HStack {
+                                Image(systemName: "crown.fill")
+                                Text("Upgrade to Premium")
+                            }
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: 280)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.purple, Color.blue],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(16)
+                        }
+
+                        Spacer()
                     }
                 }
             }
@@ -57,6 +108,9 @@ struct ArchiveView: View {
             }
             .sheet(item: $selectedArchiveItem) { item in
                 archiveGameView(for: item.gameType, date: item.date)
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
             }
         }
     }

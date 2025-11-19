@@ -196,14 +196,20 @@
   function setSeed(seed) {
     SEED = seed;
     rngState = seed;
+    console.log('🎲 Seed set to:', seed);
   }
 
+  // Mulberry32 - better seeded PRNG than LCG
   function seededRandom() {
     if (SEED === null) {
       return Math.random();
     }
-    rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
-    return rngState / 0x7fffffff;
+    // Mulberry32 algorithm - produces better distribution
+    rngState += 0x6D2B79F5;
+    let t = rngState;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
   }
 
   // Expose for Swift
@@ -278,39 +284,13 @@
     return false;
   }
 
-  // Shuffle array using seededRandom for consistency in daily mode
-  function shuffleArray(arr) {
-    const shuffled = [...arr];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(seededRandom() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }
-
   function generate(){
     state.words=[];
     const lengths=[3,4,5,6];
-
-    // Shuffle word lists at start of each game for better variety
-    const shuffledWords = {
-      3: shuffleArray(WORDS[3]),
-      4: shuffleArray(WORDS[4]),
-      5: shuffleArray(WORDS[5]),
-      6: shuffleArray(WORDS[6])
-    };
-
-    // Track which words we've tried from each length
-    const wordIndex = {3: 0, 4: 0, 5: 0, 6: 0};
-
     let guard=0;
     while(state.words.length<MAX_WORDS && guard++<3000){
       const L=choice(lengths);
-
-      // Get next word from shuffled list instead of random selection
-      if(wordIndex[L] >= shuffledWords[L].length) continue;
-      const w = shuffledWords[L][wordIndex[L]++];
-
+      const w=choice(WORDS[L]);
       if(state.words.some(v=>v.word===w)) continue;
       if(placeWord(w)) continue;
     }
@@ -581,6 +561,14 @@
   }
 
   function newGame(){
+    // Reset RNG state to seed for consistent puzzles
+    if (SEED !== null) {
+      rngState = SEED;
+      console.log('🎲 New game with seed:', SEED);
+    } else {
+      console.log('🎲 New game with random (no seed)');
+    }
+
     state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';

@@ -623,7 +623,7 @@
   let currentTheme = 'default';
   let targetWord = null;
   let targetWordPairs = []; // Required 2-letter pairs for target word
-  let foundTargetPairs = new Set(); // Track which pairs have been found
+  let foundTargetPairsCount = 0; // Track how many sequential pairs have been found
   let shuffledTargetPool = []; // Shuffled pool of target words
   let targetWordIndex = 0; // Current index in shuffled pool
 
@@ -801,7 +801,7 @@
       targetWord = null;
       targetWordEl.textContent = "—";
       targetWordPairs = [];
-      foundTargetPairs.clear();
+      foundTargetPairsCount = 0;
       return;
     }
 
@@ -810,7 +810,7 @@
 
     // Calculate consecutive non-overlapping 2-letter pairs
     targetWordPairs = [];
-    foundTargetPairs.clear();
+    foundTargetPairsCount = 0;
     for (let i = 0; i < targetWord.length - 1; i += 2) {
       const pair = targetWord.substring(i, i + 2);
       targetWordPairs.push(pair);
@@ -827,12 +827,11 @@
       return;
     }
 
-    // Build HTML with highlighted pairs
+    // Build HTML with highlighted pairs (only sequential ones found)
     let html = '';
     for (let i = 0; i < targetWord.length; i++) {
       const pairIndex = Math.floor(i / 2);
-      const pair = targetWordPairs[pairIndex];
-      const isFound = foundTargetPairs.has(pair);
+      const isFound = pairIndex < foundTargetPairsCount;
 
       if (i % 2 === 0) {
         // Start of a pair
@@ -970,6 +969,50 @@
     fragmentCountEl.textContent = fragments.length.toString();
     log("Fragment: " + text);
 
+    // Check if this fragment matches the next expected target pair (sequential order)
+    let targetAutoCompleted = false;
+    if (targetWord && text.length === 2 && foundTargetPairsCount < targetWordPairs.length) {
+      const nextExpectedPair = targetWordPairs[foundTargetPairsCount];
+      if (text === nextExpectedPair) {
+        foundTargetPairsCount++;
+        log(`Found target pair: "${text}" (${foundTargetPairsCount}/${targetWordPairs.length})`);
+        updateTargetWordDisplay();
+
+        // Check if all pairs are found
+        if (foundTargetPairsCount === targetWordPairs.length) {
+          const bonus = 30;
+          score += bonus;
+          scoreEl.textContent = score.toString();
+          updateBestScore();
+          log(`All target pairs found! Auto-completing "${targetWord}" (+${bonus} bonus)`);
+
+          // Add the target word as a completed word
+          const targetId = Date.now() + ":" + Math.random().toString(16).slice(2);
+          words.push({ id: targetId, text: targetWord });
+
+          const targetChip = document.createElement('div');
+          targetChip.className = 'chip word';
+          targetChip.textContent = targetWord;
+          targetChip.dataset.id = targetId;
+          targetChip.style.background = '#4ade80'; // Green highlight for target completion
+          wordsEl.appendChild(targetChip);
+
+          // Clear all fragments that were used for target pairs to prevent duplicate word formation
+          fragments.forEach(f => {
+            const chip = fragmentsEl.querySelector(`.chip[data-id="${f.id}"]`);
+            if (chip) chip.remove();
+          });
+          fragments = [];
+          fragmentCountEl.textContent = "0";
+
+          wordCountEl.textContent = words.length.toString();
+          playWordSound();
+          targetAutoCompleted = true;
+          pickNewTargetWord();
+        }
+      }
+    }
+
     const isDictWord = WORD_DICTIONARY.includes(text);
     const isPrefixOfTarget =
       !!(targetWord &&
@@ -978,9 +1021,10 @@
 
     // If it's a dictionary word but also a strict prefix of target,
     // keep as fragment so it can grow into the target word.
-    if (isDictWord && !isPrefixOfTarget) {
+    // Don't form word if we just auto-completed a target (to avoid duplicates)
+    if (isDictWord && !isPrefixOfTarget && !targetAutoCompleted) {
       formWordFromFragments([id], text);
-    } else {
+    } else if (!targetAutoCompleted) {
       tryMergeFragments();
     }
 
@@ -1013,35 +1057,6 @@
     const lenBonus = Math.max(0, wordText.length - 2) * 5;
     let newScore = base + lenBonus;
 
-    // Check if this is a 2-letter word that's part of the target word pairs
-    if (targetWord && wordText.length === 2 && targetWordPairs.includes(wordText)) {
-      if (!foundTargetPairs.has(wordText)) {
-        foundTargetPairs.add(wordText);
-        log(`Found target pair: "${wordText}" (${foundTargetPairs.size}/${targetWordPairs.length})`);
-        updateTargetWordDisplay();
-
-        // Check if all pairs are found
-        if (foundTargetPairs.size === targetWordPairs.length) {
-          const bonus = 30;
-          newScore += bonus;
-          log(`All target pairs found! Auto-completing "${targetWord}" (+${bonus} bonus)`);
-
-          // Add the target word as a completed word
-          const targetId = Date.now() + ":" + Math.random().toString(16).slice(2);
-          words.push({ id: targetId, text: targetWord });
-
-          const targetChip = document.createElement('div');
-          targetChip.className = 'chip word';
-          targetChip.textContent = targetWord;
-          targetChip.dataset.id = targetId;
-          targetChip.style.background = '#4ade80'; // Green highlight for target completion
-          wordsEl.appendChild(targetChip);
-
-          pickNewTargetWord();
-        }
-      }
-    }
-
     if (targetWord && wordText === targetWord) {
       const bonus = 30;
       newScore += bonus;
@@ -1066,6 +1081,8 @@
         if (i === j) continue;
         const f1 = fragments[i];
         const f2 = fragments[j];
+        if (!f1 || !f2) continue; // Guard against undefined
+
         const w1 = (f1.text + f2.text).toUpperCase();
         const w2 = (f2.text + f1.text).toUpperCase();
 

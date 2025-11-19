@@ -74,7 +74,7 @@ class DailyPuzzleManager: ObservableObject {
     /// Get seed for today's puzzle (same for all users in same timezone on same day)
     func getSeedForToday() -> Int {
         let dateString = getTodayString()
-        return dateString.hash
+        return abs(dateString.hash)
     }
 
     /// Get seed for specific date
@@ -83,7 +83,7 @@ class DailyPuzzleManager: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.timeZone = TimeZone.current
         let dateString = formatter.string(from: date)
-        return dateString.hash
+        return abs(dateString.hash)
     }
 
     /// Get X-Numbers level based on day of week

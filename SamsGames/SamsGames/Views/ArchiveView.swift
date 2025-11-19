@@ -143,6 +143,10 @@ struct ArchiveView: View {
             WebDoubleBubbleGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .diamondStack:
+            WebDiamondStackGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }
@@ -197,6 +201,21 @@ struct ArchiveGameRow: View {
                         Text(emoji)
                             .font(.caption2)
                         Text("\(name) (L\(level))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for Diamond Stack
+                if gameType == .diamondStack {
+                    let level = dailyPuzzleManager.getDiamondStackLevelForDate(date)
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let levelName = level == 1 ? "Pyramid" : (level == 2 ? "Diamond" : "Hourglass")
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption2)
+                        Text("\(levelName) (L\(level))")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }

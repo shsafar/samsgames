@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Diamond Stack</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 12px;
+      background: radial-gradient(circle at top, #fef9e7 0, #f5f7fa 40%, #e8f4ff 100%);
+      -webkit-user-select: none;
+      user-select: none;
+      min-height: 100vh;
+    }
+
+    .hud {
+      margin-bottom: 12px;
+      font-size: 1.1rem;
+      padding: 8px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 12px;
+    }
+
+    .hud span.label {
+      color: #555;
+      font-weight: 600;
+    }
+
+    .diamond-board {
+      position: relative;
+      width: 320px;
+      margin: 0 auto;
+      background: linear-gradient(145deg, #ffffff, #e6f2ff);
+      border-radius: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      padding: 0;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .edges {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 320px;
+      pointer-events: none;
+    }
+
+    .node {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #ffb200;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 17px;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      transition: box-shadow 0.1s, transform 0.08s,
+                  background 0.1s, border-color 0.1s, color 0.1s;
+    }
+
+    .node:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.18);
+    }
+
+    .node.locked {
+      background: #f0f0f0;
+      border-color: #bbbbbb;
+      cursor: default;
+      font-weight: 600;
+      box-shadow: none;
+      transform: none;
+      color: #555;
+    }
+
+    .node.disabled {
+      pointer-events: none;
+      opacity: 0.6;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .node.active {
+      box-shadow: 0 0 0 3px rgba(0,150,255,0.45);
+    }
+
+    /* Partial correct (some triangles correct, not all) */
+    .node.partial {
+      background: #ffe8c4;
+      border-color: #ff9800;
+      color: #6b3b00;
+    }
+
+    /* Fully correct (all triangles touching node correct) */
+    .node.correct {
+      background: #c8f7c5;
+      border-color: #2ecc71;
+      color: #155724;
+    }
+
+    .center-sum {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.16);
+    }
+
+    .controls {
+      margin-top: 6px;
+    }
+
+    button {
+      padding: 6px 12px;
+      margin: 3px;
+      border-radius: 12px;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      background: linear-gradient(145deg, #4facfe, #00c6ff);
+      color: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    }
+
+    button.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+      box-shadow: none;
+      transform: none;
+    }
+
+    #message {
+      margin-top: 10px;
+      font-weight: 600;
+      min-height: 24px;
+    }
+
+    #keypad {
+      margin: 6px auto 0;
+      width: 140px;
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      touch-action: manipulation;
+    }
+
+    #keypad button {
+      padding: 4px 0;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #999;
+      cursor: pointer;
+      background: #ffffff;
+      color: #333;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
+    #keypad button:active {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.22);
+      transform: translateY(1px);
+    }
+
+    .win-message {
+      color: #2ecc71;
+      font-size: 1.2rem;
+    }
+
+    .lose-message {
+      color: #e74c3c;
+      font-size: 1.2rem;
+    }
+
+    /* iPad responsive styles */
+    @media (min-width: 768px) {
+      body {
+        padding: 20px;
+      }
+
+      .hud {
+        font-size: 1.4rem;
+        padding: 12px;
+        margin-bottom: 20px;
+      }
+
+      .diamond-board {
+        width: 480px;
+        transform-origin: top center;
+      }
+
+      .controls {
+        margin-top: 20px;
+      }
+
+      button {
+        padding: 12px 24px;
+        margin: 8px;
+        border-radius: 18px;
+        font-size: 18px;
+      }
+
+      #keypad {
+        margin: 16px auto 0;
+        width: 240px;
+        gap: 10px;
+      }
+
+      #keypad button {
+        padding: 12px 0;
+        font-size: 20px;
+        border-radius: 10px;
+      }
+
+      #message {
+        font-size: 1.4rem;
+        margin-top: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hud">
+    <span class="label">Time:</span> <span id="time">0</span>s &nbsp;|
+    <span class="label">Score:</span> <span id="score">100</span> &nbsp;|
+    <span class="label">Reveals:</span> <span id="reveals">3</span>
+  </div>
+
+  <div class="diamond-board" id="board"></div>
+
+  <div class="controls">
+    <button id="revealBtn">Reveal (-5)</button>
+  </div>
+
+  <div id="keypad"></div>
+  <div id="message"></div>
+
+<script>
+  const TIME_LIMIT = 60;
+  const NODE_RADIUS = 20;
+
+  // Seeded random number generator (Mulberry32)
+  let SEED = null;
+  let rngState = Date.now();
+
+  function setSeed(seed) {
+    SEED = seed;
+    rngState = seed;
+    console.log('Seed set to:', seed);
+  }
+
+  function seededRandom() {
+    if (SEED === null) {
+      return Math.random();
+    }
+    // Mulberry32 algorithm
+    rngState += 0x6D2B79F5;
+    let t = rngState;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+
+  // Current level configuration
+  let currentLevel = 1;
+  let nodeDefs = {};
+  let allTriangles = [];
+  let boardHeight = 260;
+
+  // Level configurations
+  const LEVELS = {
+    // Level 1: Pyramid (10 nodes)
+    1: {
+      height: 260,
+      nodes: {
+        n1: { x: 160, y:  40 },
+        n2: { x: 120, y:  90 },
+        n3: { x: 200, y:  90 },
+        n4: { x:  80, y: 150 },
+        n5: { x: 160, y: 150 },
+        n6: { x: 240, y: 150 },
+        n7: { x:  40, y: 210 },
+        n8: { x: 120, y: 210 },
+        n9: { x: 200, y: 210 },
+        n10:{ x: 280, y: 210 }
+      },
+      triangles: [
+        // Upright triangles
+        { id: 'u1', nodes: ['n7','n8','n4'] },
+        { id: 'u2', nodes: ['n8','n9','n5'] },
+        { id: 'u3', nodes: ['n9','n10','n6'] },
+        { id: 'u4', nodes: ['n4','n5','n2'] },
+        { id: 'u5', nodes: ['n5','n6','n3'] },
+        { id: 'u6', nodes: ['n2','n3','n1'] },
+        // Downward triangles
+        { id: 'd0', nodes: ['n2','n3','n5'] },
+        { id: 'd1', nodes: ['n4','n8','n5'] },
+        { id: 'd2', nodes: ['n5','n9','n6'] },
+        { id: 'd3', nodes: ['n6','n10','n9'] }
+      ]
+    },
+
+    // Level 2: Full Diamond (16 nodes)
+    2: {
+      height: 420,
+      nodes: {
+        n1:  { x:160, y: 40 },
+        n2:  { x:120, y: 90 },
+        n3:  { x:200, y: 90 },
+        n4:  { x: 80, y:150 },
+        n5:  { x:160, y:150 },
+        n6:  { x:240, y:150 },
+        n7:  { x: 40, y:210 },
+        n8:  { x:120, y:210 },
+        n9:  { x:200, y:210 },
+        n10: { x:280, y:210 },
+        n11: { x: 80, y:270 },
+        n12: { x:160, y:270 },
+        n13: { x:240, y:270 },
+        n14: { x:120, y:330 },
+        n15: { x:200, y:330 },
+        n16: { x:160, y:380 }
+      },
+      triangles: [
+        // Top half upright
+        { id: 'u1', nodes: ['n7','n8','n4'] },
+        { id: 'u2', nodes: ['n8','n9','n5'] },
+        { id: 'u3', nodes: ['n9','n10','n6'] },
+        { id: 'u4', nodes: ['n4','n5','n2'] },
+        { id: 'u5', nodes: ['n5','n6','n3'] },
+        { id: 'u6', nodes: ['n2','n3','n1'] },
+        // Top half downward
+        { id: 'd0', nodes: ['n2','n3','n5'] },
+        { id: 'd1', nodes: ['n4','n8','n5'] },
+        { id: 'd2', nodes: ['n5','n9','n6'] },
+        { id: 'd3', nodes: ['n6','n10','n9'] },
+        // Bottom half upright
+        { id: 'u7',  nodes: ['n7','n8','n11'] },
+        { id: 'u8',  nodes: ['n8','n9','n12'] },
+        { id: 'u9',  nodes: ['n9','n10','n13'] },
+        { id: 'u10', nodes: ['n11','n12','n14'] },
+        { id: 'u11', nodes: ['n12','n13','n15'] },
+        { id: 'u12', nodes: ['n14','n15','n16'] },
+        // Bottom half downward
+        { id: 'd4', nodes: ['n14','n15','n12'] },
+        { id: 'd5', nodes: ['n11','n8','n12'] },
+        { id: 'd6', nodes: ['n12','n9','n13'] },
+        { id: 'd7', nodes: ['n13','n10','n9'] }
+      ]
+    },
+
+    // Level 3: Hourglass (19 nodes)
+    3: {
+      height: 480,
+      nodes: {
+        S:  { x:160, y:240 },
+        T2:  { x:120, y:190 },
+        T3:  { x:200, y:190 },
+        T4:  { x: 80, y:140 },
+        T5:  { x:160, y:140 },
+        T6:  { x:240, y:140 },
+        T7:  { x: 40, y: 90 },
+        T8:  { x:120, y: 90 },
+        T9:  { x:200, y: 90 },
+        T10: { x:280, y: 90 },
+        B2:  { x:120, y:290 },
+        B3:  { x:200, y:290 },
+        B4:  { x: 80, y:340 },
+        B5:  { x:160, y:340 },
+        B6:  { x:240, y:340 },
+        B7:  { x: 40, y:390 },
+        B8:  { x:120, y:390 },
+        B9:  { x:200, y:390 },
+        B10: { x:280, y:390 }
+      },
+      triangles: [
+        // Top pyramid upright
+        { id: 'Tu1', nodes:['T7','T8','T4'] },
+        { id: 'Tu2', nodes:['T8','T9','T5'] },
+        { id: 'Tu3', nodes:['T9','T10','T6'] },
+        { id: 'Tu4', nodes:['T4','T5','T2'] },
+        { id: 'Tu5', nodes:['T5','T6','T3'] },
+        { id: 'Tu6', nodes:['T2','T3','S'] },
+        // Top pyramid downward
+        { id: 'Td0', nodes:['T2','T3','T5'] },
+        { id: 'Td1', nodes:['T4','T8','T5'] },
+        { id: 'Td2', nodes:['T5','T9','T6'] },
+        { id: 'Td3', nodes:['T6','T10','T9'] },
+        // Bottom pyramid upright
+        { id: 'Bu1', nodes:['B7','B8','B4'] },
+        { id: 'Bu2', nodes:['B8','B9','B5'] },
+        { id: 'Bu3', nodes:['B9','B10','B6'] },
+        { id: 'Bu4', nodes:['B4','B5','B2'] },
+        { id: 'Bu5', nodes:['B5','B6','B3'] },
+        { id: 'Bu6', nodes:['B2','B3','S'] },
+        // Bottom pyramid downward
+        { id: 'Bd0', nodes:['B2','B3','B5'] },
+        { id: 'Bd1', nodes:['B4','B8','B5'] },
+        { id: 'Bd2', nodes:['B5','B9','B6'] },
+        { id: 'Bd3', nodes:['B6','B10','B9'] }
+      ]
+    }
+  };
+
+  const sumColors = [
+    '#ffe58f','#ffd1dc','#c3f0ca','#cde7ff','#fbd3ff',
+    '#ffe0b2','#e1f5fe','#ffecb3','#e6ceff','#ffd4d4',
+    '#e0f4ff','#f6e4ff','#dfffe4','#ffe9e0','#e8e8ff',
+    '#fef3c7','#e0f7fa','#f3e5f5','#f1f8e9','#ffebee'
+  ];
+
+  let nodes = [];
+  const nodeMap = {};
+  const triangleSumEls = {};
+
+  let elapsedTime = 0;
+  let timerId = null;
+  let score = 100;
+  let revealsLeft = 3;
+  let gameActive = false;
+  let activeNode = null;
+
+  const timeEl    = document.getElementById('time');
+  const scoreEl   = document.getElementById('score');
+  const revealsEl = document.getElementById('reveals');
+  const msgEl     = document.getElementById('message');
+  const revealBtn = document.getElementById('revealBtn');
+  const keypad    = document.getElementById('keypad');
+  const board     = document.getElementById('board');
+
+  // Set level from Swift
+  function setLevel(level) {
+    currentLevel = level;
+    const config = LEVELS[level];
+    if (!config) {
+      console.error('Invalid level:', level);
+      return;
+    }
+    nodeDefs = JSON.parse(JSON.stringify(config.nodes));
+    allTriangles = JSON.parse(JSON.stringify(config.triangles));
+    boardHeight = config.height;
+
+    // Scale for iPad (768px+ width)
+    const isIPad = window.innerWidth >= 768;
+    if (isIPad) {
+      const scale = 1.5;
+      boardHeight = config.height * scale;
+      for (const id in nodeDefs) {
+        nodeDefs[id].x = nodeDefs[id].x * scale;
+        nodeDefs[id].y = nodeDefs[id].y * scale;
+      }
+    }
+
+    console.log('Level set to:', level, 'Nodes:', Object.keys(nodeDefs).length, 'iPad:', isIPad);
+  }
+
+  // Build board based on current level
+  function buildBoard() {
+    board.innerHTML = '';
+    board.style.height = boardHeight + 'px';
+
+    // Determine board width based on device
+    const isIPad = window.innerWidth >= 768;
+    const boardWidth = isIPad ? 480 : 320;
+    board.style.width = boardWidth + 'px';
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.classList.add('edges');
+    svg.setAttribute('width', boardWidth);
+    svg.setAttribute('height', boardHeight);
+    svg.setAttribute('viewBox', '0 0 ' + boardWidth + ' ' + boardHeight);
+    svg.style.width = boardWidth + 'px';
+    svg.style.height = boardHeight + 'px';
+
+    // Unique edges from all triangles
+    const edgeKeys = new Set();
+    allTriangles.forEach(tri => {
+      const ns = tri.nodes;
+      for (let i = 0; i < 3; i++) {
+        const a = ns[i];
+        const b = ns[(i+1) % 3];
+        const key = [a,b].sort().join('-');
+        edgeKeys.add(key);
+      }
+    });
+
+    edgeKeys.forEach(key => {
+      const [a,b] = key.split('-');
+      const na = nodeDefs[a];
+      const nb = nodeDefs[b];
+      if (!na || !nb) return;
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', na.x);
+      line.setAttribute('y1', na.y);
+      line.setAttribute('x2', nb.x);
+      line.setAttribute('y2', nb.y);
+      line.setAttribute('stroke', '#555');
+      line.setAttribute('stroke-width', '3');
+      line.setAttribute('stroke-linecap','round');
+      svg.appendChild(line);
+    });
+
+    board.appendChild(svg);
+
+    // Nodes
+    for (const id in nodeDefs) {
+      nodeMap[id] = null;
+    }
+
+    for (const id in nodeDefs) {
+      const def = nodeDefs[id];
+      const node = document.createElement('div');
+      node.className = 'node';
+      node.id = id;
+      node.style.left = (def.x - NODE_RADIUS) + 'px';
+      node.style.top  = (def.y - NODE_RADIUS) + 'px';
+      node.addEventListener('click', () => handleNodeClick(node));
+      board.appendChild(node);
+      nodeMap[id] = node;
+    }
+
+    // Triangle centers & sum bubbles
+    for (const id in triangleSumEls) {
+      delete triangleSumEls[id];
+    }
+
+    allTriangles.forEach((tri, index) => {
+      let cx = 0, cy = 0;
+      tri.nodes.forEach(id => {
+        const def = nodeDefs[id];
+        if (def) {
+          cx += def.x;
+          cy += def.y;
+        }
+      });
+      tri.center = { x: cx / 3, y: cy / 3 };
+
+      const sumEl = document.createElement('div');
+      sumEl.className = 'center-sum';
+      sumEl.style.left = (tri.center.x - 15) + 'px';
+      sumEl.style.top  = (tri.center.y - 15) + 'px';
+      sumEl.style.background = sumColors[index % sumColors.length];
+      sumEl.textContent = '?';
+      board.appendChild(sumEl);
+      triangleSumEls[tri.id] = sumEl;
+    });
+
+    nodes = Array.from(document.querySelectorAll('.node'));
+  }
+
+  // New random solutions 1–9 each game
+  function generateNewSolutions() {
+    // Reset RNG state for consistent puzzles
+    if (SEED !== null) {
+      rngState = SEED;
+    }
+
+    for (const id in nodeDefs) {
+      nodeDefs[id].solution = Math.floor(seededRandom() * 9) + 1;
+    }
+  }
+
+  // Update triangle sums based on current solutions
+  function updateTriangleSums() {
+    allTriangles.forEach(tri => {
+      let sum = 0;
+      tri.nodes.forEach(id => {
+        if (nodeDefs[id]) {
+          sum += nodeDefs[id].solution;
+        }
+      });
+      tri.sum = sum;
+      if (triangleSumEls[tri.id]) {
+        triangleSumEls[tri.id].textContent = sum;
+      }
+    });
+  }
+
+  // Keypad
+  function buildKeypad() {
+    keypad.innerHTML = '';
+    keypad.style.display = 'none';
+    for (let i = 1; i <= 9; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      btn.dataset.value = i;
+      btn.addEventListener('click', () => selectKeypadValue(i));
+      keypad.appendChild(btn);
+    }
+  }
+
+  // Game logic
+  function resetGame() {
+    elapsedTime = 0;
+    score = 100;
+    revealsLeft = 3;
+    gameActive = false;
+    activeNode = null;
+    clearInterval(timerId);
+
+    timeEl.textContent = elapsedTime;
+    scoreEl.textContent = score;
+    revealsEl.textContent = revealsLeft;
+    msgEl.textContent = '';
+    msgEl.className = '';
+
+    revealBtn.classList.remove('disabled');
+    keypad.style.display = 'none';
+
+    generateNewSolutions();
+    updateTriangleSums();
+
+    nodes.forEach(node => {
+      const id = node.id;
+      if (nodeDefs[id]) {
+        const sol = nodeDefs[id].solution;
+        node.dataset.solution = sol;
+        node.textContent = '';
+        node.classList.remove('locked','disabled','active','correct','partial');
+      }
+    });
+
+    prefillHalfNodes();
+    updateAllNodeCorrectStates();
+  }
+
+  function prefillHalfNodes() {
+    const ids = Object.keys(nodeDefs);
+
+    // Seeded shuffle
+    const shuffled = [...ids];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const prefillCount = Math.floor(ids.length / 2);
+    const prefillSet = new Set(shuffled.slice(0, prefillCount));
+
+    ids.forEach(id => {
+      const node = nodeMap[id];
+      if (!node) return;
+      const sol = nodeDefs[id].solution;
+      node.dataset.solution = sol;
+      if (prefillSet.has(id)) {
+        node.textContent = String(sol);
+        node.classList.add('locked');
+      } else {
+        node.textContent = '';
+        node.classList.remove('locked');
+      }
+    });
+  }
+
+  function startTimer() {
+    gameActive = true;
+    timerId = setInterval(() => {
+      elapsedTime++;
+      timeEl.textContent = elapsedTime;
+      if (elapsedTime >= TIME_LIMIT) {
+        clearInterval(timerId);
+        gameActive = false;
+        msgEl.textContent = "Time's up!";
+        msgEl.className = 'lose-message';
+        lockBoard();
+        keypad.style.display = 'none';
+        clearActiveNode();
+        notifyGameComplete(false, score);
+      }
+    }, 1000);
+  }
+
+  function lockBoard() {
+    nodes.forEach(node => node.classList.add('disabled'));
+    revealBtn.classList.add('disabled');
+  }
+
+  function unlockBoard() {
+    nodes.forEach(node => node.classList.remove('disabled'));
+  }
+
+  function isTriangleCorrect(tri) {
+    let sum = 0;
+    for (const id of tri.nodes) {
+      if (!nodeMap[id]) return false;
+      const val = parseInt(nodeMap[id].textContent, 10);
+      if (isNaN(val)) return false;
+      sum += val;
+    }
+    return sum === tri.sum;
+  }
+
+  // Orange when some triangles satisfied, green when all satisfied
+  function updateAllNodeCorrectStates() {
+    nodes.forEach(node => {
+      node.classList.remove('correct','partial');
+
+      if (node.classList.contains('locked')) return;
+      const nodeId = node.id;
+      const involved = allTriangles.filter(tri => tri.nodes.includes(nodeId));
+      if (!node.textContent || involved.length === 0) return;
+
+      const completed = involved.filter(tri =>
+        tri.nodes.every(id => nodeMap[id] && nodeMap[id].textContent !== '')
+      );
+
+      if (completed.length === 0) return;
+
+      const allCompletedCorrect = completed.every(tri => isTriangleCorrect(tri));
+      if (!allCompletedCorrect) return;
+
+      const allTrianglesCompleted = (completed.length === involved.length);
+
+      if (allTrianglesCompleted) {
+        node.classList.add('correct');
+      } else {
+        node.classList.add('partial');
+      }
+    });
+  }
+
+  function checkWin() {
+    if (!gameActive) return;
+    for (const tri of allTriangles) {
+      if (!isTriangleCorrect(tri)) return;
+    }
+    for (const node of nodes) {
+      if (!node.textContent) return;
+    }
+    clearInterval(timerId);
+    gameActive = false;
+    msgEl.textContent = 'Solved! Score: ' + score;
+    msgEl.className = 'win-message';
+    lockBoard();
+    keypad.style.display = 'none';
+    clearActiveNode();
+    notifyGameComplete(true, score);
+  }
+
+  function clearActiveNode() {
+    if (activeNode) {
+      activeNode.classList.remove('active');
+      activeNode = null;
+    }
+  }
+
+  function handleNodeClick(node) {
+    if (!gameActive) return;
+    if (node.classList.contains('locked')) return;
+    if (node.classList.contains('disabled')) return;
+    clearActiveNode();
+    activeNode = node;
+    node.classList.add('active');
+    keypad.style.display = 'grid';
+  }
+
+  function selectKeypadValue(value) {
+    if (!gameActive || !activeNode) return;
+    activeNode.textContent = String(value);
+    clearActiveNode();
+    keypad.style.display = 'none';
+    updateAllNodeCorrectStates();
+    checkWin();
+  }
+
+  function revealNumber() {
+    if (!gameActive) return;
+    if (revealsLeft <= 0) return;
+    if (!activeNode) return;
+    if (activeNode.classList.contains('locked')) return;
+
+    const sol = activeNode.dataset.solution;
+    if (!sol) return;
+
+    activeNode.textContent = String(sol);
+
+    revealsLeft--;
+    score -= 5;
+    if (score < 0) score = 0;
+
+    revealsEl.textContent = revealsLeft;
+    scoreEl.textContent = score;
+
+    if (revealsLeft === 0) {
+      revealBtn.classList.add('disabled');
+    }
+
+    clearActiveNode();
+    keypad.style.display = 'none';
+    updateAllNodeCorrectStates();
+    checkWin();
+  }
+
+  // Notify Swift of game completion
+  function notifyGameComplete(won, finalScore) {
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+      window.webkit.messageHandlers.gameComplete.postMessage({
+        won: won,
+        score: finalScore,
+        time: elapsedTime
+      });
+    }
+  }
+
+  revealBtn.addEventListener('click', revealNumber);
+
+  // Auto-start function called from Swift after setup
+  function autoStart() {
+    resetGame();
+    unlockBoard();
+    startTimer();
+  }
+
+  // Expose functions globally for Swift to call
+  window.setSeed = setSeed;
+  window.setLevel = setLevel;
+  window.buildBoard = buildBoard;
+  window.buildKeypad = buildKeypad;
+  window.resetGame = resetGame;
+  window.lockBoard = lockBoard;
+  window.unlockBoard = unlockBoard;
+  window.autoStart = autoStart;
+
+  // Initialize with default level
+  setLevel(1);
+  buildBoard();
+  buildKeypad();
+  resetGame();
+  lockBoard();
+</script>
+
+</body>
+</html>

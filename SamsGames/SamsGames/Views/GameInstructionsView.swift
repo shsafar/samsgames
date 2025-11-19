@@ -28,6 +28,8 @@ struct GameInstructionsView: View {
                     JushBoxInstructionsView()
                 case .doubleBubble:
                     DoubleBubbleInstructionsView()
+                case .diamondStack:
+                    DiamondStackInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

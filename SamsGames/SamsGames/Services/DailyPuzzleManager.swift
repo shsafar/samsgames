@@ -13,6 +13,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case wordInShapes = "Words In Shapes"
     case jushBox = "JushBox"
     case doubleBubble = "Double Bubble"
+    case diamondStack = "Diamond Stack"
 
     var id: String { self.rawValue }
 
@@ -23,6 +24,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .wordInShapes: return "WordInShapesIcon"
         case .jushBox: return "jushboxicon"
         case .doubleBubble: return "dbicon"
+        case .diamondStack: return "diamondstackicon"
         }
     }
 
@@ -33,6 +35,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .wordInShapes: return "textformat.abc"
         case .jushBox: return "cube.fill"
         case .doubleBubble: return "bubble.left.and.bubble.right.fill"
+        case .diamondStack: return "triangle.fill"
         }
     }
 
@@ -42,6 +45,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .wordInShapes: return "Find words hidden in shapes"
         case .jushBox: return "Sliding-stack puzzle"
         case .doubleBubble: return "Pop bubbles to form words"
+        case .diamondStack: return "Fill circles to match triangle sums"
         }
     }
 }
@@ -128,6 +132,28 @@ class DailyPuzzleManager: ObservableObject {
     /// Get today's JushBox level
     func getTodayJushBoxLevel() -> Int {
         return getJushBoxLevelForDate(currentDate)
+    }
+
+    /// Get Diamond Stack level based on day of week
+    /// Monday: L1, Tuesday: L2, Wednesday: L3, Thu-Sun: Random (1-3)
+    func getDiamondStackLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 2: return 1  // Monday: L1 (Pyramid)
+        case 3: return 2  // Tuesday: L2 (Diamond)
+        case 4: return 3  // Wednesday: L3 (Hourglass)
+        case 1, 5, 6, 7:  // Sun, Thu, Fri, Sat: Random 1-3
+            // Use date seed for consistent random level
+            let seed = getSeedForDate(date)
+            return (seed % 3) + 1
+        default: return 1
+        }
+    }
+
+    /// Get today's Diamond Stack level
+    func getTodayDiamondStackLevel() -> Int {
+        return getDiamondStackLevelForDate(currentDate)
     }
 
     /// Get difficulty name for level

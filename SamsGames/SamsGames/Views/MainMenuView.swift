@@ -173,6 +173,10 @@ struct MainMenuView: View {
             WebDoubleBubbleGameView()
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .diamondStack:
+            WebDiamondStackGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }
@@ -252,6 +256,21 @@ struct GameCard: View {
                         Text(emoji)
                             .font(.caption)
                         Text("\(name) (Level \(level))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for Diamond Stack
+                if gameType == .diamondStack {
+                    let level = dailyPuzzleManager.getTodayDiamondStackLevel()
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let levelName = level == 1 ? "Pyramid" : (level == 2 ? "Diamond" : "Hourglass")
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption)
+                        Text("\(levelName) (L\(level))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

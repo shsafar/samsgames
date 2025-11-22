@@ -14,6 +14,8 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case jushBox = "JushBox"
     case doubleBubble = "Double Bubble"
     case diamondStack = "Diamond Stack"
+    case hashtagWords = "Hashtag Words"
+    case traceWiz = "TraceWiz"
 
     var id: String { self.rawValue }
 
@@ -25,6 +27,8 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .jushBox: return "jushboxicon"
         case .doubleBubble: return "dbicon"
         case .diamondStack: return "diamondstackicon"
+        case .hashtagWords: return "hashtagwordsicon"
+        case .traceWiz: return "tracewizicon"
         }
     }
 
@@ -36,6 +40,8 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .jushBox: return "cube.fill"
         case .doubleBubble: return "bubble.left.and.bubble.right.fill"
         case .diamondStack: return "triangle.fill"
+        case .hashtagWords: return "number"
+        case .traceWiz: return "scribble.variable"
         }
     }
 
@@ -46,6 +52,8 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .jushBox: return "Sliding-stack puzzle"
         case .doubleBubble: return "Pop bubbles to form words"
         case .diamondStack: return "Fill circles to match triangle sums"
+        case .hashtagWords: return "Fill the hashtag grid with words"
+        case .traceWiz: return "Trace the line without crossing"
         }
     }
 }
@@ -154,6 +162,50 @@ class DailyPuzzleManager: ObservableObject {
     /// Get today's Diamond Stack level
     func getTodayDiamondStackLevel() -> Int {
         return getDiamondStackLevelForDate(currentDate)
+    }
+
+    /// Get Hashtag Words level based on day of week
+    /// Monday: L1, Tuesday: L2, Wednesday: L3, Thu-Sun: Random (1-3)
+    func getHashtagWordsLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 2: return 1  // Monday: L1 (Easy)
+        case 3: return 2  // Tuesday: L2 (Medium)
+        case 4: return 3  // Wednesday: L3 (Hard)
+        case 1, 5, 6, 7:  // Sun, Thu, Fri, Sat: Random 1-3
+            // Use date seed for consistent random level
+            let seed = getSeedForDate(date)
+            return (seed % 3) + 1
+        default: return 1
+        }
+    }
+
+    /// Get today's Hashtag Words level
+    func getTodayHashtagWordsLevel() -> Int {
+        return getHashtagWordsLevelForDate(currentDate)
+    }
+
+    /// Get TraceWiz difficulty level for date (1=Easy, 2=Medium, 3=Hard)
+    /// Monday: Easy, Tuesday: Medium, Wednesday: Hard, Thu-Sun: Random
+    func getTraceWizLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 2: return 1      // Monday: Easy
+        case 3: return 2      // Tuesday: Medium
+        case 4: return 3      // Wednesday: Hard
+        case 1, 5, 6, 7:      // Sun, Thu, Fri, Sat: Random
+            let seed = getSeedForDate(date)
+            let randomDifficulty = seed % 3
+            return randomDifficulty + 1  // Returns 1, 2, or 3
+        default: return 1
+        }
+    }
+
+    /// Get today's TraceWiz difficulty level
+    func getTodayTraceWizLevel() -> Int {
+        return getTraceWizLevelForDate(currentDate)
     }
 
     /// Get difficulty name for level

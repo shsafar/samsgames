@@ -30,6 +30,10 @@ struct GameInstructionsView: View {
                     DoubleBubbleInstructionsView()
                 case .diamondStack:
                     DiamondStackInstructionsView()
+                case .hashtagWords:
+                    HashtagWordsInstructionsView()
+                case .traceWiz:
+                    TraceWizInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

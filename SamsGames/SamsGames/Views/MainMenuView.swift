@@ -50,6 +50,19 @@ struct MainMenuView: View {
                                 selectedGame = gameType
                             }
                         }
+
+                        // Show scroll indicator after Double Bubble
+                        if gameType == .doubleBubble {
+                            VStack(spacing: 6) {
+                                Image(systemName: "chevron.compact.down")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary.opacity(0.5))
+                                Text("Scroll for more")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary.opacity(0.7))
+                            }
+                            .padding(.vertical, 8)
+                        }
                     }
 
                     Spacer(minLength: 50)
@@ -89,6 +102,7 @@ struct MainMenuView: View {
                     gameView(for: gameType)
                         .presentationDetents([.large])
                         .presentationDragIndicator(.hidden)
+                        .interactiveDismissDisabled(gameType == .traceWiz)
                 }
             }
             .fullScreenCover(isPresented: $showJushBox) {
@@ -135,24 +149,24 @@ struct MainMenuView: View {
     // MARK: - Subviews
 
     private var headerView: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Text("Sam's Games")
-                .font(.system(size: 36, weight: .bold))
+                .font(.system(size: 32, weight: .bold))
                 .foregroundColor(.primary)
 
             Text("Daily Puzzles")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
-        .padding(.top, 20)
-        .padding(.bottom, 10)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
     }
 
     private var todayDateView: some View {
         Text(dailyPuzzleManager.getTodayString())
             .font(.headline)
             .foregroundColor(.secondary)
-            .padding(.bottom, 10)
+            .padding(.bottom, 8)
     }
 
     @ViewBuilder
@@ -175,6 +189,14 @@ struct MainMenuView: View {
                 .environmentObject(statisticsManager)
         case .diamondStack:
             WebDiamondStackGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        case .hashtagWords:
+            WebHashtagWordsGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        case .traceWiz:
+            TraceWizGameView()
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
         }
@@ -271,6 +293,36 @@ struct GameCard: View {
                         Text(emoji)
                             .font(.caption)
                         Text("\(levelName) (L\(level))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for Hashtag Words
+                if gameType == .hashtagWords {
+                    let level = dailyPuzzleManager.getTodayHashtagWordsLevel()
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption)
+                        Text("\(name) (Level \(level))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for TraceWiz
+                if gameType == .traceWiz {
+                    let level = dailyPuzzleManager.getTodayTraceWizLevel()
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption)
+                        Text(name)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

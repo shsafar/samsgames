@@ -108,6 +108,8 @@ struct ArchiveView: View {
             }
             .sheet(item: $selectedArchiveItem) { item in
                 archiveGameView(for: item.gameType, date: item.date)
+                    .presentationDragIndicator(.hidden)
+                    .interactiveDismissDisabled(item.gameType == .traceWiz)
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
@@ -145,6 +147,14 @@ struct ArchiveView: View {
                 .environmentObject(statisticsManager)
         case .diamondStack:
             WebDiamondStackGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        case .hashtagWords:
+            WebHashtagWordsGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        case .traceWiz:
+            TraceWizGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
         }
@@ -216,6 +226,36 @@ struct ArchiveGameRow: View {
                         Text(emoji)
                             .font(.caption2)
                         Text("\(levelName) (L\(level))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for Hashtag Words
+                if gameType == .hashtagWords {
+                    let level = dailyPuzzleManager.getHashtagWordsLevelForDate(date)
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption2)
+                        Text("\(name) (L\(level))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for TraceWiz
+                if gameType == .traceWiz {
+                    let level = dailyPuzzleManager.getTraceWizLevelForDate(date)
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption2)
+                        Text(name)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }

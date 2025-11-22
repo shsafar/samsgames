@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hashtag Words</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #f3f1ea;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 20px;
+  }
+
+  #game {
+    width: min(430px, 90vw);
+    max-width: 600px;
+    background: #fdfaf4;
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+  }
+
+  /* Responsive sizing for iPad */
+  @media (min-width: 768px) {
+    #game {
+      width: min(600px, 90vw);
+      padding: 24px;
+    }
+  }
+
+  /* Level Selection Screen */
+  #levelSelection {
+    text-align: center;
+    padding: 20px;
+  }
+
+  #levelSelection h1 {
+    font-size: 32px;
+    margin: 20px 0 10px;
+    color: #1b304f;
+  }
+
+  #levelSelection p {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 30px;
+  }
+
+  .level-btn {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 12px auto;
+    padding: 16px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .level-btn:active {
+    transform: scale(0.98);
+  }
+
+  .level-btn.easy {
+    background: linear-gradient(135deg, #a6e685, #5ea531);
+    color: white;
+  }
+
+  .level-btn.medium {
+    background: linear-gradient(135deg, #ffe58a, #e0b300);
+    color: #1b304f;
+  }
+
+  .level-btn.hard {
+    background: linear-gradient(135deg, #ffb347, #ff6b35);
+    color: white;
+  }
+
+  /* Game Screen */
+  #gameScreen {
+    display: none;
+  }
+
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .top-left {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  #resetBtn, #nextBtn, #backBtn {
+    border: none;
+    background: #ece4d3;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .level-label {
+    font-size: 13px;
+    opacity: 0.8;
+  }
+
+  .hashtag-area {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 12px auto 8px;
+  }
+
+  .bar {
+    position: absolute;
+    background: #1b304f;
+    border-radius: 10px;
+    z-index: 0;
+    transform: skewX(-15deg);
+  }
+
+  .letter {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    border: 2px solid #1b304f;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1;
+    transition: background 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .letter-inner {
+    font-size: 19px;
+    font-weight: 700;
+    color: #1b304f;
+  }
+
+  .letter.empty .letter-inner { color: transparent; }
+
+  .letter.fixed {
+    background: #1b304f;
+  }
+  .letter.fixed .letter-inner { color: #fdfaf4; }
+
+  .letter.filler {
+    background: #6b7280;
+    border-color: #4b5563;
+    pointer-events: none;
+  }
+  .letter.filler .letter-inner { color: transparent; }
+
+  .letter.selected:not(.fixed):not(.filler) {
+    background: #ffb347;
+    border-color: #ff9a2e;
+  }
+
+  .letter.wrong:not(.fixed):not(.filler) {
+    background: #ffe58a;
+    border-color: #e0b300;
+  }
+
+  .letter.correct:not(.fixed):not(.filler) {
+    background: #a6e685;
+    border-color: #5ea531;
+  }
+
+  #heat {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+    font-size: 9px;
+    color: #111827;
+    z-index: 2;
+  }
+
+  .heat-cold {
+    background: radial-gradient(circle, #e0f2fe, #2563eb);
+    color: #0f172a;
+  }
+  .heat-warm {
+    background: radial-gradient(circle, #fef9c3, #eab308);
+    color: #1f2933;
+  }
+  .heat-hot  {
+    background: radial-gradient(circle, #ffedd5, #fb923c);
+    color: #1f2933;
+  }
+  .heat-max  {
+    background: radial-gradient(circle, #fee2e2, #ef4444);
+    color: #111827;
+  }
+
+  .info-btn {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: #f7e2b5;
+    color: #855100;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    z-index: 3;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .keyboard {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    margin-top: 24px;
+  }
+
+  .key {
+    border: none;
+    border-radius: 8px;
+    background: #e7ddcd;
+    font-size: 14px;
+    padding: 8px 0;
+    cursor: pointer;
+    font-weight: 600;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #status, #hintText {
+    margin-top: 6px;
+    text-align: center;
+    font-size: 13px;
+    min-height: 18px;
+  }
+  #status.success { color: #1aa36f; font-weight: 600; }
+  #status.fail { color: #d43f3a; font-weight: 600; }
+  #hintText { color: #7a5a1a; min-height: 30px; }
+
+  .bottom-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  #splashScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+  }
+
+  .splash-icon {
+    font-size: 72px;
+    margin-bottom: 20px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  .splash-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1b304f;
+    margin-bottom: 10px;
+  }
+
+  .splash-subtitle {
+    font-size: 14px;
+    color: #666;
+  }
+</style>
+</head>
+<body>
+
+<div id="game">
+  <!-- Splash Screen -->
+  <div id="splashScreen">
+    <div class="splash-icon">#️⃣</div>
+    <div class="splash-title">Hashtag Words</div>
+    <div class="splash-subtitle">Loading...</div>
+  </div>
+
+  <!-- Level Selection Screen -->
+  <div id="levelSelection" style="display:none;">
+    <h1>#️⃣ Hashtag Words</h1>
+    <p style="display: none;">Choose your difficulty level</p>
+
+    <button class="level-btn easy" onclick="selectLevel(1)">
+      Level 1 - Easy<br>
+      <small style="font-size: 13px; opacity: 0.9;">5-letter words · 5 hints · 60s</small>
+    </button>
+
+    <button class="level-btn medium" onclick="selectLevel(2)">
+      Level 2 - Medium<br>
+      <small style="font-size: 13px; opacity: 0.9;">5-letter words · 4 hints · 60s</small>
+    </button>
+
+    <button class="level-btn hard" onclick="selectLevel(3)">
+      Level 3 - Hard<br>
+      <small style="font-size: 13px; opacity: 0.9;">4-5 letter mix · 3 hints · 45s</small>
+    </button>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="gameScreen">
+    <div class="top-bar">
+      <div class="top-left">
+        <button id="backBtn" style="display: none;">← Back</button>
+        <button id="resetBtn" style="display: none;">↺ Reset</button>
+        <span class="level-label">Level <span id="levelNum">1</span><span id="puzzleLabel" style="display: none;"> · 1 / 10</span></span>
+      </div>
+      <div>⏱ <span id="timer">60</span>s · 💡 <span id="hints">5</span></div>
+    </div>
+
+    <div class="hashtag-area" id="hashtagArea">
+      <div id="heat" class="heat-cold">COLD</div>
+      <button id="infoTop" class="info-btn">i</button>
+      <button id="infoBottom" class="info-btn">i</button>
+      <button id="infoLeft" class="info-btn">i</button>
+      <button id="infoRight" class="info-btn">i</button>
+    </div>
+
+    <button id="nextBtn" style="display: none;">Next Puzzle ▶</button>
+
+    <div class="keyboard" id="keyboard"></div>
+    <div id="status"></div>
+    <div id="hintText"></div>
+
+    <div class="bottom-bar" id="bottomText" style="display: none;">
+      Lots of letters shown, blanks randomized every puzzle.
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== MULBERRY32 PRNG ==========
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  // ========== GAME STATE ==========
+  const STEP        = 50;
+  const CELL_SIZE   = 34;
+  const HBAR_HEIGHT = 40;
+  const VBAR_WIDTH  = 40;
+  const CENTER      = 130;
+  const BASE_X      = CENTER - 2*STEP - CELL_SIZE/2;
+  const BASE_Y      = CENTER - 2*STEP - CELL_SIZE/2;
+
+  let currentLevel = 0;
+  let currentPuzzleIndex = 0;
+  let currentPuzzle = null;
+  let words = [];
+  let seededRandom = Math.random;
+  let seed = null;
+
+  const hashtagArea = document.getElementById("hashtagArea");
+  const keyboardEl  = document.getElementById("keyboard");
+  const heatEl      = document.getElementById("heat");
+  const timerEl     = document.getElementById("timer");
+  const hintsEl     = document.getElementById("hints");
+  const statusEl    = document.getElementById("status");
+  const hintTextEl  = document.getElementById("hintText");
+  const resetBtn    = document.getElementById("resetBtn");
+  const nextBtn     = document.getElementById("nextBtn");
+  const backBtn     = document.getElementById("backBtn");
+  const puzzleLabel = document.getElementById("puzzleLabel");
+  const levelNum    = document.getElementById("levelNum");
+  const bottomText  = document.getElementById("bottomText");
+
+  const infoTop     = document.getElementById("infoTop");
+  const infoBottom  = document.getElementById("infoBottom");
+  const infoLeft    = document.getElementById("infoLeft");
+  const infoRight   = document.getElementById("infoRight");
+
+  let cells = [];
+  let userLetters = [];
+  let selectedIndex = null;
+  let hintsLeft = 5;
+  let timeLeft = 60;
+  let timer = null;
+  let solved = false;
+
+  // ========== LEVEL 1 PUZZLES (EASY) ==========
+  const PUZZLES_L1 = [
+    {
+      id: "L1-1",
+      top:    { answer: "BASIC", hint: "Simple and not complicated." },
+      bottom: { answer: "LEVEL", hint: "A flat surface or stage of progress." },
+      left:   { answer: "WATER", hint: "Clear liquid essential for life." },
+      right:  { answer: "RIVER", hint: "Large natural flowing stream." }
+    },
+    {
+      id: "L1-2",
+      top:    { answer: "GREET", hint: "To welcome someone politely." },
+      bottom: { answer: "PARTY", hint: "Fun gathering with friends." },
+      left:   { answer: "DREAM", hint: "Imagery in your mind while sleeping." },
+      right:  { answer: "PETTY", hint: "Focused on unimportant details." }
+    },
+    {
+      id: "L1-3",
+      top:    { answer: "PILOT", hint: "Person who flies an airplane." },
+      bottom: { answer: "PESTO", hint: "Green sauce made from basil and oil." },
+      left:   { answer: "RIVER", hint: "Natural flowing stream of water." },
+      right:  { answer: "ROUTE", hint: "A path or direction to follow." }
+    },
+    {
+      id: "L1-4",
+      top:    { answer: "COCOA", hint: "Powder used to make hot chocolate." },
+      bottom: { answer: "STEEL", hint: "Very strong metal made from iron." },
+      left:   { answer: "MOUTH", hint: "Part of the face used for eating and talking." },
+      right:  { answer: "BONES", hint: "Hard pieces that form the skeleton." }
+    },
+    {
+      id: "L1-5",
+      top:    { answer: "DREAM", hint: "Something you hope will happen." },
+      bottom: { answer: "EDGES", hint: "Outer borders of objects." },
+      left:   { answer: "GRADE", hint: "Score you get on school work." },
+      right:  { answer: "PAPER", hint: "Thin material used for writing." }
+    },
+    {
+      id: "L1-6",
+      top:    { answer: "MAKER", hint: "Someone who creates or produces something." },
+      bottom: { answer: "PAPER", hint: "Material used for notes and books." },
+      left:   { answer: "CARAT", hint: "Unit of weight for gemstones." },
+      right:  { answer: "LEVEL", hint: "A stage, rank, or flat position." }
+    },
+    {
+      id: "L1-7",
+      top:    { answer: "TIMES", hint: "Moments, or the multiplication sign." },
+      bottom: { answer: "IDEAS", hint: "Thoughts or mental concepts." },
+      left:   { answer: "MINDS", hint: "Thinking parts of people." },
+      right:  { answer: "METAL", hint: "Hard, shiny material like iron." }
+    },
+    {
+      id: "L1-8",
+      top:    { answer: "MAPLE", hint: "Tree whose leaf is on the Canadian flag." },
+      bottom: { answer: "STORM", hint: "Violent weather with wind and rain." },
+      left:   { answer: "EARTH", hint: "The planet we live on." },
+      right:  { answer: "ALARM", hint: "Device that warns with a loud sound." }
+    },
+    {
+      id: "L1-9",
+      top:    { answer: "WORLD", hint: "The planet and everyone on it." },
+      bottom: { answer: "RIVER", hint: "Large natural stream of water." },
+      left:   { answer: "LOGIC", hint: "Clear and sensible reasoning." },
+      right:  { answer: "OLDER", hint: "More advanced in age." }
+    },
+    {
+      id: "L1-10",
+      top:    { answer: "GRAPE", hint: "Small round fruit used to make wine." },
+      bottom: { answer: "SCENE", hint: "A view, or part of a movie or play." },
+      left:   { answer: "TRACK", hint: "Path for running or for trains." },
+      right:  { answer: "SPINE", hint: "Backbone running down your back." }
+    }
+  ];
+
+  // ========== LEVEL 2 PUZZLES (MEDIUM) ==========
+  const PUZZLES_L2 = [
+    {
+      id: "L2-1",
+      top:    { answer: "BASIC", hint: "Simple, not advanced." },
+      bottom: { answer: "LEVEL", hint: "Flat, or a stage of progress." },
+      left:   { answer: "WATER", hint: "Clear liquid essential for life." },
+      right:  { answer: "RIVER", hint: "Large natural flowing stream." }
+    },
+    {
+      id: "L2-2",
+      top:    { answer: "GREET", hint: "Welcome someone with words or a smile." },
+      bottom: { answer: "PARTY", hint: "Social gathering with music and fun." },
+      left:   { answer: "DREAM", hint: "Picture or story in your mind while asleep." },
+      right:  { answer: "PETTY", hint: "Overly focused on small, unimportant things." }
+    },
+    {
+      id: "L2-3",
+      top:    { answer: "PILOT", hint: "Person who flies an aircraft." },
+      bottom: { answer: "PESTO", hint: "Green Italian sauce made with basil." },
+      left:   { answer: "RIVER", hint: "Natural flowing waterway." },
+      right:  { answer: "ROUTE", hint: "Planned path from one place to another." }
+    },
+    {
+      id: "L2-4",
+      top:    { answer: "COCOA", hint: "Powder used to make hot chocolate." },
+      bottom: { answer: "STEEL", hint: "Hard, strong metal made from iron." },
+      left:   { answer: "MOUTH", hint: "Part of the face used for eating and talking." },
+      right:  { answer: "BONES", hint: "Hard parts that form the skeleton." }
+    },
+    {
+      id: "L2-5",
+      top:    { answer: "DREAM", hint: "Something you hope will happen someday." },
+      bottom: { answer: "EDGES", hint: "Outer borders or sides." },
+      left:   { answer: "GRADE", hint: "Score or mark on school work." },
+      right:  { answer: "PAPER", hint: "Thin sheet used for writing and printing." }
+    },
+    {
+      id: "L2-6",
+      top:    { answer: "MAKER", hint: "Person who creates or builds something." },
+      bottom: { answer: "PAPER", hint: "Material used for books and notes." },
+      left:   { answer: "CARAT", hint: "Unit of weight for diamonds." },
+      right:  { answer: "LEVEL", hint: "Flat state or a rank." }
+    },
+    {
+      id: "L2-7",
+      top:    { answer: "TIMES", hint: "Moments, or multiplication symbol." },
+      bottom: { answer: "IDEAS", hint: "Thoughts, concepts, mental plans." },
+      left:   { answer: "MINDS", hint: "Thinking parts of people." },
+      right:  { answer: "METAL", hint: "Hard, shiny material like iron or gold." }
+    },
+    {
+      id: "L2-8",
+      top:    { answer: "MAPLE", hint: "Tree whose leaf is on Canada's flag." },
+      bottom: { answer: "STORM", hint: "Strong wind with heavy rain or thunder." },
+      left:   { answer: "EARTH", hint: "The planet we live on." },
+      right:  { answer: "ALARM", hint: "Device that warns you with a sound." }
+    },
+    {
+      id: "L2-9",
+      top:    { answer: "WORLD", hint: "The Earth and everyone on it." },
+      bottom: { answer: "RIVER", hint: "Wide natural stream of water." },
+      left:   { answer: "LOGIC", hint: "Clear, sensible way of thinking." },
+      right:  { answer: "OLDER", hint: "More advanced in age." }
+    },
+    {
+      id: "L2-10",
+      top:    { answer: "GRAPE", hint: "Small round fruit; can be made into wine." },
+      bottom: { answer: "SCENE", hint: "View, or part of a play or movie." },
+      left:   { answer: "TRACK", hint: "Path for racing or trains." },
+      right:  { answer: "SPINE", hint: "Backbone down the center of your back." }
+    }
+  ];
+
+  // ========== LEVEL 3 PUZZLES (HARD) ==========
+  const PUZZLES_L3 = [
+    {
+      id: "L3-1",
+      top:    { answer: "ACID#", hint: "Sharp or sour chemical liquid that reacts strongly." },
+      bottom: { answer: "#TUBE", hint: "Hollow cylinder that carries air or liquid." },
+      left:   { answer: "#CATS", hint: "Small furry pets that purr." },
+      right:  { answer: "#DABS", hint: "Light touches with a finger or brush." }
+    },
+    {
+      id: "L3-2",
+      top:    { answer: "ACID#", hint: "Sharp or sour chemical liquid that reacts strongly." },
+      bottom: { answer: "#TOOL", hint: "Instrument used to fix or build things." },
+      left:   { answer: "#CATS", hint: "Small furry pets that purr." },
+      right:  { answer: "#DOOR", hint: "Movable barrier that opens and closes a room." }
+    },
+    {
+      id: "L3-3",
+      top:    { answer: "#CORN", hint: "Yellow grain that grows on tall stalks." },
+      bottom: { answer: "#TOOL", hint: "Instrument used to fix or build things." },
+      left:   { answer: "#CATS", hint: "Small furry pets that purr." },
+      right:  { answer: "#ROOF", hint: "Top covering of a building." }
+    },
+    {
+      id: "L3-4",
+      top:    { answer: "#CARD", hint: "Small stiff paper piece used for games or messages." },
+      bottom: { answer: "#TOOL", hint: "Instrument used to fix or build things." },
+      left:   { answer: "#CATS", hint: "Small furry pets that purr." },
+      right:  { answer: "#ROOF", hint: "Top covering of a building." }
+    },
+    {
+      id: "L3-5",
+      top:    { answer: "#CORN", hint: "Yellow grain that grows on tall stalks." },
+      bottom: { answer: "#TOOL", hint: "Instrument used to fix or build things." },
+      left:   { answer: "#CATS", hint: "Small furry pets that purr." },
+      right:  { answer: "#ROOM", hint: "Part of a building separated by walls." }
+    },
+    {
+      id: "L3-6",
+      top:    { answer: "#CARD", hint: "Small stiff paper piece used for games or messages." },
+      bottom: { answer: "#TOOL", hint: "Instrument used to fix or build things." },
+      left:   { answer: "#CATS", hint: "Small furry pets that purr." },
+      right:  { answer: "#ROOM", hint: "Part of a building separated by walls." }
+    },
+    {
+      id: "L3-7",
+      top:    { answer: "CAKE#", hint: "Sweet baked dessert, often with frosting." },
+      bottom: { answer: "#SILK", hint: "Smooth, shiny cloth made from silkworms." },
+      left:   { answer: "CATS#", hint: "Small furry pets that purr." },
+      right:  { answer: "#EELS", hint: "Long, snake-like fish." }
+    },
+    {
+      id: "L3-8",
+      top:    { answer: "GATE#", hint: "Hinged opening in a fence or wall." },
+      bottom: { answer: "#SILK", hint: "Smooth, shiny cloth made from silkworms." },
+      left:   { answer: "CATS#", hint: "Small furry pets that purr." },
+      right:  { answer: "#EELS", hint: "Long, snake-like fish." }
+    },
+    {
+      id: "L3-9",
+      top:    { answer: "GAME#", hint: "Structured play or contest with rules." },
+      bottom: { answer: "#SILK", hint: "Smooth, shiny cloth made from silkworms." },
+      left:   { answer: "CATS#", hint: "Small furry pets that purr." },
+      right:  { answer: "#EELS", hint: "Long, snake-like fish." }
+    },
+    {
+      id: "L3-10",
+      top:    { answer: "FACE#", hint: "Front part of the head with eyes, nose, and mouth." },
+      bottom: { answer: "#SILK", hint: "Smooth, shiny cloth made from silkworms." },
+      left:   { answer: "CATS#", hint: "Small furry pets that purr." },
+      right:  { answer: "#EELS", hint: "Long, snake-like fish." }
+    },
+    {
+      id: "L3-11",
+      top:    { answer: "TIMES", hint: "Repeated occasions or the × sign in math." },
+      bottom: { answer: "IDEAS", hint: "Thoughts, plans, or mental concepts." },
+      left:   { answer: "MINDS", hint: "Thinking parts of people; intellects." },
+      right:  { answer: "METAL", hint: "Hard, shiny material like iron or steel." }
+    },
+    {
+      id: "L3-12",
+      top:    { answer: "MAPLE", hint: "Tree whose leaf is on the Canadian flag." },
+      bottom: { answer: "STORM", hint: "Violent weather with wind and rain." },
+      left:   { answer: "EARTH", hint: "The planet we live on." },
+      right:  { answer: "ALARM", hint: "Device that warns you with a sound." }
+    },
+    {
+      id: "L3-13",
+      top:    { answer: "WORLD", hint: "The Earth and all life on it." },
+      bottom: { answer: "RIVER", hint: "Large natural stream of water." },
+      left:   { answer: "LOGIC", hint: "Clear, sensible way of thinking." },
+      right:  { answer: "OLDER", hint: "More advanced in age." }
+    },
+    {
+      id: "L3-14",
+      top:    { answer: "GRAPE", hint: "Small round fruit used to make wine." },
+      bottom: { answer: "SCENE", hint: "View, or part of a movie or play." },
+      left:   { answer: "TRACK", hint: "Path for runners or for trains." },
+      right:  { answer: "SPINE", hint: "Backbone down the center of your back." }
+    },
+    {
+      id: "L3-15",
+      top:    { answer: "FRUIT", hint: "Sweet edible plant product with seeds." },
+      bottom: { answer: "BLEND", hint: "Mix together smoothly." },
+      left:   { answer: "RUBLE", hint: "Russian currency unit." },
+      right:  { answer: "TREND", hint: "General direction or pattern over time." }
+    },
+    {
+      id: "L3-16",
+      top:    { answer: "OCEAN", hint: "Vast body of salt water." },
+      bottom: { answer: "PLANT", hint: "Living organism that grows in soil." },
+      left:   { answer: "CLEAN", hint: "Free from dirt or marks." },
+      right:  { answer: "CHANT", hint: "Rhythmic singing or shouting." }
+    },
+    {
+      id: "L3-17",
+      top:    { answer: "FLAME", hint: "Burning gas that gives off light and heat." },
+      bottom: { answer: "SMART", hint: "Intelligent and quick-witted." },
+      left:   { answer: "LEARN", hint: "Gain knowledge or skill through study." },
+      right:  { answer: "MEATS", hint: "Animal flesh used as food." }
+    },
+    {
+      id: "L3-18",
+      top:    { answer: "HEART", hint: "Organ that pumps blood through the body." },
+      bottom: { answer: "EXACT", hint: "Completely accurate and correct." },
+      left:   { answer: "EXTRA", hint: "More than is needed or expected." },
+      right:  { answer: "TRACT", hint: "Area of land or system of body organs." }
+    },
+    {
+      id: "L3-19",
+      top:    { answer: "SHINY", hint: "Reflecting light; glossy and bright." },
+      bottom: { answer: "SWEEP", hint: "Clean an area with a brush or broom." },
+      left:   { answer: "HINTS", hint: "Subtle clues or suggestions." },
+      right:  { answer: "YEEPS", hint: "Exclamations of surprise or alarm." }
+    },
+    {
+      id: "L3-20",
+      top:    { answer: "GRAND", hint: "Large and impressive in size or appearance." },
+      bottom: { answer: "SPEND", hint: "Pay money for goods or services." },
+      left:   { answer: "GRIND", hint: "Crush into small particles or powder." },
+      right:  { answer: "NERD", hint: "Person deeply interested in academic subjects." }
+    }
+  ];
+
+  // ========== FUNCTIONS ==========
+
+  function setSeed(s) {
+    seed = s;
+    seededRandom = mulberry32(seed);
+  }
+
+  function setLevel(lvl) {
+    currentLevel = lvl;
+  }
+
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function selectLevel(level) {
+    currentLevel = level;
+    currentPuzzleIndex = 0;
+
+    document.getElementById("levelSelection").style.display = "none";
+    document.getElementById("gameScreen").style.display = "block";
+
+    levelNum.textContent = level;
+
+    if (level === 1) {
+      hintsLeft = 5;
+      timeLeft = 60;
+      bottomText.textContent = "Lots of letters shown, blanks randomized every puzzle.";
+    } else if (level === 2) {
+      hintsLeft = 4;
+      timeLeft = 60;
+      bottomText.textContent = "Fewer hints, more challenge!";
+    } else if (level === 3) {
+      hintsLeft = 3;
+      timeLeft = 45;
+      bottomText.textContent = "4-5 letter mix, hardest level!";
+    }
+
+    hintsEl.textContent = hintsLeft;
+    timerEl.textContent = timeLeft;
+
+    loadPuzzle(0);
+
+    // Use requestAnimationFrame to ensure layout is complete before building board
+    requestAnimationFrame(() => {
+      resetGame();
+    });
+  }
+
+  function loadPuzzle(idx) {
+    currentPuzzleIndex = idx;
+
+    let puzzleList;
+    if (currentLevel === 1) {
+      puzzleList = PUZZLES_L1;
+    } else if (currentLevel === 2) {
+      puzzleList = PUZZLES_L2;
+    } else {
+      puzzleList = PUZZLES_L3;
+    }
+
+    currentPuzzle = puzzleList[idx];
+    const p = currentPuzzle;
+
+    const t = p.top.answer.toUpperCase();
+    const b = p.bottom.answer.toUpperCase();
+    const l = p.left.answer.toUpperCase();
+    const r = p.right.answer.toUpperCase();
+
+    if (t.length !== 5 || b.length !== 5 || l.length !== 5 || r.length !== 5) {
+      console.error("All words must be 5 letters long.", p);
+    }
+
+    words = [
+      {
+        id: "top", orientation: "h",
+        answer: t, hint: p.top.hint,
+        path: [{r:1,c:0},{r:1,c:1},{r:1,c:2},{r:1,c:3},{r:1,c:4}]
+      },
+      {
+        id: "bottom", orientation: "h",
+        answer: b, hint: p.bottom.hint,
+        path: [{r:3,c:0},{r:3,c:1},{r:3,c:2},{r:3,c:3},{r:3,c:4}]
+      },
+      {
+        id: "left", orientation: "v",
+        answer: l, hint: p.left.hint,
+        path: [{r:0,c:1},{r:1,c:1},{r:2,c:1},{r:3,c:1},{r:4,c:1}]
+      },
+      {
+        id: "right", orientation: "v",
+        answer: r, hint: p.right.hint,
+        path: [{r:0,c:3},{r:1,c:3},{r:2,c:3},{r:3,c:3},{r:4,c:3}]
+      }
+    ];
+
+    puzzleLabel.textContent = (idx + 1) + " / " + puzzleList.length;
+  }
+
+  function buildBars() {
+    hashtagArea.querySelectorAll(".bar").forEach(b => b.remove());
+
+    [1,3].forEach(row => {
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const centerY = BASE_Y + row*STEP + CELL_SIZE/2;
+      bar.style.top = (centerY - HBAR_HEIGHT/2) + "px";
+      bar.style.left = (BASE_X - 25) + "px";
+      bar.style.width = (STEP*4 + CELL_SIZE + 50) + "px";
+      bar.style.height = HBAR_HEIGHT + "px";
+      hashtagArea.appendChild(bar);
+    });
+
+    [1,3].forEach(col => {
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const centerX = BASE_X + col*STEP + CELL_SIZE/2;
+      bar.style.left = (centerX - VBAR_WIDTH/2) + "px";
+      bar.style.top = (BASE_Y - 25) + "px";
+      bar.style.width = VBAR_WIDTH + "px";
+      bar.style.height = (STEP*4 + CELL_SIZE + 50) + "px";
+      hashtagArea.appendChild(bar);
+    });
+  }
+
+  function buildCells() {
+    hashtagArea.querySelectorAll(".letter").forEach(el => el.remove());
+    cells = [];
+    userLetters = [];
+
+    // Reset seeded random to ensure same puzzle configuration every time
+    if (seed !== null) {
+      seededRandom = mulberry32(seed);
+    }
+
+    const cellMap = {};
+    const wordCells = { top:[], bottom:[], left:[], right:[] };
+
+    // Create cell map
+    words.forEach(word => {
+      const letters = word.answer.toUpperCase().split("");
+      word.path.forEach((pos, idx) => {
+        const key = pos.r + "_" + pos.c;
+        if (!cellMap[key]) {
+          cellMap[key] = { r:pos.r, c:pos.c, solution:letters[idx], fixed:false, wordRefs:[] };
+        }
+        cellMap[key].wordRefs.push({ wordId:word.id, index:idx });
+        wordCells[word.id].push({ key, index:idx });
+      });
+    });
+
+    // Random fixed cells
+    let MIN_FIXED, MAX_FIXED;
+    if (currentLevel === 1) {
+      MIN_FIXED = 3;
+      MAX_FIXED = 4;
+    } else if (currentLevel === 2) {
+      MIN_FIXED = 2;
+      MAX_FIXED = 3;
+    } else {
+      MIN_FIXED = 1;
+      MAX_FIXED = 2;
+    }
+
+    words.forEach(word => {
+      const list = wordCells[word.id];
+      const len = list.length;
+      if (!len) return;
+
+      let maxFixForThis = Math.min(MAX_FIXED, len - 1);
+      let minFixForThis = Math.min(MIN_FIXED, len);
+      if (maxFixForThis < minFixForThis) maxFixForThis = minFixForThis;
+
+      const target = Math.floor(seededRandom() * (maxFixForThis - minFixForThis + 1)) + minFixForThis;
+
+      const indices = shuffle([...Array(len).keys()]).slice(0, target);
+      indices.forEach(i => {
+        const key = list[i].key;
+        const cell = cellMap[key];
+        if (cell.solution !== '#') {
+          cell.fixed = true;
+        }
+      });
+    });
+
+    // Build DOM
+    let index = 0;
+    for (const key in cellMap) {
+      const data = cellMap[key];
+      const el = document.createElement("div");
+      el.className = "letter";
+
+      let left = BASE_X + data.c * STEP;
+      let top  = BASE_Y + data.r * STEP;
+
+      if (data.r === 1) left += 8;
+      if (data.r === 3) left -= 8;
+
+      if (data.c === 1 || data.c === 3) {
+        if (data.r === 0) {
+          left += 26;
+        } else if (data.r === 4) {
+          left -= 26;
+        }
+      }
+
+      el.style.left = left + "px";
+      el.style.top  = top + "px";
+
+      const span = document.createElement("span");
+      span.className = "letter-inner";
+
+      if (data.solution === '#') {
+        el.classList.add("filler");
+        span.textContent = "";
+      } else if (data.fixed) {
+        el.classList.add("fixed");
+        span.textContent = data.solution;
+      } else {
+        el.classList.add("empty");
+        span.textContent = "";
+        const currentIndex = index;
+        el.addEventListener("click", () => selectCell(currentIndex));
+      }
+
+      el.appendChild(span);
+
+      hashtagArea.appendChild(el);
+      data.el = el;
+      data.span = span;
+      cells.push(data);
+      userLetters.push((data.solution === '#' || data.fixed) ? data.solution : "");
+      index++;
+    }
+  }
+
+  function clearSelection() {
+    cells.forEach(c => c.el.classList.remove("selected"));
+  }
+
+  function selectCell(idx) {
+    if (solved) return;
+    const cell = cells[idx];
+    if (cell.fixed || cell.solution === '#') return;
+
+    clearSelection();
+    cell.el.classList.remove("wrong","correct");
+    cell.el.classList.add("selected");
+    selectedIndex = idx;
+  }
+
+  function positionHintButtons() {
+    const btnMap = { top:infoTop, bottom:infoBottom, left:infoLeft, right:infoRight };
+
+    words.forEach(word => {
+      const btn = btnMap[word.id];
+      if (!btn) return;
+
+      if (word.orientation === "h") {
+        let maxC = -1;
+        let row = word.path[0].r;
+        word.path.forEach(p => { if (p.c > maxC) maxC = p.c; });
+        const centerY = BASE_Y + row*STEP + CELL_SIZE/2;
+        const endX = BASE_X + maxC*STEP + CELL_SIZE;
+        btn.style.left = (endX + 34) + "px";
+        btn.style.top  = (centerY - 11) + "px";
+      } else {
+        let maxR = -1;
+        let col = word.path[0].c;
+        word.path.forEach(p => { if (p.r > maxR) maxR = p.r; });
+        const centerX = BASE_X + col*STEP + CELL_SIZE/2;
+        const endY = BASE_Y + maxR*STEP + CELL_SIZE;
+        btn.style.left = (centerX - 11) + "px";
+        btn.style.top  = (endY + 10) + "px";
+      }
+    });
+  }
+
+  function buildKeyboard() {
+    keyboardEl.innerHTML = "";
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(ch => {
+      const btn = document.createElement("button");
+      btn.className = "key";
+      btn.textContent = ch;
+      btn.addEventListener("click", () => pressLetter(ch));
+      keyboardEl.appendChild(btn);
+    });
+    const back = document.createElement("button");
+    back.className = "key";
+    back.textContent = "⌫";
+    back.addEventListener("click", backspace);
+    keyboardEl.appendChild(back);
+  }
+
+  function pressLetter(ch) {
+    if (selectedIndex === null || solved) return;
+    const cell = cells[selectedIndex];
+    if (cell.fixed || cell.solution === '#') return;
+
+    cell.span.textContent = ch;
+    cell.el.classList.remove("empty");
+    userLetters[selectedIndex] = ch;
+
+    clearSelection();
+    selectedIndex = null;
+
+    checkProgress();
+  }
+
+  function backspace() {
+    if (selectedIndex === null || solved) return;
+    const cell = cells[selectedIndex];
+    if (cell.fixed || cell.solution === '#') return;
+
+    cell.span.textContent = "";
+    cell.el.classList.add("empty");
+    cell.el.classList.remove("wrong","correct");
+    userLetters[selectedIndex] = "";
+    checkProgress();
+  }
+
+  function checkProgress() {
+    let totalNonFixed = 0;
+    let correctNonFixed = 0;
+    let correctAll = 0;
+
+    cells.forEach((cell, i) => {
+      if (cell.fixed || cell.solution === '#') {
+        correctAll++;
+        return;
+      }
+      totalNonFixed++;
+      const el = cell.el;
+      const val = (userLetters[i] || "").toUpperCase();
+      el.classList.remove("wrong","correct");
+      if (!val) return;
+
+      if (val === cell.solution.toUpperCase()) {
+        correctNonFixed++;
+        correctAll++;
+        el.classList.add("correct");
+      } else {
+        el.classList.add("wrong");
+      }
+    });
+
+    const ratio = totalNonFixed ? (correctNonFixed / totalNonFixed) : 0;
+    updateHeat(ratio);
+
+    const totalCells = cells.length;
+    if (correctAll === totalCells) {
+      solved = true;
+      clearInterval(timer);
+      heatEl.textContent = "DONE";
+      heatEl.className = "";
+      heatEl.classList.add("heat-max");
+      statusEl.textContent = "✅ You solved the hashtag!";
+      statusEl.className = "success";
+
+      // Send completion message to Swift
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+        window.webkit.messageHandlers.gameComplete.postMessage({
+          won: true,
+          timeLeft: timeLeft
+        });
+      }
+    } else {
+      statusEl.textContent = "";
+      statusEl.className = "";
+    }
+  }
+
+  function updateHeat(ratio) {
+    heatEl.className = "";
+    if (ratio < 0.25) {
+      heatEl.classList.add("heat-cold");
+      heatEl.textContent = "COLD";
+    } else if (ratio < 0.5) {
+      heatEl.classList.add("heat-warm");
+      heatEl.textContent = "WARM";
+    } else if (ratio < 0.9) {
+      heatEl.classList.add("heat-hot");
+      heatEl.textContent = "HOT";
+    } else {
+      heatEl.classList.add("heat-max");
+      heatEl.textContent = "ALMOST";
+    }
+  }
+
+  function useHint(word) {
+    if (solved) return;
+    if (hintsLeft <= 0) {
+      hintTextEl.textContent = "No hints left!";
+      return;
+    }
+    hintsLeft--;
+    hintsEl.textContent = hintsLeft;
+    hintTextEl.textContent = "Hint (" + word.id.toUpperCase() + "): " + word.hint;
+  }
+
+  function startTimer() {
+    if (timer) clearInterval(timer);
+
+    if (currentLevel === 3) {
+      timeLeft = 45;
+    } else {
+      timeLeft = 60;
+    }
+
+    timerEl.textContent = timeLeft;
+    timer = setInterval(() => {
+      timeLeft--;
+      timerEl.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        if (!solved) {
+          statusEl.textContent = "⏰ Time's up!";
+          statusEl.className = "fail";
+        }
+      }
+    }, 1000);
+  }
+
+  function resetGame() {
+    solved = false;
+
+    if (currentLevel === 1) {
+      hintsLeft = 5;
+    } else if (currentLevel === 2) {
+      hintsLeft = 4;
+    } else {
+      hintsLeft = 3;
+    }
+
+    hintsEl.textContent = hintsLeft;
+    hintTextEl.textContent = "";
+    statusEl.textContent = "";
+    statusEl.className = "";
+    selectedIndex = null;
+
+    buildBars();
+    buildCells();
+    positionHintButtons();
+    updateHeat(0);
+    startTimer();
+  }
+
+  // ========== EVENT LISTENERS ==========
+
+  infoTop.addEventListener("click",    () => useHint(words[0]));
+  infoBottom.addEventListener("click", () => useHint(words[1]));
+  infoLeft.addEventListener("click",   () => useHint(words[2]));
+  infoRight.addEventListener("click",  () => useHint(words[3]));
+
+  resetBtn.addEventListener("click", () => {
+    loadPuzzle(currentPuzzleIndex);
+    resetGame();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    let puzzleList;
+    if (currentLevel === 1) {
+      puzzleList = PUZZLES_L1;
+    } else if (currentLevel === 2) {
+      puzzleList = PUZZLES_L2;
+    } else {
+      puzzleList = PUZZLES_L3;
+    }
+
+    currentPuzzleIndex = (currentPuzzleIndex + 1) % puzzleList.length;
+    loadPuzzle(currentPuzzleIndex);
+    resetGame();
+  });
+
+  backBtn.addEventListener("click", () => {
+    if (timer) clearInterval(timer);
+    document.getElementById("gameScreen").style.display = "none";
+    document.getElementById("levelSelection").style.display = "block";
+  });
+
+  // ========== INITIALIZATION ==========
+
+  buildKeyboard();
+
+  // Show splash for 3 seconds, then show game screen (level will be set by Swift)
+  setTimeout(() => {
+    document.getElementById("splashScreen").style.display = "none";
+    // Level selection is hidden - Swift will call selectLevel() directly
+    // If no level is set after 1 second, default to level 1 for testing
+    setTimeout(() => {
+      if (currentLevel === 0) {
+        selectLevel(1);
+      }
+    }, 1000);
+  }, 3000);
+
+  // Expose functions for Swift to call
+  window.setSeed = setSeed;
+  window.setLevel = setLevel;
+  window.selectLevel = selectLevel;
+  window.loadPuzzle = loadPuzzle;
+  window.resetGame = resetGame;
+</script>
+
+</body>
+</html>

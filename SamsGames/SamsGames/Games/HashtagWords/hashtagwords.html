@@ -238,6 +238,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  .info-btn.disabled {
+    background: #9ca3af;
+    color: #4b5563;
+    cursor: not-allowed;
+  }
+
   .keyboard {
     display: grid;
     grid-template-columns: repeat(10, 1fr);
@@ -1117,6 +1123,14 @@
     hintsLeft--;
     hintsEl.textContent = hintsLeft;
     hintTextEl.textContent = "Hint (" + word.id.toUpperCase() + "): " + word.hint;
+
+    // Update hint button appearance when hints run out
+    if (hintsLeft <= 0) {
+      infoTop.classList.add("disabled");
+      infoBottom.classList.add("disabled");
+      infoLeft.classList.add("disabled");
+      infoRight.classList.add("disabled");
+    }
   }
 
   function startTimer() {
@@ -1158,6 +1172,12 @@
     statusEl.textContent = "";
     statusEl.className = "";
     selectedIndex = null;
+
+    // Reset hint button appearance
+    infoTop.classList.remove("disabled");
+    infoBottom.classList.remove("disabled");
+    infoLeft.classList.remove("disabled");
+    infoRight.classList.remove("disabled");
 
     buildBars();
     buildCells();

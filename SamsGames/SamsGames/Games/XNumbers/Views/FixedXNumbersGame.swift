@@ -2022,7 +2022,17 @@ class XNumbersGameModel: ObservableObject {
                 // Right diagonal (top to bottom) - extended to new top node
                 GameLine(id: 4, nodeIds: [2, 5, 8, 11, 14],
                         targetSum: nodes[2].correctValue + nodes[5].correctValue + nodes[8].correctValue + nodes[11].correctValue + nodes[14].correctValue,
-                        sumPosition: CGPoint(x: -120, y: 120))  // Moved farther: -100 * 1.2 = -120, 100 * 1.2 = 120
+                        sumPosition: CGPoint(x: -120, y: 120)),  // Moved farther: -100 * 1.2 = -120, 100 * 1.2 = 120
+
+                // NEW: Top horizontal cross line (left to right) through nodes 3, 4, 5 - LEFT sum box
+                GameLine(id: 5, nodeIds: [3, 4, 5],
+                        targetSum: nodes[3].correctValue + nodes[4].correctValue + nodes[5].correctValue,
+                        sumPosition: CGPoint(x: -192, y: -120)),  // Left side of line
+
+                // NEW: Top horizontal cross line (left to right) through nodes 3, 4, 5 - RIGHT sum box
+                GameLine(id: 6, nodeIds: [3, 4, 5],
+                        targetSum: nodes[3].correctValue + nodes[4].correctValue + nodes[5].correctValue,
+                        sumPosition: CGPoint(x: 192, y: -120))  // Right side of line
             ]
         }
     }

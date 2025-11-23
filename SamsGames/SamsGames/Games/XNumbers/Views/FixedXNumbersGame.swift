@@ -523,7 +523,7 @@ struct NodeCircle: View {
                     .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
             }
         }
-        .disabled(node.isFixed)
+        .disabled(node.isFixed || node.isPlayerSolved)
         .position(
             x: center.x + node.position.x * scale,
             y: center.y + node.position.y * scale
@@ -541,7 +541,9 @@ struct NodeCircle: View {
             return Color.orange.opacity(0.9)
         }
 
-        if node.isFixed {
+        if node.isPlayerSolved {
+            return Color.green.opacity(0.7)  // Green for player-found correct answers
+        } else if node.isFixed {
             return Color.blue.opacity(0.9)  // Dark blue for fixed/known numbers
         } else if let value = node.value {
             // Check if all lines containing this node are complete
@@ -605,14 +607,14 @@ struct FixedSumSquareView: View {
 
         RoundedRectangle(cornerRadius: 6)
             .fill(isComplete ? Color.green : Color.purple)
-            .frame(width: 40 * scale, height: 28 * scale)
+            .frame(width: 53 * scale, height: 37 * scale)  // 32% larger total (46*1.15=53, 32*1.15=37)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(Color.black.opacity(0.3), lineWidth: 1.5)
             )
             .overlay(
                 Text("\(line.targetSum)")
-                    .font(.system(size: 14 * scale, weight: .bold))
+                    .font(.system(size: 18 * scale, weight: .bold))  // Increased from 14 to 18
                     .foregroundColor(.white)
             )
             .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
@@ -1640,6 +1642,7 @@ struct GameNode: Identifiable {
     var value: Int?
     var correctValue: Int
     var isFixed: Bool
+    var isPlayerSolved: Bool = false  // Track when player finds correct answer
     var isSelected: Bool = false
     var isSpecial: Bool = false
     var specialType: SpecialNodeType? = nil
@@ -1946,26 +1949,26 @@ class XNumbersGameModel: ObservableObject {
                 // Horizontal middle line (left to right)
                 GameLine(id: 0, nodeIds: [4, 5, 6, 7, 8],
                         targetSum: nodes[4].correctValue + nodes[5].correctValue + nodes[6].correctValue + nodes[7].correctValue + nodes[8].correctValue,
-                        sumPosition: CGPoint(x: -160, y: 0)),
+                        sumPosition: CGPoint(x: -192, y: 0)),  // Moved farther: -160 * 1.2 = -192
 
                 GameLine(id: 1, nodeIds: [4, 5, 6, 7, 8],
                         targetSum: nodes[4].correctValue + nodes[5].correctValue + nodes[6].correctValue + nodes[7].correctValue + nodes[8].correctValue,
-                        sumPosition: CGPoint(x: 160, y: 0)),
+                        sumPosition: CGPoint(x: 192, y: 0)),  // Moved farther: 160 * 1.2 = 192
 
                 // Vertical middle line (top to bottom)
                 GameLine(id: 2, nodeIds: [0, 2, 6, 10, 12],
                         targetSum: nodes[0].correctValue + nodes[2].correctValue + nodes[6].correctValue + nodes[10].correctValue + nodes[12].correctValue,
-                        sumPosition: CGPoint(x: 0, y: 160)),
+                        sumPosition: CGPoint(x: 0, y: 192)),  // Moved farther: 160 * 1.2 = 192
 
                 // Top-right to bottom-left diagonal
                 GameLine(id: 3, nodeIds: [3, 6, 9],
                         targetSum: nodes[3].correctValue + nodes[6].correctValue + nodes[9].correctValue,
-                        sumPosition: CGPoint(x: -100, y: 100)),
+                        sumPosition: CGPoint(x: -120, y: 120)),  // Moved farther: -100 * 1.2 = -120, 100 * 1.2 = 120
 
                 // Top-left to bottom-right diagonal
                 GameLine(id: 4, nodeIds: [1, 6, 11],
                         targetSum: nodes[1].correctValue + nodes[6].correctValue + nodes[11].correctValue,
-                        sumPosition: CGPoint(x: 100, y: 100))
+                        sumPosition: CGPoint(x: 120, y: 120))  // Moved farther: 100 * 1.2 = 120
             ]
         } else if currentLevel == 2 {
             // Level 2: Lines with new corner nodes
@@ -1973,26 +1976,26 @@ class XNumbersGameModel: ObservableObject {
                 // Horizontal middle line (left to right)
                 GameLine(id: 0, nodeIds: [6, 7, 8, 9, 10],
                         targetSum: nodes[6].correctValue + nodes[7].correctValue + nodes[8].correctValue + nodes[9].correctValue + nodes[10].correctValue,
-                        sumPosition: CGPoint(x: -160, y: 0)),
+                        sumPosition: CGPoint(x: -192, y: 0)),  // Moved farther: -160 * 1.2 = -192
 
                 GameLine(id: 1, nodeIds: [6, 7, 8, 9, 10],
                         targetSum: nodes[6].correctValue + nodes[7].correctValue + nodes[8].correctValue + nodes[9].correctValue + nodes[10].correctValue,
-                        sumPosition: CGPoint(x: 160, y: 0)),
+                        sumPosition: CGPoint(x: 192, y: 0)),  // Moved farther: 160 * 1.2 = 192
 
                 // Vertical middle line (top to bottom)
                 GameLine(id: 2, nodeIds: [1, 4, 8, 12, 14],
                         targetSum: nodes[1].correctValue + nodes[4].correctValue + nodes[8].correctValue + nodes[12].correctValue + nodes[14].correctValue,
-                        sumPosition: CGPoint(x: 0, y: 160)),
+                        sumPosition: CGPoint(x: 0, y: 192)),  // Moved farther: 160 * 1.2 = 192
 
                 // Top-left corner diagonal (NEW) - sum displays on RIGHT
                 GameLine(id: 3, nodeIds: [0, 3, 8, 13],
                         targetSum: nodes[0].correctValue + nodes[3].correctValue + nodes[8].correctValue + nodes[13].correctValue,
-                        sumPosition: CGPoint(x: 100, y: 100)),
+                        sumPosition: CGPoint(x: 120, y: 120)),  // Moved farther: 100 * 1.2 = 120
 
                 // Top-right corner diagonal (NEW) - sum displays on LEFT
                 GameLine(id: 4, nodeIds: [2, 5, 8, 11],
                         targetSum: nodes[2].correctValue + nodes[5].correctValue + nodes[8].correctValue + nodes[11].correctValue,
-                        sumPosition: CGPoint(x: -100, y: 100))
+                        sumPosition: CGPoint(x: -120, y: 120))  // Moved farther: -100 * 1.2 = -120, 100 * 1.2 = 120
             ]
         } else {
             // Level 3: Lines with 3 additional top nodes
@@ -2000,26 +2003,26 @@ class XNumbersGameModel: ObservableObject {
                 // Horizontal middle line (left to right)
                 GameLine(id: 0, nodeIds: [9, 10, 11, 12, 13],
                         targetSum: nodes[9].correctValue + nodes[10].correctValue + nodes[11].correctValue + nodes[12].correctValue + nodes[13].correctValue,
-                        sumPosition: CGPoint(x: -160, y: 0)),
+                        sumPosition: CGPoint(x: -192, y: 0)),  // Moved farther: -160 * 1.2 = -192
 
                 GameLine(id: 1, nodeIds: [9, 10, 11, 12, 13],
                         targetSum: nodes[9].correctValue + nodes[10].correctValue + nodes[11].correctValue + nodes[12].correctValue + nodes[13].correctValue,
-                        sumPosition: CGPoint(x: 160, y: 0)),
+                        sumPosition: CGPoint(x: 192, y: 0)),  // Moved farther: 160 * 1.2 = 192
 
                 // Vertical middle line (top to bottom) - extended to new top node
                 GameLine(id: 2, nodeIds: [1, 4, 7, 11, 15, 17],
                         targetSum: nodes[1].correctValue + nodes[4].correctValue + nodes[7].correctValue + nodes[11].correctValue + nodes[15].correctValue + nodes[17].correctValue,
-                        sumPosition: CGPoint(x: 0, y: 160)),
+                        sumPosition: CGPoint(x: 0, y: 192)),  // Moved farther: 160 * 1.2 = 192
 
                 // Left diagonal (top to bottom) - extended to new top node
                 GameLine(id: 3, nodeIds: [0, 3, 6, 11, 16],
                         targetSum: nodes[0].correctValue + nodes[3].correctValue + nodes[6].correctValue + nodes[11].correctValue + nodes[16].correctValue,
-                        sumPosition: CGPoint(x: 100, y: 100)),
+                        sumPosition: CGPoint(x: 120, y: 120)),  // Moved farther: 100 * 1.2 = 120
 
                 // Right diagonal (top to bottom) - extended to new top node
                 GameLine(id: 4, nodeIds: [2, 5, 8, 11, 14],
                         targetSum: nodes[2].correctValue + nodes[5].correctValue + nodes[8].correctValue + nodes[11].correctValue + nodes[14].correctValue,
-                        sumPosition: CGPoint(x: -100, y: 100))
+                        sumPosition: CGPoint(x: -120, y: 120))  // Moved farther: -100 * 1.2 = -120, 100 * 1.2 = 120
             ]
         }
     }
@@ -2134,6 +2137,12 @@ class XNumbersGameModel: ObservableObject {
         nodes[index].value = number
         nodes[index].isSelected = false
         selectedNode = nil
+
+        // Check if the placed number is correct
+        if number == nodes[index].correctValue {
+            // Mark as player-solved (turn it green)
+            nodes[index].isPlayerSolved = true
+        }
 
         checkGameComplete()
     }

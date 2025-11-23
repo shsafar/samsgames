@@ -97,16 +97,14 @@
       background: #1b88d0;
     }
 
-    /* Mobile-optimized score board - LARGER */
+    /* Mobile-optimized score board - LARGER - TWO LINES */
     .score-board {
       background: rgba(0,0,0,0.5);
-      padding: 18px 20px;
+      padding: 14px 20px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 14px;
-      font-size: 1.4rem;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 1.3rem;
       border-bottom: 2px solid rgba(255,255,255,0.15);
       font-weight: 600;
     }
@@ -116,9 +114,16 @@
       color: #4fc3f7;
     }
 
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
     .score-group {
       display: flex;
-      gap: 24px;
+      gap: 20px;
       align-items: center;
     }
 
@@ -157,11 +162,13 @@
       letter-spacing: 1px;
     }
 
-    /* Fullscreen game area */
+    /* Reduced size game area */
     .game-area {
       position: relative;
-      flex: 1;
+      flex: 0.7;
       width: 100%;
+      min-height: 300px;
+      max-height: 450px;
       overflow: hidden;
       background: radial-gradient(circle at top, #8de5e5, #4db8b8);
     }
@@ -444,20 +451,26 @@
   </div>
 
   <div class="score-board">
-    <div class="score-group">
-      <div>Score: <span id="score">0</span></div>
-      <div>Best: <span id="best-score">0</span></div>
-      <div>Words: <span id="word-count">0</span></div>
-      <div>Fragments: <span id="fragment-count">0</span></div>
+    <!-- First Row: Score, Best, Words, Fragments -->
+    <div class="score-row">
+      <div class="score-group">
+        <div>Score: <span id="score">0</span></div>
+        <div>Best: <span id="best-score">0</span></div>
+        <div>Words: <span id="word-count">0</span></div>
+        <div>Fragments: <span id="fragment-count">0</span></div>
+      </div>
     </div>
-    <div class="target-display">
-      Target: <span id="target-word">—</span>
+    <!-- Second Row: Target, Pick, Time -->
+    <div class="score-row">
+      <div class="target-display">
+        Target: <span id="target-word">—</span>
+      </div>
+      <div class="current-pick">
+        Pick:
+        <span id="pick-letters">—</span>
+      </div>
+      <div class="timer">Time: <span id="time-left">∞</span></div>
     </div>
-    <div class="current-pick">
-      Pick:
-      <span id="pick-letters">—</span>
-    </div>
-    <div class="timer">Time: <span id="time-left">∞</span></div>
   </div>
 
   <div id="game-area" class="game-area theme-default">
@@ -568,7 +581,13 @@
       "FILM","FIND","FINE","FIRE","FIRM","FISH","FIVE","FLAT","FLOW","FOLK","FOOD","FOOT","FORD","FORK",
       "FORM","FORT","FOUR","FREE","FROM","FUEL","FULL","FUND","GAIN","GAME","GATE","GAVE","GEAR","GIFT",
       "GIRL","GIVE","GLAD","GOAL","GOES","GOLD","GOLF","GONE","GOOD","GRAY","GREW","GROW","GULF","HAIR",
-      "HALF","HALL","HAND","HANG","HARD","HARM","HATE","HAVE","HEAD","HEAR","HEAT","HELD","HELL","HELP"
+      "HALF","HALL","HAND","HANG","HARD","HARM","HATE","HAVE","HEAD","HEAR","HEAT","HELD","HELL","HELP",
+      // 6-letter words
+      "ACCEPT","ACTION","ACTIVE","ACTUAL","ADVICE","AFFECT","AFFORD","AGENCY","AGREED","AMOUNT","ANIMAL","ANNUAL",
+      "ANSWER","ANYONE","APPEAL","APPEAR","ARTIST","ASPECT","ASSAULT","ATTACK","ATTEND","AUTHOR","AVERAGE","BATTLE",
+      "BEAUTY","BECOME","BEFORE","BEHALF","BEHIND","BELIEF","BELONG","BENEATH","BENEFIT","BETTER","BEYOND","BORDER",
+      "BOTTLE","BOTTOM","BRANCH","BROKEN","BUDGET","BURDEN","BUTTON","CAMERA","CANCER","CARBON","CAREER","CASTLE",
+      "CASUAL","CENTER","CENTRE","CHANCE","CHANGE","CHARGE","CHOICE","CHOSEN","CHURCH","CIRCLE","CLIENT","CLOSED"
     ],
     social: [
       // 2-letter words - Social context
@@ -582,7 +601,15 @@
       "MOOD","NAME","NEED","NICE","PALS","PARTY","PEACE","PEOPLE","PLEASE","POLITE","PRAISE","SHARE",
       "SHAKE","SHOUT","SIGN","SMILE","SPEAK","STAY","SWEET","TALK","TEAM","THANK","THINK","TOAST","TONE",
       "TRUST","TURN","UNITE","USAGE","VISIT","VOICE","VOTE","WAIT","WALK","WANT","WARM","WAVE","WELCOME",
-      "WINK","WISH","WITH","WORD","WORK","WRITE","YOGA"
+      "WINK","WISH","WITH","WORD","WORK","WRITE","YOGA",
+      // 6-letter words
+      "ACCEPT","ADMIRE","ADVICE","AFFORD","AFRAID","AGENDA","AGREED","ANSWER","ANYONE","ARRIVE","ASSIST","ATTACH",
+      "ATTEND","BESTIE","BONDED","BRUNCH","BUBBLE","CHARMS","CHUMMY","CIRCLE","COMMON","COUPLE","CREDIT","CROWNS",
+      "DEBATE","DECENT","DEVOTE","DINNER","EMERGE","ENABLE","ENGAGE","ENJOYS","FAMILY","FATHER","FAVOUR","FOLLOW",
+      "FRIEND","GATHER","GENTLE","GREETS","HAPPEN","HOPING","HUMBLE","INVITE","JOYFUL","KINDLY","LISTEN","LOVELY",
+      "MOTHER","NICELY","NOTICE","POLITE","PRAISE","PREFER","PROVEN","REGARD","REMIND","REPEAT","RESCUE","SAFETY",
+      "SALUTE","SENIOR","SHARED","SOCIAL","SOFTEN","SPIRIT","SPOUSE","STABLE","TENDER","THANKS","THRIVE","TRAVEL",
+      "UNITED","WARMTH","WEALTH","WISHES"
     ],
     scientific: [
       // 2-letter words - Scientific/Technical
@@ -595,7 +622,13 @@
       "NOVA","NUCLEUS","ORBIT","ORGAN","OXIDE","OZONE","PHASE","PLASMA","POLE","POWER","PROBE","PROTON",
       "QUARK","RADAR","RATIO","REACT","ROCK","SALT","SCALE","SENSOR","SERIES","SHELL","SOLAR","SOUND",
       "SPACE","SPEED","SPIN","STAR","STEAM","STRAIN","SYSTEM","TEST","THEORY","TIDE","TIME","TISSUE",
-      "TOXIN","TRACE","VACUUM","VAPOR","VIRUS","VOLT","WAVE","WEIGHT","WIRE","ZERO","ZONE"
+      "TOXIN","TRACE","VACUUM","VAPOR","VIRUS","VOLT","WAVE","WEIGHT","WIRE","ZERO","ZONE",
+      // 6-letter words
+      "ACIDIC","ACTION","ATOMS","BARYON","BINARY","CARBON","CHARGE","CHOSEN","CIRRUS","COBALT","COSMIC","CRATER",
+      "CRYSTAL","CURRENT","CYCLIC","DENDRITE","DILUTE","DOMAIN","ENERGY","ENGINE","ENZYME","FISSION","FOSSIL","FROZEN",
+      "FUSION","GALAXY","GAMMA","GENOME","GLOBAL","GRAVITY","GROOVY","HELIUM","HYBRID","IMPACT","INDUCT","IODINE",
+      "ISOLATE","KINETIC","LABILE","LAMINA","LEPTON","LINEAR","LIQUID","MAGNET","MARGIN","METHANE","MOTION","NATURE",
+      "NEBULA","NEURAL","NEWTON","NICKEL","NOCEBO","NORMAL","NUCLEI","OPTICS","ORBITAL","ORIGIN","OXYGEN","PHASES"
     ],
     animals: [
       // 2-letter words - Animals
@@ -608,7 +641,13 @@
       "LYNX","MINK","MOLE","MOOSE","MOTH","MOUSE","MULE","NEWT","PANDA","PONY","PUMA","QUAIL","RABBIT",
       "RAVEN","ROBIN","SEAL","SHARK","SHEEP","SKUNK","SLOTH","SNAIL","SNAKE","SPARROW","SPIDER","SQUID",
       "STAG","STORK","SWAN","TIGER","TOAD","TROUT","TURKEY","VIPER","VOLE","WASP","WHALE","WOLF","WORM",
-      "ZEBRA"
+      "ZEBRA",
+      // 6-letter words
+      "ANIMAL","BADGER","BEAGLE","BEAVER","BEETLE","BOBCAT","CANARY","CATTLE","CHEETAH","CONDOR","COYOTE","DONKEY",
+      "DRAGON","ERMINE","FALCON","FERRET","GIBBON","GOPHER","GROUSE","HORNET","IGUANA","IMPALA","INSECT","JACKAL",
+      "JAGUAR","KITTEN","LIZARD","MAMMAL","MARMOT","MARTIN","MONKEY","OSPREY","PARROT","PELICAN","PHEASANT","PIGEON",
+      "POSSUM","RABBIT","RACOON","RAPTOR","RODENT","SALMON","SPIDER","SQUIRREL","TERRIER","TOMCAT","TURTLE","WEASEL",
+      "WOMBAT","YUCCA"
     ]
   };
 
@@ -685,6 +724,9 @@
     dailySeed = seed;
     seededRandom = createSeededRandom(seed);
     console.log("✅ Seed set for daily mode:", seed);
+
+    // Initialize target word pool with this seed (shuffle once)
+    initTargetWordPool();
   };
 
   // Start daily game (called from Swift)
@@ -1076,6 +1118,41 @@
   function tryMergeFragments() {
     if (fragments.length < 2) return;
 
+    // Try merging 3 fragments (for 6-letter words)
+    if (fragments.length >= 3) {
+      for (let i = 0; i < fragments.length; i++) {
+        for (let j = 0; j < fragments.length; j++) {
+          if (i === j) continue;
+          for (let k = 0; k < fragments.length; k++) {
+            if (k === i || k === j) continue;
+            const f1 = fragments[i];
+            const f2 = fragments[j];
+            const f3 = fragments[k];
+            if (!f1 || !f2 || !f3) continue;
+
+            // Try all 6 permutations of 3 fragments
+            const permutations = [
+              f1.text + f2.text + f3.text,
+              f1.text + f3.text + f2.text,
+              f2.text + f1.text + f3.text,
+              f2.text + f3.text + f1.text,
+              f3.text + f1.text + f2.text,
+              f3.text + f2.text + f1.text
+            ];
+
+            for (const perm of permutations) {
+              const word = perm.toUpperCase();
+              if (WORD_DICTIONARY.includes(word)) {
+                formWordFromFragments([f1.id, f2.id, f3.id], word);
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Try merging 2 fragments (for 4-letter words and smaller)
     for (let i = 0; i < fragments.length; i++) {
       for (let j = 0; j < fragments.length; j++) {
         if (i === j) continue;
@@ -1226,7 +1303,15 @@
     }
 
     overlay.classList.remove('visible');
-    initTargetWordPool(); // Shuffle target words for new game
+
+    // In daily mode, just reset index to get same first target word
+    // In regular mode, re-shuffle the pool
+    if (window.dailyMode) {
+      targetWordIndex = 0; // Reset to first word in the seeded shuffle
+    } else {
+      initTargetWordPool(); // Re-shuffle target words for new game
+    }
+
     pickNewTargetWord();
     log("Game reset. Press Start.");
   }
@@ -1235,7 +1320,16 @@
     currentTheme = theme;
     gameArea.classList.remove('theme-default','theme-social','theme-scientific','theme-animals');
     WORD_DICTIONARY = DICTIONARIES[theme].slice();
-    initTargetWordPool(); // Re-shuffle for new theme
+
+    // In daily mode, reset seeded random and re-shuffle with same seed
+    // In regular mode, just re-shuffle
+    if (window.dailyMode && dailySeed !== null) {
+      seededRandom = createSeededRandom(dailySeed); // Reset RNG state
+      initTargetWordPool(); // Re-shuffle with reset seed
+    } else {
+      initTargetWordPool(); // Re-shuffle for new theme
+    }
+
     switch (theme) {
       case 'social':
         gameArea.classList.add('theme-social');

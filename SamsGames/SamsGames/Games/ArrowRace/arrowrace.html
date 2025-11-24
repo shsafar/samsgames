@@ -209,8 +209,6 @@
 
     let seededRandom = Math.random;
     let dailySeed = null;
-    let seedSet = false;
-    let gameInitialized = false;
 
     // Level configuration
     let currentLevel = 0;
@@ -309,37 +307,12 @@
       document.documentElement.style.setProperty('--token-size', `${tokenSize}px`);
 
       buildIndexMaps();
-
-      // Initialize game if seed is already set and not yet initialized
-      if (seedSet && !gameInitialized) {
-        initGame();
-      }
     }
 
     function setSeed(seed) {
       dailySeed = seed;
       seededRandom = mulberry32(seed);
-      seedSet = true;
       console.log('✅ Arrow Race: Seed set to', seed);
-
-      // Initialize game if level is already set and not yet initialized
-      if (currentLevel > 0 && !gameInitialized) {
-        initGame();
-      }
-    }
-
-    function initGame() {
-      if (gameInitialized) {
-        console.log('⚠️ Arrow Race: Game already initialized, skipping');
-        return;
-      }
-
-      gameInitialized = true;
-      initBoard();
-      placeTokens();
-      placeRandomArrows();
-      updateTurnIndicator();
-      console.log('✅ Arrow Race: Game initialized with seed', dailySeed, 'level', currentLevel);
     }
 
     function getCellElement(gameIndex) {
@@ -791,15 +764,24 @@
     window.setSeed = setSeed;
     window.setLevel = setLevel;
     window.resetGame = resetGame;
+    window.initBoard = initBoard;
+    window.placeTokens = placeTokens;
+    window.placeRandomArrows = placeRandomArrows;
+    window.updateTurnIndicator = updateTurnIndicator;
 
-    // Initial setup - Swift will call setSeed and setLevel which will trigger initGame
-    // If neither is called after 200ms, use defaults
+    // Initial setup - Swift will call setSeed, setLevel, then manually initialize
+    // If neither is called after 500ms, use defaults
     setTimeout(() => {
-      if (currentLevel === 0 && !seedSet) {
+      if (currentLevel === 0) {
+        console.log('⚠️ Arrow Race: No level set by Swift, using defaults');
         setSeed(Date.now());
         setLevel(1);
+        initBoard();
+        placeTokens();
+        placeRandomArrows();
+        updateTurnIndicator();
       }
-    }, 200);
+    }, 500);
   </script>
 </body>
 </html>

@@ -219,21 +219,38 @@ struct WebArrowRaceGameViewRepresentable: UIViewRepresentable {
         let url = URL(fileURLWithPath: htmlPath)
         webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
 
-        // Wait for page to load, then set seed and level
+        // Wait for page to load, then set seed and level, then initialize
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Set seed first
             webView.evaluateJavaScript("window.setSeed(\(seed));") { _, error in
                 if let error = error {
                     print("❌ Error setting seed: \(error)")
                 } else {
                     print("✅ Arrow Race seed set: \(seed)")
                 }
-            }
 
-            webView.evaluateJavaScript("window.setLevel(\(level));") { _, error in
-                if let error = error {
-                    print("❌ Error setting level: \(error)")
-                } else {
-                    print("✅ Arrow Race level set: \(level)")
+                // Then set level
+                webView.evaluateJavaScript("window.setLevel(\(level));") { _, error in
+                    if let error = error {
+                        print("❌ Error setting level: \(error)")
+                    } else {
+                        print("✅ Arrow Race level set: \(level)")
+                    }
+
+                    // Finally initialize the game
+                    webView.evaluateJavaScript("""
+                        if (typeof window.initBoard === 'function') {
+                            window.initBoard();
+                            window.placeTokens();
+                            window.placeRandomArrows();
+                            window.updateTurnIndicator();
+                            console.log('✅ Arrow Race: Game initialized from Swift');
+                        }
+                    """) { _, error in
+                        if let error = error {
+                            print("❌ Error initializing game: \(error)")
+                        }
+                    }
                 }
             }
         }

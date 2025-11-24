@@ -157,6 +157,10 @@ struct ArchiveView: View {
             TraceWizGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .arrowRace:
+            WebArrowRaceGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

@@ -199,6 +199,10 @@ struct MainMenuView: View {
             TraceWizGameView()
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .arrowRace:
+            WebArrowRaceGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

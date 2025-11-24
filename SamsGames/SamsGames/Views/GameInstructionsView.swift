@@ -34,6 +34,8 @@ struct GameInstructionsView: View {
                     HashtagWordsInstructionsView()
                 case .traceWiz:
                     TraceWizInstructionsView()
+                case .arrowRace:
+                    ArrowRaceInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

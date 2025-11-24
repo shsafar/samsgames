@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Arrow Race</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+    }
+
+    h1 {
+      margin: 5px 0;
+      font-size: 24px;
+    }
+
+    #top-bar {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    #dice-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #dice {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      font-weight: bold;
+      background: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s, background 0.2s, border-color 0.2s, opacity 0.2s;
+    }
+
+    #dice.rolling {
+      animation: spin 0.4s linear infinite;
+      cursor: default;
+    }
+
+    @keyframes spin {
+      0%   { transform: rotate(0deg); }
+      25%  { transform: rotate(30deg); }
+      50%  { transform: rotate(-30deg); }
+      75%  { transform: rotate(15deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    #turn-indicator {
+      font-size: 12px;
+      color: #444;
+    }
+
+    #board-wrapper {
+      position: relative;
+      display: inline-block;
+      margin-top: 10px;
+    }
+
+    #board {
+      display: grid;
+      gap: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    #arrow-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .cell {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .cell-number {
+      font-size: 11px;
+      color: #555;
+      position: absolute;
+      top: 4px;
+      left: 4px;
+    }
+
+    .arrow-start-highlight {
+      border: 2px solid #0a9b3f;
+    }
+
+    .snake-start-highlight {
+      border: 2px solid #d62929;
+    }
+
+    .player-token {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #007bff;
+      box-shadow: 0 0 6px rgba(0,0,0,0.4);
+      z-index: 4;
+    }
+
+    .ai-token {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ff9800;
+      box-shadow: 0 0 6px rgba(0,0,0,0.4);
+      z-index: 3;
+    }
+
+    #message {
+      margin-top: 12px;
+      min-height: 20px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    #reset-btn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #333;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    #reset-btn:hover {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="game-title">Arrow Race</h1>
+  <div id="top-bar">
+    <div id="dice-container">
+      <div id="dice">Roll</div>
+      <div id="turn-indicator">Your turn (Blue)</div>
+    </div>
+  </div>
+
+  <div id="board-wrapper">
+    <svg id="arrow-layer">
+      <defs>
+        <marker id="arrowhead-green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#0a9b3f"></path>
+        </marker>
+        <marker id="arrowhead-red" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#d62929"></path>
+        </marker>
+      </defs>
+    </svg>
+    <div id="board"></div>
+  </div>
+
+  <div id="message"></div>
+  <button id="reset-btn" style="display: none;">New Game</button>
+
+  <script>
+    // ========== MULBERRY32 PRNG ==========
+    function mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    let seededRandom = Math.random;
+    let dailySeed = null;
+
+    // Level configuration
+    let currentLevel = 1;
+    let boardSize = 5;
+    let totalCells = 25;
+    let cellSize = 60;
+    let gapSize = 4;
+    let ladderCount = 3;
+    let snakeCount = 3;
+
+    const boardEl = document.getElementById('board');
+    const wrapperEl = document.getElementById('board-wrapper');
+    const arrowSvg = document.getElementById('arrow-layer');
+    const diceEl = document.getElementById('dice');
+    const messageEl = document.getElementById('message');
+    const resetBtn = document.getElementById('reset-btn');
+    const turnIndicatorEl = document.getElementById('turn-indicator');
+    const gameTitleEl = document.getElementById('game-title');
+
+    let playerPos = 0;
+    let aiPos = 0;
+    let arrowMap = {};
+    let isRolling = false;
+    let isMoving = false;
+    let playerTokenEl = null;
+    let aiTokenEl = null;
+    let gameOver = false;
+    let currentTurn = 'player';
+
+    // serpentine index ↔ row/col
+    let indexToRC = [];
+    let rcToIndex = [];
+
+    function buildIndexMaps() {
+      indexToRC = [];
+      rcToIndex = [];
+      let idx = 0;
+      for (let row = 0; row < boardSize; row++) {
+        rcToIndex[row] = [];
+        if (row % 2 === 0) {
+          for (let col = 0; col < boardSize; col++) {
+            indexToRC[idx] = { row, col };
+            rcToIndex[row][col] = idx;
+            idx++;
+          }
+        } else {
+          for (let col = boardSize - 1; col >= 0; col--) {
+            indexToRC[idx] = { row, col };
+            rcToIndex[row][col] = idx;
+            idx++;
+          }
+        }
+      }
+    }
+
+    function setLevel(level) {
+      currentLevel = level;
+
+      if (level === 1) {
+        boardSize = 5;
+        cellSize = 60;
+        gapSize = 4;
+        ladderCount = 3;
+        snakeCount = 3;
+        gameTitleEl.textContent = 'Arrow Race – Level 1 (5×5)';
+      } else if (level === 2) {
+        boardSize = 7;
+        cellSize = 44;
+        gapSize = 3;
+        ladderCount = 4;
+        snakeCount = 4;
+        gameTitleEl.textContent = 'Arrow Race – Level 2 (7×7)';
+      } else if (level === 3) {
+        boardSize = 10;
+        cellSize = 32;
+        gapSize = 2;
+        ladderCount = 6;
+        snakeCount = 6;
+        gameTitleEl.textContent = 'Arrow Race – Level 3 (10×10)';
+      }
+
+      totalCells = boardSize * boardSize;
+
+      // Update board grid
+      boardEl.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSize}px)`;
+      boardEl.style.gridTemplateRows = `repeat(${boardSize}, ${cellSize}px)`;
+      boardEl.style.gap = `${gapSize}px`;
+
+      // Update cell sizes
+      const cellNumberFontSize = level === 1 ? 11 : (level === 2 ? 10 : 9);
+      document.documentElement.style.setProperty('--cell-size', `${cellSize}px`);
+      document.documentElement.style.setProperty('--cell-number-font', `${cellNumberFontSize}px`);
+
+      // Update token sizes
+      const tokenSize = level === 1 ? 22 : (level === 2 ? 20 : 14);
+      document.documentElement.style.setProperty('--token-size', `${tokenSize}px`);
+
+      buildIndexMaps();
+    }
+
+    function setSeed(seed) {
+      dailySeed = seed;
+      seededRandom = mulberry32(seed);
+      console.log('✅ Arrow Race: Seed set to', seed);
+    }
+
+    function getCellElement(gameIndex) {
+      const { row, col } = indexToRC[gameIndex];
+      const rowFromTop = boardSize - 1 - row;
+      const domIndex = rowFromTop * boardSize + col;
+      return boardEl.children[domIndex];
+    }
+
+    function initBoard() {
+      boardEl.innerHTML = '';
+
+      for (let r = 0; r < boardSize; r++) {
+        for (let c = 0; c < boardSize; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.style.width = `${cellSize}px`;
+          cell.style.height = `${cellSize}px`;
+          const numberDiv = document.createElement('div');
+          numberDiv.className = 'cell-number';
+          cell.appendChild(numberDiv);
+          boardEl.appendChild(cell);
+        }
+      }
+
+      for (let i = 0; i < totalCells; i++) {
+        const cell = getCellElement(i);
+        cell.querySelector('.cell-number').textContent = i + 1;
+      }
+    }
+
+    function clearArrowVisuals() {
+      const markerSize = currentLevel === 1 ? 8 : (currentLevel === 2 ? 6 : 5);
+      const markerRef = currentLevel === 1 ? 7 : (currentLevel === 2 ? 5 : 4);
+      const markerMid = currentLevel === 1 ? 4 : (currentLevel === 2 ? 3 : 2.5);
+
+      arrowSvg.innerHTML = `
+        <defs>
+          <marker id="arrowhead-green" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerRef}" refY="${markerMid}" orient="auto">
+            <path d="M0,0 L${markerSize},${markerMid} L0,${markerSize} z" fill="#0a9b3f"></path>
+          </marker>
+          <marker id="arrowhead-red" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerRef}" refY="${markerMid}" orient="auto">
+            <path d="M0,0 L${markerSize},${markerMid} L0,${markerSize} z" fill="#d62929"></path>
+          </marker>
+        </defs>
+      `;
+      for (let i = 0; i < totalCells; i++) {
+        const cell = getCellElement(i);
+        cell.classList.remove('arrow-start-highlight', 'snake-start-highlight');
+      }
+    }
+
+    function cellCenter(gameIndex) {
+      const cell = getCellElement(gameIndex);
+      const cellRect = cell.getBoundingClientRect();
+      const wrapRect = wrapperEl.getBoundingClientRect();
+      const cx = cellRect.left - wrapRect.left + cellRect.width / 2;
+      const cy = cellRect.top - wrapRect.top + cellRect.height / 2;
+      return { x: cx, y: cy };
+    }
+
+    function drawArrow(startIdx, endIdx, type) {
+      const start = cellCenter(startIdx);
+      const end = cellCenter(endIdx);
+
+      const ns = 'http://www.w3.org/2000/svg';
+      const path = document.createElementNS(ns, 'path');
+
+      const midX = (start.x + end.x) / 2;
+      const midY = (start.y + end.y) / 2;
+      const offset = (currentLevel === 1 ? 20 : (currentLevel === 2 ? 15 : 12)) * (type === 'ladder' ? -1 : 1);
+      const controlX = midX;
+      const controlY = midY + offset;
+
+      const d = `M ${start.x} ${start.y} Q ${controlX} ${controlY} ${end.x} ${end.y}`;
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+
+      const strokeWidth = currentLevel === 1 ? 4 : (currentLevel === 2 ? 3 : 2.5);
+
+      if (type === 'ladder') {
+        path.setAttribute('stroke', '#0a9b3f');
+        path.setAttribute('stroke-width', strokeWidth);
+        path.setAttribute('marker-end', 'url(#arrowhead-green)');
+      } else {
+        path.setAttribute('stroke', '#d62929');
+        path.setAttribute('stroke-width', strokeWidth);
+        path.setAttribute('marker-end', 'url(#arrowhead-red)');
+      }
+
+      arrowSvg.appendChild(path);
+
+      const startCell = getCellElement(startIdx);
+      startCell.classList.add(type === 'ladder' ? 'arrow-start-highlight' : 'snake-start-highlight');
+    }
+
+    function placeRandomArrows() {
+      arrowMap = {};
+      clearArrowVisuals();
+
+      const usedPathCells = new Set();
+      const usedStarts = new Set();
+      const usedTargets = new Set();
+
+      let safety = 0;
+      const maxSafety = currentLevel === 1 ? 800 : (currentLevel === 2 ? 1200 : 2000);
+
+      function addArrow(type) {
+        safety++;
+        if (safety > maxSafety) return;
+
+        let startIndex = Math.floor(seededRandom() * totalCells);
+        const startRC = indexToRC[startIndex];
+        let row = startRC.row;
+        let col = startRC.col;
+
+        if (startIndex === 0 || startIndex === totalCells - 1) return addArrow(type);
+        if (usedPathCells.has(startIndex)) return addArrow(type);
+        if (usedStarts.has(startIndex) || usedTargets.has(startIndex)) return addArrow(type);
+
+        let pathIndices = [startIndex];
+        let targetIndex;
+
+        const maxArrowLength = currentLevel === 1 ? 4 : (currentLevel === 2 ? 5 : 7);
+
+        if (type === 'ladder') {
+          if (row >= boardSize - 1) return addArrow(type);
+          let maxLen = boardSize - 1 - row;
+          if (maxLen < 2) return addArrow(type);
+          const length = 2 + Math.floor(seededRandom() * Math.min(maxArrowLength, maxLen - 1));
+          const dir = Math.floor(seededRandom() * 3);
+          let rowStep = 1;
+          let colStep = (dir === 1 ? -1 : dir === 2 ? 1 : 0);
+
+          let r = row;
+          let c = col;
+          for (let i = 0; i < length; i++) {
+            r += rowStep;
+            c += colStep;
+            if (r < 0 || r >= boardSize || c < 0 || c >= boardSize) return addArrow(type);
+            const idx = rcToIndex[r][c];
+            pathIndices.push(idx);
+          }
+          targetIndex = pathIndices[pathIndices.length - 1];
+          if (targetIndex === totalCells - 1) return addArrow(type);
+        } else {
+          if (row <= 0) return addArrow(type);
+          let maxLen = row;
+          if (maxLen < 2) return addArrow(type);
+          const length = 2 + Math.floor(seededRandom() * Math.min(maxArrowLength, maxLen - 1));
+          const dir = Math.floor(seededRandom() * 3);
+          let rowStep = -1;
+          let colStep = (dir === 1 ? -1 : dir === 2 ? 1 : 0);
+
+          let r = row;
+          let c = col;
+          for (let i = 0; i < length; i++) {
+            r += rowStep;
+            c += colStep;
+            if (r < 0 || r >= boardSize || c < 0 || c >= boardSize) return addArrow(type);
+            const idx = rcToIndex[r][c];
+            pathIndices.push(idx);
+          }
+          targetIndex = pathIndices[pathIndices.length - 1];
+          if (targetIndex === 0) return addArrow(type);
+        }
+
+        for (const idx of pathIndices) {
+          if (usedPathCells.has(idx)) return addArrow(type);
+        }
+
+        if (usedTargets.has(startIndex) || usedStarts.has(targetIndex) || usedTargets.has(targetIndex)) {
+          return addArrow(type);
+        }
+
+        arrowMap[startIndex] = { target: targetIndex, type };
+        usedStarts.add(startIndex);
+        usedTargets.add(targetIndex);
+        for (const idx of pathIndices) usedPathCells.add(idx);
+      }
+
+      for (let i = 0; i < ladderCount; i++) addArrow('ladder');
+      for (let i = 0; i < snakeCount; i++) addArrow('snake');
+
+      requestAnimationFrame(() => {
+        for (const start in arrowMap) {
+          const { target, type } = arrowMap[start];
+          drawArrow(Number(start), target, type);
+        }
+      });
+    }
+
+    function placeTokens() {
+      if (!playerTokenEl) {
+        playerTokenEl = document.createElement('div');
+        playerTokenEl.className = 'player-token';
+      }
+      if (!aiTokenEl) {
+        aiTokenEl = document.createElement('div');
+        aiTokenEl.className = 'ai-token';
+      }
+      getCellElement(playerPos).appendChild(playerTokenEl);
+      getCellElement(aiPos).appendChild(aiTokenEl);
+    }
+
+    function setMessage(text) {
+      messageEl.textContent = text;
+    }
+
+    function updateDiceStyles() {
+      if (gameOver) {
+        diceEl.style.background = '#ddd';
+        diceEl.style.borderColor = '#888';
+        diceEl.style.opacity = '0.7';
+        diceEl.style.cursor = 'default';
+        diceEl.style.pointerEvents = 'none';
+        return;
+      }
+
+      if (currentTurn === 'player') {
+        diceEl.style.background = '#ffffff';
+        diceEl.style.borderColor = '#333';
+        diceEl.style.opacity = '1';
+        diceEl.style.cursor = 'pointer';
+        diceEl.style.pointerEvents = (isRolling || isMoving) ? 'none' : 'auto';
+      } else {
+        diceEl.style.background = '#ffe0b2';
+        diceEl.style.borderColor = '#ff9800';
+        diceEl.style.opacity = '1';
+        diceEl.style.cursor = 'default';
+        diceEl.style.pointerEvents = 'none';
+      }
+    }
+
+    function updateTurnIndicator() {
+      if (gameOver) {
+        turnIndicatorEl.textContent = 'Game over';
+        updateDiceStyles();
+        return;
+      }
+      if (currentTurn === 'player') {
+        turnIndicatorEl.textContent = 'Your turn (Blue)';
+        if (!isRolling && !isMoving) {
+          diceEl.textContent = 'Roll';
+        }
+      } else {
+        turnIndicatorEl.textContent = 'App turn (Orange)';
+      }
+      updateDiceStyles();
+    }
+
+    function handleGameOver(msg) {
+      gameOver = true;
+      setMessage(msg);
+      updateTurnIndicator();
+
+      // Send completion message to Swift
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+        const won = msg.includes('You win');
+        window.webkit.messageHandlers.gameComplete.postMessage({
+          won: won
+        });
+      }
+    }
+
+    function rollDiceFor(who) {
+      if (isRolling || isMoving || gameOver) return;
+      if (who === 'player' && currentTurn !== 'player') return;
+      if (who === 'ai' && currentTurn !== 'ai') return;
+
+      isRolling = true;
+      updateDiceStyles();
+      diceEl.classList.add('rolling');
+      setMessage('');
+
+      let rollValue = 1;
+      let elapsed = 0;
+      const duration = 700;
+      const interval = 80;
+
+      const animId = setInterval(() => {
+        elapsed += interval;
+        rollValue = 1 + Math.floor(Math.random() * 6);
+        diceEl.textContent = rollValue;
+        if (elapsed >= duration) {
+          clearInterval(animId);
+          diceEl.classList.remove('rolling');
+          isRolling = false;
+          updateDiceStyles();
+          applyRoll(rollValue, who);
+        }
+      }, interval);
+    }
+
+    function applyRoll(rollValue, who) {
+      if (gameOver) return;
+
+      const currentPos = (who === 'player') ? playerPos : aiPos;
+      const targetPos = currentPos + rollValue;
+
+      if (targetPos > totalCells - 1) {
+        if (who === 'player') {
+          setMessage('You need an exact roll to reach the last cell.');
+        } else {
+          setMessage('App needs an exact roll.');
+        }
+        endTurnAndMaybeTriggerNext(who);
+        return;
+      }
+
+      movePieceStepByStep(rollValue, who);
+    }
+
+    function movePieceStepByStep(steps, who) {
+      if (steps <= 0) return;
+      isMoving = true;
+      updateDiceStyles();
+
+      let stepsTaken = 0;
+      const stepInterval = setInterval(() => {
+        if (stepsTaken >= steps) {
+          clearInterval(stepInterval);
+          applyArrowEffect(who);
+          return;
+        }
+
+        if (who === 'player') {
+          playerPos++;
+          if (playerPos >= totalCells - 1) playerPos = totalCells - 1;
+        } else {
+          aiPos++;
+          if (aiPos >= totalCells - 1) aiPos = totalCells - 1;
+        }
+
+        placeTokens();
+        stepsTaken++;
+
+        const pos = (who === 'player') ? playerPos : aiPos;
+        if (pos === totalCells - 1 && stepsTaken === steps) {
+          clearInterval(stepInterval);
+          isMoving = false;
+          updateDiceStyles();
+          if (who === 'player') {
+            handleGameOver('You reached the last cell. You win!');
+          } else {
+            handleGameOver('The app reached the last cell. You lose.');
+          }
+        }
+      }, 200);
+    }
+
+    function applyArrowEffect(who) {
+      const pos = (who === 'player') ? playerPos : aiPos;
+      if (pos === totalCells - 1) {
+        isMoving = false;
+        updateDiceStyles();
+        return;
+      }
+
+      const info = arrowMap[pos];
+      if (!info) {
+        isMoving = false;
+        updateDiceStyles();
+        endTurnAndMaybeTriggerNext(who);
+        return;
+      }
+
+      const { target, type } = info;
+      setMessage(
+        (who === 'player' ? 'You hit a ' : 'App hit a ') +
+        (type === 'ladder' ? 'green arrow! Climb up.' : 'red arrow! Slide down.')
+      );
+
+      setTimeout(() => {
+        if (who === 'player') {
+          playerPos = target;
+        } else {
+          aiPos = target;
+        }
+        placeTokens();
+
+        const newPos = (who === 'player') ? playerPos : aiPos;
+        if (newPos === totalCells - 1) {
+          isMoving = false;
+          updateDiceStyles();
+          if (who === 'player') {
+            handleGameOver('Arrow helped you reach the end! You win!');
+          } else {
+            handleGameOver('Arrow helped the app reach the end. You lose.');
+          }
+        } else {
+          isMoving = false;
+          updateDiceStyles();
+          endTurnAndMaybeTriggerNext(who);
+        }
+      }, 300);
+    }
+
+    function scheduleAIRoll() {
+      if (gameOver) return;
+      if (currentTurn !== 'ai') return;
+      if (isRolling || isMoving) {
+        setTimeout(scheduleAIRoll, 250);
+        return;
+      }
+      rollDiceFor('ai');
+    }
+
+    function endTurnAndMaybeTriggerNext(whoJustPlayed) {
+      if (gameOver) return;
+      currentTurn = (whoJustPlayed === 'player') ? 'ai' : 'player';
+      updateTurnIndicator();
+
+      if (currentTurn === 'ai') {
+        setTimeout(scheduleAIRoll, 600);
+      }
+    }
+
+    function resetGame() {
+      gameOver = false;
+      playerPos = 0;
+      aiPos = 0;
+      isRolling = false;
+      isMoving = false;
+      currentTurn = 'player';
+      setMessage('');
+      diceEl.textContent = 'Roll';
+
+      // Reset seeded random for consistent arrow placements
+      if (dailySeed !== null) {
+        seededRandom = mulberry32(dailySeed);
+      }
+
+      initBoard();
+      placeTokens();
+      placeRandomArrows();
+      updateTurnIndicator();
+    }
+
+    diceEl.addEventListener('click', () => rollDiceFor('player'));
+    resetBtn.addEventListener('click', resetGame);
+
+    // Expose functions for Swift to call
+    window.setSeed = setSeed;
+    window.setLevel = setLevel;
+    window.resetGame = resetGame;
+
+    // Initial setup (wait for Swift to set level and seed)
+    setTimeout(() => {
+      if (currentLevel === 0) {
+        setLevel(1); // Default to level 1
+      }
+      initBoard();
+      placeTokens();
+      placeRandomArrows();
+      updateTurnIndicator();
+    }, 100);
+  </script>
+</body>
+</html>

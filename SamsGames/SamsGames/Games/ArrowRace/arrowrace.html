@@ -102,10 +102,12 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      width: var(--cell-size, 60px);
+      height: var(--cell-size, 60px);
     }
 
     .cell-number {
-      font-size: 11px;
+      font-size: var(--cell-number-font, 11px);
       color: #555;
       position: absolute;
       top: 4px;
@@ -121,8 +123,8 @@
     }
 
     .player-token {
-      width: 22px;
-      height: 22px;
+      width: var(--token-size, 22px);
+      height: var(--token-size, 22px);
       border-radius: 50%;
       background: #007bff;
       box-shadow: 0 0 6px rgba(0,0,0,0.4);
@@ -130,8 +132,8 @@
     }
 
     .ai-token {
-      width: 22px;
-      height: 22px;
+      width: var(--token-size, 22px);
+      height: var(--token-size, 22px);
       border-radius: 50%;
       background: #ff9800;
       box-shadow: 0 0 6px rgba(0,0,0,0.4);
@@ -161,7 +163,7 @@
   </style>
 </head>
 <body>
-  <h1 id="game-title">Arrow Race</h1>
+  <h1 id="game-title">Play Against Sam!</h1>
   <div id="top-bar">
     <div id="dice-container">
       <div id="dice">Roll</div>
@@ -199,9 +201,10 @@
 
     let seededRandom = Math.random;
     let dailySeed = null;
+    let seedSet = false;
 
     // Level configuration
-    let currentLevel = 1;
+    let currentLevel = 0;
     let boardSize = 5;
     let totalCells = 25;
     let cellSize = 60;
@@ -263,21 +266,21 @@
         gapSize = 4;
         ladderCount = 3;
         snakeCount = 3;
-        gameTitleEl.textContent = 'Arrow Race – Level 1 (5×5)';
+        gameTitleEl.textContent = 'Play Against Sam! – Level 1 (5×5)';
       } else if (level === 2) {
         boardSize = 7;
         cellSize = 44;
         gapSize = 3;
         ladderCount = 4;
         snakeCount = 4;
-        gameTitleEl.textContent = 'Arrow Race – Level 2 (7×7)';
+        gameTitleEl.textContent = 'Play Against Sam! – Level 2 (7×7)';
       } else if (level === 3) {
         boardSize = 10;
         cellSize = 32;
         gapSize = 2;
         ladderCount = 6;
         snakeCount = 6;
-        gameTitleEl.textContent = 'Arrow Race – Level 3 (10×10)';
+        gameTitleEl.textContent = 'Play Against Sam! – Level 3 (10×10)';
       }
 
       totalCells = boardSize * boardSize;
@@ -297,12 +300,30 @@
       document.documentElement.style.setProperty('--token-size', `${tokenSize}px`);
 
       buildIndexMaps();
+
+      // Initialize game if seed is already set
+      if (seedSet) {
+        initGame();
+      }
     }
 
     function setSeed(seed) {
       dailySeed = seed;
       seededRandom = mulberry32(seed);
+      seedSet = true;
       console.log('✅ Arrow Race: Seed set to', seed);
+
+      // Initialize game if level is already set
+      if (currentLevel > 0) {
+        initGame();
+      }
+    }
+
+    function initGame() {
+      initBoard();
+      placeTokens();
+      placeRandomArrows();
+      updateTurnIndicator();
     }
 
     function getCellElement(gameIndex) {
@@ -319,8 +340,6 @@
         for (let c = 0; c < boardSize; c++) {
           const cell = document.createElement('div');
           cell.className = 'cell';
-          cell.style.width = `${cellSize}px`;
-          cell.style.height = `${cellSize}px`;
           const numberDiv = document.createElement('div');
           numberDiv.className = 'cell-number';
           cell.appendChild(numberDiv);
@@ -549,7 +568,7 @@
           diceEl.textContent = 'Roll';
         }
       } else {
-        turnIndicatorEl.textContent = 'App turn (Orange)';
+        turnIndicatorEl.textContent = 'Sam turn (Orange)';
       }
       updateDiceStyles();
     }
@@ -607,7 +626,7 @@
         if (who === 'player') {
           setMessage('You need an exact roll to reach the last cell.');
         } else {
-          setMessage('App needs an exact roll.');
+          setMessage('Sam needs an exact roll.');
         }
         endTurnAndMaybeTriggerNext(who);
         return;
@@ -648,7 +667,7 @@
           if (who === 'player') {
             handleGameOver('You reached the last cell. You win!');
           } else {
-            handleGameOver('The app reached the last cell. You lose.');
+            handleGameOver('Sam reached the last cell. You lose.');
           }
         }
       }, 200);
@@ -672,7 +691,7 @@
 
       const { target, type } = info;
       setMessage(
-        (who === 'player' ? 'You hit a ' : 'App hit a ') +
+        (who === 'player' ? 'You hit a ' : 'Sam hit a ') +
         (type === 'ladder' ? 'green arrow! Climb up.' : 'red arrow! Slide down.')
       );
 
@@ -691,7 +710,7 @@
           if (who === 'player') {
             handleGameOver('Arrow helped you reach the end! You win!');
           } else {
-            handleGameOver('Arrow helped the app reach the end. You lose.');
+            handleGameOver('Arrow helped Sam reach the end. You lose.');
           }
         } else {
           isMoving = false;
@@ -750,16 +769,14 @@
     window.setLevel = setLevel;
     window.resetGame = resetGame;
 
-    // Initial setup (wait for Swift to set level and seed)
+    // Initial setup - Swift will call setSeed and setLevel which will trigger initGame
+    // If neither is called after 200ms, use defaults
     setTimeout(() => {
-      if (currentLevel === 0) {
-        setLevel(1); // Default to level 1
+      if (currentLevel === 0 && !seedSet) {
+        setSeed(Date.now());
+        setLevel(1);
       }
-      initBoard();
-      placeTokens();
-      placeRandomArrows();
-      updateTurnIndicator();
-    }, 100);
+    }, 200);
   </script>
 </body>
 </html>

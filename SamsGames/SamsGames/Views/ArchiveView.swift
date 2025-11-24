@@ -264,6 +264,21 @@ struct ArchiveGameRow: View {
                             .foregroundColor(.secondary)
                     }
                 }
+
+                // Show difficulty for Arrow Race
+                if gameType == .arrowRace {
+                    let level = dailyPuzzleManager.getArrowRaceLevelForDate(date)
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption2)
+                        Text("\(name) (L\(level))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
 
             Spacer()

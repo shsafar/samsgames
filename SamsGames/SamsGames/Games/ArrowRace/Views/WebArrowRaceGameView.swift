@@ -112,8 +112,8 @@ struct WebArrowRaceGameView: View {
                         )
                 }
 
-                Text("Arrow Race")
-                    .font(.system(size: 32, weight: .bold))
+                Text("Play Against Sam!")
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundColor(.orange)
                     .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 2)
                     .padding(.top, 20)

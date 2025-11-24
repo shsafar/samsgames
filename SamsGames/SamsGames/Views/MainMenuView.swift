@@ -332,6 +332,21 @@ struct GameCard: View {
                     }
                 }
 
+                // Show difficulty for Arrow Race
+                if gameType == .arrowRace {
+                    let level = dailyPuzzleManager.getTodayArrowRaceLevel()
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption)
+                        Text("\(name) (Level \(level))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 if currentStreak > 0 {
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill")

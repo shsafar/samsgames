@@ -57,7 +57,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .diamondStack: return "Fill circles to match triangle sums"
         case .hashtagWords: return "Fill the hashtag grid with words"
         case .traceWiz: return "Trace the line without crossing"
-        case .arrowRace: return "Race to the finish against the app"
+        case .arrowRace: return "Race to the finish against Sam"
         }
     }
 }

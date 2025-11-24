@@ -20,21 +20,21 @@ struct GameConstants {
 
         static let easy = Difficulty(
             name: "Easy",
-            speed: 150,                // 150px/sec - ensures 4500px total path for 30 seconds
-            maxDistanceFromLine: 120,  // Very forgiving - can be 120px away
-            minProgressBehind: 600     // Super lenient - can be 600px behind
+            speed: 128,                // 128px/sec - 15% slower (was 150)
+            maxDistanceFromLine: 150,  // More forgiving - 150px away
+            minProgressBehind: 500     // Lenient - can be 500px behind
         )
 
         static let medium = Difficulty(
             name: "Medium",
-            speed: 150,                // 150px/sec - matches easy for 30-second gameplay (was 200)
-            maxDistanceFromLine: 150,  // More forgiving - increased from 100 to 150px
-            minProgressBehind: 500     // More lenient - increased from 400 to 500px
+            speed: 128,                // 128px/sec - 15% slower (was 150)
+            maxDistanceFromLine: 120,  // Tighter - can be 120px away
+            minProgressBehind: 600     // More lenient - can be 600px behind
         )
 
         static let hard = Difficulty(
             name: "Hard",
-            speed: 250,                // 250px/sec - ensures 7500px total path
+            speed: 213,                // 213px/sec - 15% slower (was 250)
             maxDistanceFromLine: 80,   // Must stay closer (80px)
             minProgressBehind: 300     // Must keep up better (300px behind max)
         )
@@ -225,15 +225,7 @@ class TraceWizGameState: ObservableObject {
 
             updateRevealedSegments()
 
-            // Check for round end
-            if roundTime >= GameConstants.roundTime {
-                if player.isEliminated {
-                    // Already failed with specific reason
-                } else {
-                    // Time ran out - player didn't reach finish line in time
-                    endGame(won: false, reason: "Time's up! Try to reach the finish line faster!")
-                }
-            }
+            // Timer removed - no time limit to complete the game
 
             // Check all game rules if player is drawing
             if player.points.count >= 2 {

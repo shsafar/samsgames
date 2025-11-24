@@ -211,36 +211,31 @@ struct WebArrowRaceGameViewRepresentable: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.onGameCompleted = onGameCompleted
 
-        guard let htmlPath = Bundle.main.path(forResource: "arrowrace", ofType: "html", inDirectory: "Games/ArrowRace") else {
-            print("❌ Arrow Race HTML not found")
+        guard let htmlPath = Bundle.main.path(forResource: "arrowrace", ofType: "html") else {
+            print("❌ Arrow Race HTML not found in bundle")
             return
         }
 
-        do {
-            let htmlString = try String(contentsOfFile: htmlPath, encoding: .utf8)
-            let baseURL = URL(fileURLWithPath: htmlPath).deletingLastPathComponent()
-            webView.loadHTMLString(htmlString, baseURL: baseURL)
+        let url = URL(fileURLWithPath: htmlPath)
+        webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
 
-            // Wait for page to load, then set seed and level
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                webView.evaluateJavaScript("window.setSeed(\(seed));") { _, error in
-                    if let error = error {
-                        print("❌ Error setting seed: \(error)")
-                    } else {
-                        print("✅ Arrow Race seed set: \(seed)")
-                    }
-                }
-
-                webView.evaluateJavaScript("window.setLevel(\(level));") { _, error in
-                    if let error = error {
-                        print("❌ Error setting level: \(error)")
-                    } else {
-                        print("✅ Arrow Race level set: \(level)")
-                    }
+        // Wait for page to load, then set seed and level
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            webView.evaluateJavaScript("window.setSeed(\(seed));") { _, error in
+                if let error = error {
+                    print("❌ Error setting seed: \(error)")
+                } else {
+                    print("✅ Arrow Race seed set: \(seed)")
                 }
             }
-        } catch {
-            print("❌ Error loading Arrow Race HTML: \(error)")
+
+            webView.evaluateJavaScript("window.setLevel(\(level));") { _, error in
+                if let error = error {
+                    print("❌ Error setting level: \(error)")
+                } else {
+                    print("✅ Arrow Race level set: \(level)")
+                }
+            }
         }
     }
 

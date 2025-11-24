@@ -177,10 +177,8 @@ struct WebArrowRaceGameView: View {
     private func handleGameCompletion(won: Bool) {
         if won && !archiveMode {
             dailyPuzzleManager.markCompleted(.arrowRace)
-            statisticsManager.recordGamePlayed(for: .arrowRace, won: true)
+            statisticsManager.recordCompletion(.arrowRace)
             showCompletionAlert = true
-        } else if !won {
-            statisticsManager.recordGamePlayed(for: .arrowRace, won: false)
         }
     }
 }

@@ -210,6 +210,7 @@
     let seededRandom = Math.random;
     let dailySeed = null;
     let seedSet = false;
+    let gameInitialized = false;
 
     // Level configuration
     let currentLevel = 0;
@@ -309,8 +310,8 @@
 
       buildIndexMaps();
 
-      // Initialize game if seed is already set
-      if (seedSet) {
+      // Initialize game if seed is already set and not yet initialized
+      if (seedSet && !gameInitialized) {
         initGame();
       }
     }
@@ -321,17 +322,24 @@
       seedSet = true;
       console.log('✅ Arrow Race: Seed set to', seed);
 
-      // Initialize game if level is already set
-      if (currentLevel > 0) {
+      // Initialize game if level is already set and not yet initialized
+      if (currentLevel > 0 && !gameInitialized) {
         initGame();
       }
     }
 
     function initGame() {
+      if (gameInitialized) {
+        console.log('⚠️ Arrow Race: Game already initialized, skipping');
+        return;
+      }
+
+      gameInitialized = true;
       initBoard();
       placeTokens();
       placeRandomArrows();
       updateTurnIndicator();
+      console.log('✅ Arrow Race: Game initialized with seed', dailySeed, 'level', currentLevel);
     }
 
     function getCellElement(gameIndex) {

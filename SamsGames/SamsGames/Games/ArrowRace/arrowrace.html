@@ -122,6 +122,14 @@
       border: 2px solid #d62929;
     }
 
+    .start-cell {
+      background: #ffb3d9 !important;
+    }
+
+    .finish-cell {
+      background: #d4c5f9 !important;
+    }
+
     .player-token {
       width: var(--token-size, 22px);
       height: var(--token-size, 22px);
@@ -350,6 +358,13 @@
       for (let i = 0; i < totalCells; i++) {
         const cell = getCellElement(i);
         cell.querySelector('.cell-number').textContent = i + 1;
+
+        // Color first cell (start) pink and last cell (finish) light purple
+        if (i === 0) {
+          cell.classList.add('start-cell');
+        } else if (i === totalCells - 1) {
+          cell.classList.add('finish-cell');
+        }
       }
     }
 

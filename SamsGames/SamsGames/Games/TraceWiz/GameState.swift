@@ -342,7 +342,22 @@ class TraceWizGameState: ObservableObject {
 
         let margin: CGFloat = 60
         let W = size.width
-        let H = max(size.height * 5, 4000) // Reasonable path length for no-timer gameplay
+
+        // Calculate path length for exactly 30 seconds of gameplay
+        // Path length = 30 seconds × speed (px/sec)
+        let targetPathLength: CGFloat
+        switch difficulty.name {
+        case "Easy":
+            targetPathLength = 30 * 50  // 1500px (30s × 50px/s)
+        case "Medium":
+            targetPathLength = 30 * 60  // 1800px (30s × 60px/s)
+        case "Hard":
+            targetPathLength = 30 * 80  // 2400px (30s × 80px/s)
+        default:
+            targetPathLength = 1800     // Fallback to medium
+        }
+
+        let H = max(size.height * 2, targetPathLength) // Use calculated path length
 
         // Start at position determined by seeded random
         let randomValue = seededRandom()

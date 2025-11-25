@@ -142,7 +142,8 @@
     }
 
     .current-pick {
-      font-size: 1.2rem;
+      font-size: 1.6rem;        /* Larger: 1.2rem → 1.6rem */
+      font-weight: 600;         /* Make it bolder */
       display: flex;
       align-items: center;
       gap: 8px;
@@ -150,25 +151,25 @@
 
     #pick-letters {
       display: inline-block;
-      min-width: 40px;
-      padding: 6px 14px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, #7b2cbf, #9d4edd);
-      border: 2px solid #c77dff;
+      min-width: 80px;              /* Double size: 40px → 80px */
+      padding: 12px 28px;           /* Double size: 6px → 12px, 14px → 28px */
+      border-radius: 36px;          /* Double size: 18px → 36px */
+      background: linear-gradient(135deg, #f4d03f, #ffe45b);  /* Yellow gradient instead of purple */
+      border: 4px solid #ffeb3b;    /* Double size border: 2px → 4px, yellow border */
       text-align: center;
       font-weight: bold;
-      font-size: 1.3rem;
-      color: #fff;
-      letter-spacing: 1px;
+      font-size: 2.6rem;            /* Double size: 1.3rem → 2.6rem */
+      color: #000;                  /* Black text for better contrast on yellow */
+      letter-spacing: 2px;          /* Double size: 1px → 2px */
     }
 
-    /* Reduced size game area */
+    /* Extended bubble floating area - even taller */
     .game-area {
       position: relative;
-      flex: 0.7;
+      flex: 1.2;
       width: 100%;
-      min-height: 300px;
-      max-height: 450px;
+      min-height: 500px;
+      max-height: 750px;
       overflow: hidden;
       background: radial-gradient(circle at top, #8de5e5, #4db8b8);
     }
@@ -466,7 +467,7 @@
         Target: <span id="target-word">—</span>
       </div>
       <div class="current-pick">
-        Pick:
+        Letters Picked:
         <span id="pick-letters">—</span>
       </div>
       <div class="timer">Time: <span id="time-left">∞</span></div>
@@ -702,6 +703,7 @@
   let score = 0;
   let bestScore = 0;
   let timeLeft = Infinity;
+  let lastFragmentText = "";  // Keep track of last created fragment
 
   // DAILY MODE INTEGRATION
   window.dailyMode = false;
@@ -892,7 +894,8 @@
   // Staging display
   function updatePickDisplay() {
     if (selectedBubbles.length === 0) {
-      pickLettersEl.textContent = "—";
+      // Show last fragment text instead of "—" if available
+      pickLettersEl.textContent = lastFragmentText || "—";
       return;
     }
     const txt = selectedBubbles.map(b => b.letter).join('');
@@ -947,6 +950,11 @@
       selectedBubbles = [];
     }
 
+    // Clear last fragment text when starting new selection
+    if (selectedBubbles.length === 0) {
+      lastFragmentText = "";
+    }
+
     bubble.el.classList.add('selected');
     selectedBubbles.push(bubble);
     updatePickDisplay();
@@ -991,6 +999,8 @@
     burstAndRemoveBubble(b1);
     burstAndRemoveBubble(b2);
 
+    // Save fragment text before clearing
+    lastFragmentText = fragmentText;
     selectedBubbles = [];
     updatePickDisplay();
 
@@ -1284,6 +1294,7 @@
     words = [];
     score = 0;
     bubbleIdCounter = 0;
+    lastFragmentText = "";  // Clear last fragment text on reset
 
     scoreEl.textContent = "0";
     wordCountEl.textContent = "0";

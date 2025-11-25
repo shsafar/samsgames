@@ -37,12 +37,16 @@ struct GameCanvasView: UIViewRepresentable {
         scrollView.tag = 999
         drawingView.tag = 1000
 
-        // Configure scrolling behavior for drawing
+        // Configure scrolling behavior for drawing - LOCK IT DOWN
         scrollView.isScrollEnabled = false  // Disable manual scrolling - we'll auto-scroll
         scrollView.canCancelContentTouches = false
         scrollView.delaysContentTouches = false
         scrollView.maximumZoomScale = 1.0
         scrollView.minimumZoomScale = 1.0
+        scrollView.isDirectionalLockEnabled = true  // Lock scrolling direction
+        scrollView.alwaysBounceVertical = false     // Prevent vertical bounce
+        scrollView.alwaysBounceHorizontal = false   // Prevent horizontal bounce
+        scrollView.isPagingEnabled = false          // Disable paging
 
         // Prevent automatic content inset adjustments
         if #available(iOS 11.0, *) {

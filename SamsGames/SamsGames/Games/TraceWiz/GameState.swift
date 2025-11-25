@@ -20,21 +20,21 @@ struct GameConstants {
 
         static let easy = Difficulty(
             name: "Easy",
-            speed: 128,                // 128px/sec - 15% slower (was 150)
+            speed: 50,                 // 50px/sec - Much slower since timer removed
             maxDistanceFromLine: 150,  // More forgiving - 150px away
             minProgressBehind: 500     // Lenient - can be 500px behind
         )
 
         static let medium = Difficulty(
             name: "Medium",
-            speed: 128,                // 128px/sec - 15% slower (was 150)
+            speed: 60,                 // 60px/sec - Moderate speed without timer
             maxDistanceFromLine: 120,  // Tighter - can be 120px away
             minProgressBehind: 600     // More lenient - can be 600px behind
         )
 
         static let hard = Difficulty(
             name: "Hard",
-            speed: 213,                // 213px/sec - 15% slower (was 250)
+            speed: 80,                 // 80px/sec - Faster but still playable
             maxDistanceFromLine: 80,   // Must stay closer (80px)
             minProgressBehind: 300     // Must keep up better (300px behind max)
         )
@@ -212,20 +212,10 @@ class TraceWizGameState: ObservableObject {
         case .running:
             roundTime += deltaTime
 
-            // Update revealed path length based on speed
+            // Update revealed path length based on speed only
             revealedLength += difficulty.speed * CGFloat(deltaTime)
 
-            // Show final graphic line at 27 seconds - reveal the complete path earlier
-            if roundTime >= 27.0 && segments.count > 0 {
-                let totalPathLength = segments.last?.accumulatedLength ?? 0
-                if revealedLength < totalPathLength {
-                    revealedLength = totalPathLength
-                }
-            }
-
             updateRevealedSegments()
-
-            // Timer removed - no time limit to complete the game
 
             // Check all game rules if player is drawing
             if player.points.count >= 2 {
@@ -352,7 +342,7 @@ class TraceWizGameState: ObservableObject {
 
         let margin: CGFloat = 60
         let W = size.width
-        let H = max(size.height * 12, 8000) // Ensure minimum 8000px height for 30+ seconds
+        let H = max(size.height * 5, 4000) // Reasonable path length for no-timer gameplay
 
         // Start at position determined by seeded random
         let randomValue = seededRandom()

@@ -66,7 +66,7 @@ struct TraceWizGameView: View {
         }
         .navigationBarHidden(true)
         .sheet(isPresented: $showInstructions) {
-            TraceWizInstructionsView()
+            GameInstructionsView(gameType: .traceWiz)
         }
         .alert("Puzzle Complete!", isPresented: $showCompletionAlert) {
             Button("OK") {

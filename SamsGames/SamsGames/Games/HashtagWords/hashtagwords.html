@@ -726,6 +726,13 @@
   function setSeed(s) {
     seed = s;
     seededRandom = mulberry32(seed);
+
+    // Shuffle puzzle arrays for daily consistency
+    shuffle(PUZZLES_L1);
+    shuffle(PUZZLES_L2);
+    shuffle(PUZZLES_L3);
+
+    console.log('✅ Hashtag Words: Seed set and puzzles shuffled');
   }
 
   function setLevel(lvl) {

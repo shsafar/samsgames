@@ -1,0 +1,748 @@
+🎮 Hashtag Words Puzzle Generator
+Generating valid puzzles with shared middle characters...
+
+
+==================================================
+Generating Level 1
+==================================================
+
+==================================================
+Generating Level 2
+==================================================
+
+==================================================
+Generating Level 3
+==================================================
+
+
+// ========== LEVEL 1 NEW PUZZLES ==========
+    {
+      id: "L1-11",
+      top:    { answer: "CRASH", hint: "Violent collision or impact" },
+      bottom: { answer: "GRADE", hint: "Score or level of quality" },
+      left:   { answer: "FLAME", hint: "Visible part of fire" },
+      right:  { answer: "FRAME", hint: "Border around a picture" }
+    }
+,
+    {
+      id: "L1-12",
+      top:    { answer: "FLASH", hint: "Brief burst of bright light" },
+      bottom: { answer: "REACH", hint: "Extend to touch something" },
+      left:   { answer: "PEACE", hint: "State without war or conflict" },
+      right:  { answer: "CRASH", hint: "Violent collision or impact" }
+    }
+,
+    {
+      id: "L1-13",
+      top:    { answer: "BLAME", hint: "Hold responsible for fault" },
+      bottom: { answer: "PEACE", hint: "State without war or conflict" },
+      left:   { answer: "CRASH", hint: "Violent collision or impact" },
+      right:  { answer: "GRADE", hint: "Score or level of quality" }
+    }
+,
+    {
+      id: "L1-14",
+      top:    { answer: "SPEAK", hint: "Talk or express in words" },
+      bottom: { answer: "BLEAK", hint: "Cold, empty, and depressing" },
+      left:   { answer: "BREAK", hint: "Separate into pieces" },
+      right:  { answer: "CLEAR", hint: "Easy to see or understand" }
+    }
+,
+    {
+      id: "L1-15",
+      top:    { answer: "STEAM", hint: "Water vapor from boiling" },
+      bottom: { answer: "OCEAN", hint: "Vast body of salt water" },
+      left:   { answer: "ARENA", hint: "Large venue for sports" },
+      right:  { answer: "TREAT", hint: "Something special to enjoy" }
+    }
+,
+    {
+      id: "L1-16",
+      top:    { answer: "CLEAR", hint: "Easy to see or understand" },
+      bottom: { answer: "TREAT", hint: "Something special to enjoy" },
+      left:   { answer: "BREAD", hint: "Baked food made from flour" },
+      right:  { answer: "CLEAN", hint: "Free from dirt" }
+    }
+,
+    {
+      id: "L1-17",
+      top:    { answer: "BRICK", hint: "Block for building walls" },
+      bottom: { answer: "GRIND", hint: "Crush into powder" },
+      left:   { answer: "PRIME", hint: "Best quality or first" },
+      right:  { answer: "STICK", hint: "Thin piece of wood" }
+    }
+,
+    {
+      id: "L1-18",
+      top:    { answer: "THICK", hint: "Having great width" },
+      bottom: { answer: "TRICK", hint: "Clever act to deceive" },
+      left:   { answer: "GRIND", hint: "Crush into powder" },
+      right:  { answer: "STICK", hint: "Thin piece of wood" }
+    }
+,
+    {
+      id: "L1-19",
+      top:    { answer: "SPICE", hint: "Aromatic plant flavoring" },
+      bottom: { answer: "CLIMB", hint: "Go up using hands and feet" },
+      left:   { answer: "QUICK", hint: "Fast or rapid" },
+      right:  { answer: "TWICE", hint: "Two times or double" }
+    }
+,
+    {
+      id: "L1-20",
+      top:    { answer: "CLONE", hint: "Exact genetic copy" },
+      bottom: { answer: "FLOUR", hint: "Powder for baking" },
+      left:   { answer: "SCOUT", hint: "Person searching for something" },
+      right:  { answer: "STONE", hint: "Hard piece of rock" }
+    }
+,
+    {
+      id: "L1-21",
+      top:    { answer: "TROUT", hint: "Freshwater fish" },
+      bottom: { answer: "CROSS", hint: "Go across or symbol +" },
+      left:   { answer: "PROUD", hint: "Feeling pleased about achievement" },
+      right:  { answer: "PHONE", hint: "Device for calling" }
+    }
+,
+    {
+      id: "L1-22",
+      top:    { answer: "SHOUT", hint: "Yell or cry loudly" },
+      bottom: { answer: "SPOON", hint: "Utensil for eating" },
+      left:   { answer: "PHONE", hint: "Device for calling" },
+      right:  { answer: "PROOF", hint: "Evidence showing truth" }
+    }
+,
+    {
+      id: "L1-23",
+      top:    { answer: "FRUIT", hint: "Sweet plant product with seeds" },
+      bottom: { answer: "THROW", hint: "Propel through air" },
+      left:   { answer: "GRAND", hint: "Large and impressive" },
+      right:  { answer: "BRAND", hint: "Make of product or mark" }
+    }
+,
+    {
+      id: "L1-24",
+      top:    { answer: "CROWN", hint: "Royal headpiece worn by monarchs" },
+      bottom: { answer: "TRUCK", hint: "Large vehicle for cargo" },
+      left:   { answer: "BRAND", hint: "Make of product or mark" },
+      right:  { answer: "BROWN", hint: "Color of wood or chocolate" }
+    }
+,
+    {
+      id: "L1-25",
+      top:    { answer: "TREND", hint: "General direction or style" },
+      bottom: { answer: "BROWN", hint: "Color of wood or chocolate" },
+      left:   { answer: "PRINT", hint: "Produce text on paper" },
+      right:  { answer: "CROWN", hint: "Royal headpiece worn by monarchs" }
+    }
+,
+    {
+      id: "L1-26",
+      top:    { answer: "CRUSH", hint: "Squeeze and break" },
+      bottom: { answer: "TRUNK", hint: "Elephant nose or tree body" },
+      left:   { answer: "BRUSH", hint: "Tool with bristles" },
+      right:  { answer: "LUNCH", hint: "Midday meal" }
+    }
+,
+    {
+      id: "L1-27",
+      top:    { answer: "PLUCK", hint: "Pull quickly or courage" },
+      bottom: { answer: "LUNCH", hint: "Midday meal" },
+      left:   { answer: "PLUMP", hint: "Pleasantly fat or rounded" },
+      right:  { answer: "BRUSH", hint: "Tool with bristles" }
+    }
+,
+    {
+      id: "L1-28",
+      top:    { answer: "BLUSH", hint: "Turn red from embarrassment" },
+      bottom: { answer: "BRUSH", hint: "Tool with bristles" },
+      left:   { answer: "STUCK", hint: "Unable to move" },
+      right:  { answer: "CRUSH", hint: "Squeeze and break" }
+    }
+,
+    {
+      id: "L1-29",
+      top:    { answer: "THERE", hint: "At that place" },
+      bottom: { answer: "SHARP", hint: "Having fine cutting edge" },
+      left:   { answer: "SHOCK", hint: "Sudden surprising event" },
+      right:  { answer: "WHOLE", hint: "Complete or entire" }
+    }
+,
+    {
+      id: "L1-30",
+      top:    { answer: "CHEAP", hint: "Low in price" },
+      bottom: { answer: "CHAIR", hint: "Furniture for sitting" },
+      left:   { answer: "SHOCK", hint: "Sudden surprising event" },
+      right:  { answer: "SHARP", hint: "Having fine cutting edge" }
+    }
+,
+    {
+      id: "L1-31",
+      top:    { answer: "THEIR", hint: "Belonging to them" },
+      bottom: { answer: "WHERE", hint: "At what place or location" },
+      left:   { answer: "SHOCK", hint: "Sudden surprising event" },
+      right:  { answer: "THERE", hint: "At that place" }
+    }
+,
+    {
+      id: "L1-32",
+      top:    { answer: "SCALE", hint: "Device for weighing" },
+      bottom: { answer: "GLIDE", hint: "Move with continuous motion" },
+      left:   { answer: "GLOBE", hint: "Spherical model of Earth" },
+      right:  { answer: "ALBUM", hint: "Collection of music or photos" }
+    }
+,
+    {
+      id: "L1-33",
+      top:    { answer: "SLIDE", hint: "Move smoothly along surface" },
+      bottom: { answer: "GLOBE", hint: "Spherical model of Earth" },
+      left:   { answer: "BLADE", hint: "Sharp cutting edge" },
+      right:  { answer: "FLASH", hint: "Brief burst of light" }
+    }
+,
+    {
+      id: "L1-34",
+      top:    { answer: "GLOBE", hint: "Spherical model of Earth" },
+      bottom: { answer: "ALBUM", hint: "Collection of music or photos" },
+      left:   { answer: "CLASH", hint: "Violent collision or disagreement" },
+      right:  { answer: "SCALE", hint: "Device for weighing" }
+    }
+,
+    {
+      id: "L1-35",
+      top:    { answer: "DANCE", hint: "Move to music rhythmically" },
+      bottom: { answer: "ANGEL", hint: "Heavenly spiritual being" },
+      left:   { answer: "SINCE", hint: "From then until now" },
+      right:  { answer: "TENSE", hint: "Anxious or verb form" }
+    }
+,
+    {
+      id: "L1-36",
+      top:    { answer: "TENSE", hint: "Anxious or verb form" },
+      bottom: { answer: "DENSE", hint: "Closely packed together" },
+      left:   { answer: "MANGE", hint: "Skin disease in animals" },
+      right:  { answer: "DANCE", hint: "Move to music rhythmically" }
+    }
+,
+    {
+      id: "L1-37",
+      top:    { answer: "SINCE", hint: "From then until now" },
+      bottom: { answer: "DANCE", hint: "Move to music rhythmically" },
+      left:   { answer: "TENSE", hint: "Anxious or verb form" },
+      right:  { answer: "ANGER", hint: "Strong feeling of displeasure" }
+    }
+,
+    {
+      id: "L1-38",
+      top:    { answer: "BATCH", hint: "Group produced together" },
+      bottom: { answer: "DITCH", hint: "Narrow channel or abandon" },
+      left:   { answer: "CATCH", hint: "Grab moving object" },
+      right:  { answer: "PITCH", hint: "Throw or musical frequency" }
+    }
+,
+    {
+      id: "L1-39",
+      top:    { answer: "WITCH", hint: "Person with magical powers" },
+      bottom: { answer: "PITCH", hint: "Throw or musical frequency" },
+      left:   { answer: "MATCH", hint: "Competition or corresponding pair" },
+      right:  { answer: "BATCH", hint: "Group produced together" }
+    }
+,
+    {
+      id: "L1-40",
+      top:    { answer: "BATCH", hint: "Group produced together" },
+      bottom: { answer: "CATCH", hint: "Grab moving object" },
+      left:   { answer: "HATCH", hint: "Emerge from egg" },
+      right:  { answer: "MATCH", hint: "Competition or corresponding pair" }
+    }
+
+
+// ========== LEVEL 2 NEW PUZZLES ==========
+    {
+      id: "L2-11",
+      top:    { answer: "FLASH", hint: "Brief burst of bright light" },
+      bottom: { answer: "BRASS", hint: "Yellow metal alloy" },
+      left:   { answer: "DRAMA", hint: "Theatrical performance or intense situation" },
+      right:  { answer: "FRAME", hint: "Border around a picture" }
+    }
+,
+    {
+      id: "L2-12",
+      top:    { answer: "DRAMA", hint: "Theatrical performance or intense situation" },
+      bottom: { answer: "FLAME", hint: "Visible part of fire" },
+      left:   { answer: "GRADE", hint: "Score or level of quality" },
+      right:  { answer: "BLAME", hint: "Hold responsible for fault" }
+    }
+,
+    {
+      id: "L2-13",
+      top:    { answer: "BLAME", hint: "Hold responsible for fault" },
+      bottom: { answer: "CLASS", hint: "Group of students or category" },
+      left:   { answer: "FRAME", hint: "Border around a picture" },
+      right:  { answer: "PLACE", hint: "Location or position" }
+    }
+,
+    {
+      id: "L2-14",
+      top:    { answer: "CLEAN", hint: "Free from dirt" },
+      bottom: { answer: "CLEAR", hint: "Easy to see or understand" },
+      left:   { answer: "ARENA", hint: "Large venue for sports" },
+      right:  { answer: "BLEAK", hint: "Cold, empty, and depressing" }
+    }
+,
+    {
+      id: "L2-15",
+      top:    { answer: "CLEAR", hint: "Easy to see or understand" },
+      bottom: { answer: "TREAT", hint: "Something special to enjoy" },
+      left:   { answer: "SPEAK", hint: "Talk or express in words" },
+      right:  { answer: "SNEAK", hint: "Move quietly and secretly" }
+    }
+,
+    {
+      id: "L2-16",
+      top:    { answer: "YIELD", hint: "Produce or give way" },
+      bottom: { answer: "FIELD", hint: "Open area of land" },
+      left:   { answer: "TREAT", hint: "Something special to enjoy" },
+      right:  { answer: "CREAM", hint: "Thick part of milk" }
+    }
+,
+    {
+      id: "L2-17",
+      top:    { answer: "TWICE", hint: "Two times or double" },
+      bottom: { answer: "PRIME", hint: "Best quality or first" },
+      left:   { answer: "TRICK", hint: "Clever act to deceive" },
+      right:  { answer: "THICK", hint: "Having great width" }
+    }
+,
+    {
+      id: "L2-18",
+      top:    { answer: "JOINT", hint: "Place where two things meet" },
+      bottom: { answer: "TRICK", hint: "Clever act to deceive" },
+      left:   { answer: "TWICE", hint: "Two times or double" },
+      right:  { answer: "QUICK", hint: "Fast or rapid" }
+    }
+,
+    {
+      id: "L2-19",
+      top:    { answer: "GRIND", hint: "Crush into powder" },
+      bottom: { answer: "PRICE", hint: "Cost or amount of money" },
+      left:   { answer: "SLICE", hint: "Thin piece cut from something" },
+      right:  { answer: "THICK", hint: "Having great width" }
+    }
+,
+    {
+      id: "L2-20",
+      top:    { answer: "PROOF", hint: "Evidence showing truth" },
+      bottom: { answer: "FLOUR", hint: "Powder for baking" },
+      left:   { answer: "PROUD", hint: "Feeling pleased about achievement" },
+      right:  { answer: "SCOUT", hint: "Person searching for something" }
+    }
+,
+    {
+      id: "L2-21",
+      top:    { answer: "TROUT", hint: "Freshwater fish" },
+      bottom: { answer: "FLOAT", hint: "Rest on water surface" },
+      left:   { answer: "GROSS", hint: "Disgusting or total amount" },
+      right:  { answer: "CLONE", hint: "Exact genetic copy" }
+    }
+,
+    {
+      id: "L2-22",
+      top:    { answer: "PHONE", hint: "Device for calling" },
+      bottom: { answer: "ALONE", hint: "By yourself without others" },
+      left:   { answer: "ABOUT", hint: "Concerning or approximately" },
+      right:  { answer: "CLONE", hint: "Exact genetic copy" }
+    }
+,
+    {
+      id: "L2-23",
+      top:    { answer: "FRUIT", hint: "Sweet plant product with seeds" },
+      bottom: { answer: "CROWN", hint: "Royal headpiece worn by monarchs" },
+      left:   { answer: "TRUCK", hint: "Large vehicle for cargo" },
+      right:  { answer: "PRINT", hint: "Produce text on paper" }
+    }
+,
+    {
+      id: "L2-24",
+      top:    { answer: "GRANT", hint: "Give or allow formally" },
+      bottom: { answer: "DRAWN", hint: "Pulled or sketched" },
+      left:   { answer: "FRUIT", hint: "Sweet plant product with seeds" },
+      right:  { answer: "PRINT", hint: "Produce text on paper" }
+    }
+,
+    {
+      id: "L2-25",
+      top:    { answer: "DRAWN", hint: "Pulled or sketched" },
+      bottom: { answer: "CROWN", hint: "Royal headpiece worn by monarchs" },
+      left:   { answer: "GRAND", hint: "Large and impressive" },
+      right:  { answer: "TREND", hint: "General direction or style" }
+    }
+,
+    {
+      id: "L2-26",
+      top:    { answer: "CRUSH", hint: "Squeeze and break" },
+      bottom: { answer: "STUCK", hint: "Unable to move" },
+      left:   { answer: "LUNCH", hint: "Midday meal" },
+      right:  { answer: "TRUNK", hint: "Elephant nose or tree body" }
+    }
+,
+    {
+      id: "L2-27",
+      top:    { answer: "TRUNK", hint: "Elephant nose or tree body" },
+      bottom: { answer: "PLUCK", hint: "Pull quickly or courage" },
+      left:   { answer: "PLUMP", hint: "Pleasantly fat or rounded" },
+      right:  { answer: "CRUSH", hint: "Squeeze and break" }
+    }
+,
+    {
+      id: "L2-28",
+      top:    { answer: "STUCK", hint: "Unable to move" },
+      bottom: { answer: "BRUSH", hint: "Tool with bristles" },
+      left:   { answer: "TRUNK", hint: "Elephant nose or tree body" },
+      right:  { answer: "PLUMP", hint: "Pleasantly fat or rounded" }
+    }
+,
+    {
+      id: "L2-29",
+      top:    { answer: "CHEAP", hint: "Low in price" },
+      bottom: { answer: "WHERE", hint: "At what place or location" },
+      left:   { answer: "WHEAT", hint: "Grain for making flour" },
+      right:  { answer: "THEIR", hint: "Belonging to them" }
+    }
+,
+    {
+      id: "L2-30",
+      top:    { answer: "CHEAP", hint: "Low in price" },
+      bottom: { answer: "THERE", hint: "At that place" },
+      left:   { answer: "CHEAT", hint: "Act dishonestly to win" },
+      right:  { answer: "CHAIR", hint: "Furniture for sitting" }
+    }
+,
+    {
+      id: "L2-31",
+      top:    { answer: "WHERE", hint: "At what place or location" },
+      bottom: { answer: "THEIR", hint: "Belonging to them" },
+      left:   { answer: "SHARP", hint: "Having fine cutting edge" },
+      right:  { answer: "CHAIR", hint: "Furniture for sitting" }
+    }
+,
+    {
+      id: "L2-32",
+      top:    { answer: "SCALE", hint: "Device for weighing" },
+      bottom: { answer: "GLOBE", hint: "Spherical model of Earth" },
+      left:   { answer: "GLIDE", hint: "Move with continuous motion" },
+      right:  { answer: "SLIDE", hint: "Move smoothly along surface" }
+    }
+,
+    {
+      id: "L2-33",
+      top:    { answer: "SCALE", hint: "Device for weighing" },
+      bottom: { answer: "GLIDE", hint: "Move with continuous motion" },
+      left:   { answer: "BLADE", hint: "Sharp cutting edge" },
+      right:  { answer: "ALBUM", hint: "Collection of music or photos" }
+    }
+,
+    {
+      id: "L2-34",
+      top:    { answer: "SCALE", hint: "Device for weighing" },
+      bottom: { answer: "ALBUM", hint: "Collection of music or photos" },
+      left:   { answer: "SLIDE", hint: "Move smoothly along surface" },
+      right:  { answer: "SLASH", hint: "Cut with violent stroke" }
+    }
+,
+    {
+      id: "L2-35",
+      top:    { answer: "SINCE", hint: "From then until now" },
+      bottom: { answer: "ANGER", hint: "Strong feeling of displeasure" },
+      left:   { answer: "HENCE", hint: "Therefore or from now" },
+      right:  { answer: "MANGE", hint: "Skin disease in animals" }
+    }
+,
+    {
+      id: "L2-36",
+      top:    { answer: "ANGEL", hint: "Heavenly spiritual being" },
+      bottom: { answer: "SINCE", hint: "From then until now" },
+      left:   { answer: "HENCE", hint: "Therefore or from now" },
+      right:  { answer: "MANGE", hint: "Skin disease in animals" }
+    }
+,
+    {
+      id: "L2-37",
+      top:    { answer: "FENCE", hint: "Barrier enclosing area" },
+      bottom: { answer: "MANGE", hint: "Skin disease in animals" },
+      left:   { answer: "DENSE", hint: "Closely packed together" },
+      right:  { answer: "HENCE", hint: "Therefore or from now" }
+    }
+,
+    {
+      id: "L2-38",
+      top:    { answer: "PITCH", hint: "Throw or musical frequency" },
+      bottom: { answer: "CATCH", hint: "Grab moving object" },
+      left:   { answer: "HATCH", hint: "Emerge from egg" },
+      right:  { answer: "DITCH", hint: "Narrow channel or abandon" }
+    }
+,
+    {
+      id: "L2-39",
+      top:    { answer: "DITCH", hint: "Narrow channel or abandon" },
+      bottom: { answer: "BATCH", hint: "Group produced together" },
+      left:   { answer: "WITCH", hint: "Person with magical powers" },
+      right:  { answer: "CATCH", hint: "Grab moving object" }
+    }
+,
+    {
+      id: "L2-40",
+      top:    { answer: "BATCH", hint: "Group produced together" },
+      bottom: { answer: "MATCH", hint: "Competition or corresponding pair" },
+      left:   { answer: "CATCH", hint: "Grab moving object" },
+      right:  { answer: "DITCH", hint: "Narrow channel or abandon" }
+    }
+
+
+// ========== LEVEL 3 NEW PUZZLES ==========
+    {
+      id: "L3-21",
+      top:    { answer: "BEACH", hint: "Sandy shore by the ocean" },
+      bottom: { answer: "TRASH", hint: "Waste or garbage" },
+      left:   { answer: "SHADE", hint: "Area protected from sunlight" },
+      right:  { answer: "BLAME", hint: "Hold responsible for fault" }
+    }
+,
+    {
+      id: "L3-22",
+      top:    { answer: "CLASS", hint: "Group of students or category" },
+      bottom: { answer: "REACH", hint: "Extend to touch something" },
+      left:   { answer: "PEACE", hint: "State without war or conflict" },
+      right:  { answer: "TRADE", hint: "Exchange of goods or services" }
+    }
+,
+    {
+      id: "L3-23",
+      top:    { answer: "BRASS", hint: "Yellow metal alloy" },
+      bottom: { answer: "PLACE", hint: "Location or position" },
+      left:   { answer: "GLASS", hint: "Transparent solid material" },
+      right:  { answer: "FLASH", hint: "Brief burst of bright light" }
+    }
+,
+    {
+      id: "L3-24",
+      top:    { answer: "OCEAN", hint: "Vast body of salt water" },
+      bottom: { answer: "CLEAR", hint: "Easy to see or understand" },
+      left:   { answer: "BREAK", hint: "Separate into pieces" },
+      right:  { answer: "STEAK", hint: "Thick slice of beef" }
+    }
+,
+    {
+      id: "L3-25",
+      top:    { answer: "STEAK", hint: "Thick slice of beef" },
+      bottom: { answer: "CLEAR", hint: "Easy to see or understand" },
+      left:   { answer: "BREAD", hint: "Baked food made from flour" },
+      right:  { answer: "SHEAR", hint: "Cut with scissors or shears" }
+    }
+,
+    {
+      id: "L3-26",
+      top:    { answer: "CLEAN", hint: "Free from dirt" },
+      bottom: { answer: "STEAM", hint: "Water vapor from boiling" },
+      left:   { answer: "ARENA", hint: "Large venue for sports" },
+      right:  { answer: "OCEAN", hint: "Vast body of salt water" }
+    }
+,
+    {
+      id: "L3-27",
+      top:    { answer: "SPICE", hint: "Aromatic plant flavoring" },
+      bottom: { answer: "BRICK", hint: "Block for building walls" },
+      left:   { answer: "GRIND", hint: "Crush into powder" },
+      right:  { answer: "POINT", hint: "Sharp end or purpose" }
+    }
+,
+    {
+      id: "L3-28",
+      top:    { answer: "STICK", hint: "Thin piece of wood" },
+      bottom: { answer: "CLIMB", hint: "Go up using hands and feet" },
+      left:   { answer: "SLICE", hint: "Thin piece cut from something" },
+      right:  { answer: "THICK", hint: "Having great width" }
+    }
+,
+    {
+      id: "L3-29",
+      top:    { answer: "TWICE", hint: "Two times or double" },
+      bottom: { answer: "SMILE", hint: "Happy facial expression" },
+      left:   { answer: "QUICK", hint: "Fast or rapid" },
+      right:  { answer: "TRICK", hint: "Clever act to deceive" }
+    }
+,
+    {
+      id: "L3-30",
+      top:    { answer: "TROUT", hint: "Freshwater fish" },
+      bottom: { answer: "FLOAT", hint: "Rest on water surface" },
+      left:   { answer: "CROSS", hint: "Go across or symbol +" },
+      right:  { answer: "ABOUT", hint: "Concerning or approximately" }
+    }
+,
+    {
+      id: "L3-31",
+      top:    { answer: "CLOUD", hint: "White mass in sky" },
+      bottom: { answer: "GROSS", hint: "Disgusting or total amount" },
+      left:   { answer: "STONE", hint: "Hard piece of rock" },
+      right:  { answer: "PHONE", hint: "Device for calling" }
+    }
+,
+    {
+      id: "L3-32",
+      top:    { answer: "FLOUR", hint: "Powder for baking" },
+      bottom: { answer: "STONE", hint: "Hard piece of rock" },
+      left:   { answer: "ABOUT", hint: "Concerning or approximately" },
+      right:  { answer: "ALONE", hint: "By yourself without others" }
+    }
+,
+    {
+      id: "L3-33",
+      top:    { answer: "FRUIT", hint: "Sweet plant product with seeds" },
+      bottom: { answer: "PRINT", hint: "Produce text on paper" },
+      left:   { answer: "TRUCK", hint: "Large vehicle for cargo" },
+      right:  { answer: "TREND", hint: "General direction or style" }
+    }
+,
+    {
+      id: "L3-34",
+      top:    { answer: "GRAND", hint: "Large and impressive" },
+      bottom: { answer: "GRANT", hint: "Give or allow formally" },
+      left:   { answer: "BRAND", hint: "Make of product or mark" },
+      right:  { answer: "CROWN", hint: "Royal headpiece worn by monarchs" }
+    }
+,
+    {
+      id: "L3-35",
+      top:    { answer: "ARROW", hint: "Pointed projectile from bow" },
+      bottom: { answer: "THROW", hint: "Propel through air" },
+      left:   { answer: "BRAND", hint: "Make of product or mark" },
+      right:  { answer: "CROWN", hint: "Royal headpiece worn by monarchs" }
+    }
+,
+    {
+      id: "L3-36",
+      top:    { answer: "BUNCH", hint: "Group of things together" },
+      bottom: { answer: "PLUMP", hint: "Pleasantly fat or rounded" },
+      left:   { answer: "TRUNK", hint: "Elephant nose or tree body" },
+      right:  { answer: "LUNCH", hint: "Midday meal" }
+    }
+,
+    {
+      id: "L3-37",
+      top:    { answer: "PLUCK", hint: "Pull quickly or courage" },
+      bottom: { answer: "BRUSH", hint: "Tool with bristles" },
+      left:   { answer: "TRUNK", hint: "Elephant nose or tree body" },
+      right:  { answer: "CRUSH", hint: "Squeeze and break" }
+    }
+,
+    {
+      id: "L3-38",
+      top:    { answer: "BUNCH", hint: "Group of things together" },
+      bottom: { answer: "BLUSH", hint: "Turn red from embarrassment" },
+      left:   { answer: "STUCK", hint: "Unable to move" },
+      right:  { answer: "TRUNK", hint: "Elephant nose or tree body" }
+    }
+,
+    {
+      id: "L3-39",
+      top:    { answer: "THEIR", hint: "Belonging to them" },
+      bottom: { answer: "THING", hint: "Object or item" },
+      left:   { answer: "CHEAP", hint: "Low in price" },
+      right:  { answer: "WHERE", hint: "At what place or location" }
+    }
+,
+    {
+      id: "L3-40",
+      top:    { answer: "WHILE", hint: "During the time that" },
+      bottom: { answer: "WHALE", hint: "Largest marine mammal" },
+      left:   { answer: "THERE", hint: "At that place" },
+      right:  { answer: "WHERE", hint: "At what place or location" }
+    }
+,
+    {
+      id: "L3-41",
+      top:    { answer: "CHEAT", hint: "Act dishonestly to win" },
+      bottom: { answer: "WHERE", hint: "At what place or location" },
+      left:   { answer: "CHAIR", hint: "Furniture for sitting" },
+      right:  { answer: "CHEAP", hint: "Low in price" }
+    }
+,
+    {
+      id: "L3-42",
+      top:    { answer: "BLADE", hint: "Sharp cutting edge" },
+      bottom: { answer: "GLIDE", hint: "Move with continuous motion" },
+      left:   { answer: "STALE", hint: "No longer fresh" },
+      right:  { answer: "CLASH", hint: "Violent collision or disagreement" }
+    }
+,
+    {
+      id: "L3-43",
+      top:    { answer: "CLASH", hint: "Violent collision or disagreement" },
+      bottom: { answer: "SCALE", hint: "Device for weighing" },
+      left:   { answer: "TALES", hint: "Stories or narratives" },
+      right:  { answer: "ALBUM", hint: "Collection of music or photos" }
+    }
+,
+    {
+      id: "L3-44",
+      top:    { answer: "STALE", hint: "No longer fresh" },
+      bottom: { answer: "CLASH", hint: "Violent collision or disagreement" },
+      left:   { answer: "SLIDE", hint: "Move smoothly along surface" },
+      right:  { answer: "GLIDE", hint: "Move with continuous motion" }
+    }
+,
+    {
+      id: "L3-45",
+      top:    { answer: "ANGEL", hint: "Heavenly spiritual being" },
+      bottom: { answer: "TENSE", hint: "Anxious or verb form" },
+      left:   { answer: "SINCE", hint: "From then until now" },
+      right:  { answer: "FENCE", hint: "Barrier enclosing area" }
+    }
+,
+    {
+      id: "L3-46",
+      top:    { answer: "DANCE", hint: "Move to music rhythmically" },
+      bottom: { answer: "SINCE", hint: "From then until now" },
+      left:   { answer: "ANGEL", hint: "Heavenly spiritual being" },
+      right:  { answer: "DENSE", hint: "Closely packed together" }
+    }
+,
+    {
+      id: "L3-47",
+      top:    { answer: "FENCE", hint: "Barrier enclosing area" },
+      bottom: { answer: "TENSE", hint: "Anxious or verb form" },
+      left:   { answer: "HENCE", hint: "Therefore or from now" },
+      right:  { answer: "ANGER", hint: "Strong feeling of displeasure" }
+    }
+,
+    {
+      id: "L3-48",
+      top:    { answer: "DITCH", hint: "Narrow channel or abandon" },
+      bottom: { answer: "WATCH", hint: "Observe or timepiece" },
+      left:   { answer: "BATCH", hint: "Group produced together" },
+      right:  { answer: "MATCH", hint: "Competition or corresponding pair" }
+    }
+,
+    {
+      id: "L3-49",
+      top:    { answer: "DITCH", hint: "Narrow channel or abandon" },
+      bottom: { answer: "MATCH", hint: "Competition or corresponding pair" },
+      left:   { answer: "PITCH", hint: "Throw or musical frequency" },
+      right:  { answer: "CATCH", hint: "Grab moving object" }
+    }
+,
+    {
+      id: "L3-50",
+      top:    { answer: "CATCH", hint: "Grab moving object" },
+      bottom: { answer: "HATCH", hint: "Emerge from egg" },
+      left:   { answer: "BATCH", hint: "Group produced together" },
+      right:  { answer: "DITCH", hint: "Narrow channel or abandon" }
+    }
+
+
+✅ Generated:
+   Level 1: 30 puzzles
+   Level 2: 30 puzzles
+   Level 3: 30 puzzles
+   Total: 90 new puzzles

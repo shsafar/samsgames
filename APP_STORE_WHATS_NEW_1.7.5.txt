@@ -1,0 +1,28 @@
+🎮 NEW GAME: DiskBreak!
+
+Introducing DiskBreak - a spatial logic puzzle where you rebuild broken disks by dragging scattered fragments back into place!
+
+✨ What's New:
+• NEW: DiskBreak daily puzzle game
+• 3 difficulty levels: Easy, Medium, and Hard
+• Rotating weekly schedule for varied challenges
+• Smart snap-to-place mechanics
+• Helpful hint system
+• Time-based scoring with bonuses
+• Archive mode: Play past 30 days of puzzles
+• Beautiful gradient disk designs
+
+🎯 Game Features:
+• Level 1: 5 chords, no timer (learning mode)
+• Level 2: 7 chords, 90-second timer
+• Level 3: 2 disks, 90-second timer (expert challenge)
+
+📱 Optimized for iPhone & iPad:
+• Enhanced touch controls
+• Responsive canvas sizing
+• Larger, easy-to-drag fragments
+• Professional UI design
+
+Track your progress, build streaks, and challenge yourself with this exciting new spatial puzzle!
+
+Bug fixes and performance improvements.

@@ -26,10 +26,16 @@ struct WebDiskBreakGameView: View {
 
     // Check if already completed today (only for non-archive mode)
     private var isAlreadyCompleted: Bool {
+        // TESTING: Temporarily disabled to allow testing
+        return false
+
+        // PRODUCTION: Uncomment the code below when done testing
+        /*
         if archiveMode {
             return false // Archive mode always allows play
         }
         return dailyPuzzleManager.isCompletedToday(.diskBreak)
+        */
     }
 
     // Calculate seed and level

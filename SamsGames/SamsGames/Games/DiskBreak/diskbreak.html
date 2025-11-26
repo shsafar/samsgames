@@ -152,7 +152,7 @@
     const timerEl = document.getElementById("timer");
     const levelSelect = document.getElementById("levelSelect");
 
-    const trayTop = 520;
+    const trayTop = 580;
 
     let level = 1; // 1,2,3
     let gameState = "assembled"; // "assembled" | "broken" | "complete"
@@ -517,8 +517,8 @@
       selectedPiece = null;
 
       const baseCx = canvas.width / 2;
-      const baseCy = 300;
-      const baseR = 200;
+      const baseCy = 320;
+      const baseR = 240;  // Increased from 200 to 240 (20% larger)
 
       if (level === 1 || level === 2) {
         const chordsCount = level === 1 ? 5 : 7;
@@ -533,8 +533,8 @@
         buildRandomChords(disks[0], chordsCount);
       } else if (level === 3) {
         const chordsCount = 7;
-        const r3 = 120;
-        const offset = 160;
+        const r3 = 150;  // Increased from 120 to 150 (25% larger)
+        const offset = 180;  // Increased spacing from 160 to 180
 
         disks = [
           { cx: baseCx - offset, cy: baseCy, radius: r3, gradient: null, chords: [] },

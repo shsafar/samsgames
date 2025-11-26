@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DiskBreak</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 8px 0 4px;
+    }
+    #top-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    #controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:active {
+      transform: scale(0.97);
+    }
+    select {
+      padding: 3px 6px;
+      border-radius: 4px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #status {
+      margin-bottom: 2px;
+      font-size: 14px;
+      min-height: 18px;
+    }
+    #score-timer {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    canvas {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      touch-action: none;
+    }
+
+    /* Hide controls for daily puzzle mode */
+    body.daily-mode #top-bar,
+    body.daily-mode #controls {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="top-bar">
+    <h1>DiskBreak</h1>
+    <label for="levelSelect">Level:</label>
+    <select id="levelSelect">
+      <option value="1">1 – Basic Break</option>
+      <option value="2">2 – One Disk + Timer</option>
+      <option value="3">3 – Two Disks + Timer</option>
+    </select>
+  </div>
+
+  <div id="controls">
+    <button id="newBtn">New Disk</button>
+    <button id="breakBtn">Break Disk</button>
+    <button id="hintBtn">Hint</button>
+  </div>
+  <div id="status"></div>
+  <div id="score-timer">
+    <div id="score">Score: 0</div>
+    <div id="timer">Timer: --</div>
+    <div id="controlsHint">Drag & snap the shards back into place.</div>
+  </div>
+  <canvas id="gameCanvas" width="700" height="700"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const scoreEl = document.getElementById("score");
+    const timerEl = document.getElementById("timer");
+    const levelSelect = document.getElementById("levelSelect");
+
+    const trayTop = 480;
+
+    let level = 1; // 1,2,3
+    let gameState = "assembled"; // "assembled" | "broken" | "complete"
+    let gameResult = "playing";  // "playing" | "success" | "timeout"
+
+    // disks: each { cx, cy, radius, gradient, chords:[] }
+    let disks = [];
+
+    // pieces: flattened list of all disk shards
+    // { id, diskIndex, vertices[], centroidX, centroidY, minX, maxX, minY, maxY,
+    //   isPlaced, x, y }
+    let pieces = [];
+
+    let score = 0;
+
+    // flashing before break
+    let previewFlashing = false;
+    let previewVisible = true;
+
+    // hint
+    let hintActive = false;
+    let hintTimeout = null;
+
+    // timer (Levels 2 & 3)
+    let timerId = null;
+    let remainingTime = 0;
+
+    // dragging / selection
+    let draggingPiece = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let selectedPiece = null;
+
+    // Daily puzzle mode
+    let dailyMode = false;
+    let fixedSeed = null;
+    let fixedLevel = null;
+
+    // ---------- Seeded RNG ----------
+    let rngSeed = Date.now();
+
+    function seededRandom() {
+      rngSeed = (rngSeed * 9301 + 49297) % 233280;
+      return rngSeed / 233280;
+    }
+
+    function setSeed(seed) {
+      console.log('Setting seed to:', seed);
+      rngSeed = seed;
+      fixedSeed = seed;
+      dailyMode = true;
+      document.body.classList.add('daily-mode');
+    }
+
+    function selectLevel(lv) {
+      console.log('Selecting level:', lv);
+      fixedLevel = lv;
+      level = lv;
+      levelSelect.value = lv;
+      // Auto-start the game for daily mode
+      if (dailyMode) {
+        newDisk();
+      }
+    }
+
+    // Make functions available to Swift
+    window.setSeed = setSeed;
+    window.selectLevel = selectLevel;
+
+    // ---------- Utility ----------
+    function randomGradient(cx, cy, r) {
+      const grad = ctx.createRadialGradient(cx, cy, 20, cx, cy, r);
+      const paletteOptions = [
+        ["#d4f1ff", "#a0d8ff", "#6fb6ff"],  // light blue
+        ["#ffe6cc", "#ffcf99", "#ffb677"],  // peach
+        ["#ffe6f7", "#ffbde3", "#ff93cc"],  // pink
+        ["#e6ffe6", "#b5f2c7", "#7ee0a6"],  // mint
+        ["#f4f4ff", "#d6dbff", "#b0b8ff"]   // soft violet
+      ];
+      const palette = paletteOptions[Math.floor(seededRandom() * paletteOptions.length)];
+      grad.addColorStop(0, palette[0]);
+      grad.addColorStop(0.5, palette[1]);
+      grad.addColorStop(1, palette[2]);
+      return grad;
+    }
+
+    function updateScore() {
+      scoreEl.textContent = "Score: " + score;
+    }
+
+    function updateTimerDisplay() {
+      if (level === 1) {
+        timerEl.textContent = "Timer: --";
+        return;
+      }
+      const m = Math.floor(remainingTime / 60);
+      const s = remainingTime % 60;
+      timerEl.textContent = `Timer: ${m}:${s.toString().padStart(2, "0")}`;
+    }
+
+    function startTimer(seconds) {
+      clearTimer();
+      remainingTime = seconds;
+      updateTimerDisplay();
+      timerId = setInterval(() => {
+        if (gameState !== "broken") {
+          clearTimer();
+          return;
+        }
+        remainingTime--;
+        if (remainingTime <= 0) {
+          remainingTime = 0;
+          updateTimerDisplay();
+          clearTimer();
+          timeUp();
+        } else {
+          updateTimerDisplay();
+        }
+      }, 1000);
+    }
+
+    function clearTimer() {
+      if (timerId !== null) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function timeUp() {
+      gameState = "complete";
+      gameResult = "timeout";
+      statusEl.textContent = "Time's up! Click 'New Disk' to try again.";
+      draw();
+    }
+
+    function makeCirclePolygon(cx, cy, r, segments = 64) {
+      const pts = [];
+      for (let i = 0; i < segments; i++) {
+        const t = (2 * Math.PI * i) / segments;
+        pts.push({
+          x: cx + r * Math.cos(t),
+          y: cy + r * Math.sin(t)
+        });
+      }
+      return pts;
+    }
+
+    function clipPolygonWithLine(poly, line, keepPositive) {
+      if (poly.length === 0) return [];
+      const res = [];
+      const { a, b, c } = line;
+
+      for (let i = 0; i < poly.length; i++) {
+        const curr = poly[i];
+        const next = poly[(i + 1) % poly.length];
+
+        const d1 = a * curr.x + b * curr.y + c;
+        const d2 = a * next.x + b * next.y + c;
+
+        const inside1 = keepPositive ? d1 >= 0 : d1 <= 0;
+        const inside2 = keepPositive ? d2 >= 0 : d2 <= 0;
+
+        if (inside1 && inside2) {
+          res.push(next);
+        } else if (inside1 && !inside2) {
+          const t = d1 / (d1 - d2);
+          res.push({
+            x: curr.x + (next.x - curr.x) * t,
+            y: curr.y + (next.y - curr.y) * t
+          });
+        } else if (!inside1 && inside2) {
+          const t = d1 / (d1 - d2);
+          res.push({
+            x: curr.x + (next.x - curr.x) * t,
+            y: curr.y + (next.y - curr.y) * t
+          });
+          res.push(next);
+        }
+      }
+      return res;
+    }
+
+    function randomPointInDisk(cx, cy, r) {
+      const rr = r * Math.sqrt(seededRandom());
+      const t = seededRandom() * Math.PI * 2;
+      return {
+        x: cx + rr * Math.cos(t),
+        y: cy + rr * Math.sin(t)
+      };
+    }
+
+    function angleDistance(a, b) {
+      let d = Math.abs(a - b);
+      const twoPi = Math.PI * 2;
+      if (d > twoPi - d) d = twoPi - d;
+      return d;
+    }
+
+    // ---------- Build random chords for one disk (safe version) ----------
+    function buildRandomChords(disk, num) {
+      disk.chords = [];
+
+      // Basic length requirement
+      const minChordFrac = 0.65;
+      const minChordLen  = disk.radius * minChordFrac;
+      const minDelta     = 2 * Math.asin(minChordLen / (2 * disk.radius));
+
+      // Endpoint spacing target (soft, with fallback)
+      const minEndGapBase = 0.25; // ~14 degrees
+      const maxAttemptsPerChord = 4000;
+
+      const endpointAngles = [];
+
+      function tryAddChord(requireEndpointGap) {
+        let attempts = 0;
+        while (attempts < maxAttemptsPerChord) {
+          attempts++;
+          let a1 = seededRandom() * Math.PI * 2;
+          let a2 = seededRandom() * Math.PI * 2;
+
+          let delta = angleDistance(a1, a2);
+          if (delta < minDelta) continue; // chord too short
+
+          if (requireEndpointGap) {
+            let ok = true;
+            for (const phi of endpointAngles) {
+              if (angleDistance(a1, phi) < minEndGapBase ||
+                  angleDistance(a2, phi) < minEndGapBase) {
+                ok = false;
+                break;
+              }
+            }
+            if (!ok) continue;
+          }
+
+          // Accept chord
+          const x1 = disk.cx + disk.radius * Math.cos(a1);
+          const y1 = disk.cy + disk.radius * Math.sin(a1);
+          const x2 = disk.cx + disk.radius * Math.cos(a2);
+          const y2 = disk.cy + disk.radius * Math.sin(a2);
+
+          const a = y1 - y2;
+          const b = x2 - x1;
+          const c = x1 * y2 - x2 * y1;
+
+          disk.chords.push({ x1, y1, x2, y2, a, b, c });
+          endpointAngles.push(a1, a2);
+          return true;
+        }
+        return false;
+      }
+
+      // First pass: try with endpoint spacing
+      while (disk.chords.length < num) {
+        const ok = tryAddChord(true);
+        if (!ok) break; // give up spacing if too hard
+      }
+
+      // If we didn't reach the requested number, fill remaining chords
+      // with only the length constraint (to guarantee termination).
+      while (disk.chords.length < num) {
+        tryAddChord(false);
+      }
+    }
+
+    // ---------- Build fragments for all disks ----------
+    function buildAllFragments() {
+      pieces = [];
+      let idCounter = 1;
+
+      disks.forEach((disk, diskIndex) => {
+        const circlePoly = makeCirclePolygon(disk.cx, disk.cy, disk.radius, 80);
+        const patternMap = {};
+        const numChords = disk.chords.length;
+        const maxRegions = numChords * (numChords + 1) / 2 + 1;
+        const samples = 800;
+
+        for (let i = 0; i < samples; i++) {
+          const p = randomPointInDisk(disk.cx, disk.cy, disk.radius);
+          let pattern = "";
+          for (let j = 0; j < disk.chords.length; j++) {
+            const line = disk.chords[j];
+            const val = line.a * p.x + line.b * p.y + line.c;
+            pattern += (val >= 0 ? "1" : "0");
+          }
+          if (!patternMap[pattern]) {
+            patternMap[pattern] = p;
+            if (Object.keys(patternMap).length >= maxRegions) break;
+          }
+        }
+
+        for (const pattern in patternMap) {
+          const seed = patternMap[pattern];
+          let poly = circlePoly.map(pt => ({ x: pt.x, y: pt.y }));
+
+          for (let i = 0; i < disk.chords.length; i++) {
+            const line = disk.chords[i];
+            const valSeed = line.a * seed.x + line.b * seed.y + line.c;
+            const keepPositive = valSeed >= 0;
+            poly = clipPolygonWithLine(poly, line, keepPositive);
+            if (poly.length === 0) break;
+          }
+
+          if (poly.length < 3) continue;
+
+          const localVerts = poly.map(pt => ({
+            x: pt.x - disk.cx,
+            y: pt.y - disk.cy
+          }));
+
+          let cx = 0, cy = 0;
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          for (const v of localVerts) {
+            cx += v.x;
+            cy += v.y;
+            if (v.x < minX) minX = v.x;
+            if (v.x > maxX) maxX = v.x;
+            if (v.y < minY) minY = v.y;
+            if (v.y > maxY) maxY = v.y;
+          }
+          cx /= localVerts.length;
+          cy /= localVerts.length;
+
+          pieces.push({
+            id: idCounter++,
+            diskIndex,
+            vertices: localVerts,
+            centroidX: cx,
+            centroidY: cy,
+            minX,
+            maxX,
+            minY,
+            maxY,
+            isPlaced: true,
+            x: 0,
+            y: 0
+          });
+        }
+      });
+    }
+
+    // ---------- New Disk ----------
+    function newDisk() {
+      // Reset seed if in daily mode
+      if (dailyMode && fixedSeed !== null) {
+        rngSeed = fixedSeed;
+      }
+
+      level = fixedLevel !== null ? fixedLevel : parseInt(levelSelect.value, 10);
+
+      gameState = "assembled";
+      gameResult = "playing";
+      score = 0;
+      updateScore();
+      clearTimer();
+
+      previewFlashing = false;
+      previewVisible = true;
+      hintActive = false;
+      if (hintTimeout) clearTimeout(hintTimeout);
+      draggingPiece = null;
+      selectedPiece = null;
+
+      const baseCx = canvas.width / 2;
+      const baseCy = 260;
+      const baseR = 150;
+
+      if (level === 1 || level === 2) {
+        const chordsCount = level === 1 ? 5 : 7;
+        disks = [{
+          cx: baseCx,
+          cy: baseCy,
+          radius: baseR,
+          gradient: null,
+          chords: []
+        }];
+        disks[0].gradient = randomGradient(disks[0].cx, disks[0].cy, disks[0].radius);
+        buildRandomChords(disks[0], chordsCount);
+      } else if (level === 3) {
+        const chordsCount = 7;
+        const r3 = 120;
+        const offset = 160;
+
+        disks = [
+          { cx: baseCx - offset, cy: baseCy, radius: r3, gradient: null, chords: [] },
+          { cx: baseCx + offset, cy: baseCy, radius: r3, gradient: null, chords: [] }
+        ];
+
+        // ONE shared gradient for both disks in Level 3
+        const sharedGradient = randomGradient(baseCx, baseCy, r3);
+        disks.forEach(d => {
+          d.gradient = sharedGradient;
+          buildRandomChords(d, chordsCount);
+        });
+      }
+
+      buildAllFragments();
+
+      if (level === 1) {
+        remainingTime = 0;
+      } else {
+        remainingTime = 90;
+      }
+      updateTimerDisplay();
+
+      if (level === 1) {
+        statusEl.textContent = "Level 1: Study the cracks. Press 'Break Disk' to start.";
+      } else if (level === 2) {
+        statusEl.textContent = "Level 2: One disk, more shards, 90 seconds. Press 'Break Disk' to start.";
+      } else {
+        statusEl.textContent = "Level 3: Two disks, same color. Study both, then press 'Break Disk' to start.";
+      }
+
+      draw();
+    }
+
+    // ---------- Break Disk with flashing ----------
+    function breakDisk() {
+      if (gameState !== "assembled" || previewFlashing) return;
+
+      const flashesWanted = level === 1 ? 5 : 7;
+      statusEl.textContent = "Watch the cracks…";
+      previewFlashing = true;
+      let toggles = 0;
+      const totalToggles = flashesWanted * 2;
+
+      function flash() {
+        previewVisible = !previewVisible;
+        draw();
+        toggles++;
+        if (toggles < totalToggles) {
+          setTimeout(flash, 250);
+        } else {
+          previewFlashing = false;
+          previewVisible = true;
+          actuallyBreakDisk();
+        }
+      }
+      flash();
+    }
+
+    function actuallyBreakDisk() {
+      gameState = "broken";
+      selectedPiece = null;
+
+      if (level === 1) {
+        statusEl.textContent = "Level 1: Drag the fragments back into the circle.";
+      } else if (level === 2) {
+        statusEl.textContent = "Level 2: Drag all fragments back before time runs out.";
+      } else {
+        statusEl.textContent = "Level 3: Two disks, same color, mixed fragments. Put each piece in the correct disk.";
+      }
+
+      const margin = 12;
+
+      pieces.forEach(p => {
+        p.isPlaced = false;
+
+        const disk = disks[p.diskIndex];
+
+        let placed = false;
+        for (let attempts = 0; attempts < 300; attempts++) {
+          const row = seededRandom() < 0.5 ? 0 : 1; // two tray layers
+          const trayHeight = (canvas.height - trayTop - 70) / 2;
+          const baseY = trayTop + 35 + row * trayHeight;
+
+          const cxOffset = (seededRandom() * (canvas.width - 2 * margin)) + margin - disk.cx;
+          const cyOffset = baseY - disk.cy + (seededRandom() * (trayHeight - 40) - (trayHeight - 40) / 2);
+
+          const worldMinX = disk.cx + cxOffset + p.minX;
+          const worldMaxX = disk.cx + cxOffset + p.maxX;
+          const worldMinY = disk.cy + cyOffset + p.minY;
+          const worldMaxY = disk.cy + cyOffset + p.maxY;
+
+          if (
+            worldMinX >= margin &&
+            worldMaxX <= canvas.width - margin &&
+            worldMinY >= trayTop + margin &&
+            worldMaxY <= canvas.height - margin
+          ) {
+            p.x = cxOffset;
+            p.y = cyOffset;
+            placed = true;
+            break;
+          }
+        }
+
+        if (!placed) {
+          const safeWorldX = canvas.width / 2;
+          let safeWorldY = trayTop + margin - p.minY + 10;
+          if (safeWorldY + p.maxY > canvas.height - margin) {
+            safeWorldY = canvas.height - margin - p.maxY - 5;
+          }
+          let offsetX = 0;
+          if (safeWorldX + p.minX < margin) {
+            offsetX = margin - (safeWorldX + p.minX) + 5;
+          }
+          if (safeWorldX + p.maxX + offsetX > canvas.width - margin) {
+            offsetX = (canvas.width - margin) - (safeWorldX + p.maxX) - 5;
+          }
+          p.x = (safeWorldX + offsetX) - disk.cx;
+          p.y = safeWorldY - disk.cy;
+        }
+      });
+
+      if (level >= 2) {
+        startTimer(90);
+      }
+
+      draw();
+    }
+
+    // ---------- Hint ----------
+    function showHint() {
+      if (gameState !== "broken") return;
+      hintActive = true;
+
+      score -= (level === 1 ? 5 : 10);
+      updateScore();
+
+      if (hintTimeout) clearTimeout(hintTimeout);
+      hintTimeout = setTimeout(() => {
+        hintActive = false;
+        draw();
+      }, 1500);
+      draw();
+    }
+
+    // ---------- Drawing ----------
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.fillStyle = "#f3f3f3";
+      ctx.fillRect(0, trayTop, canvas.width, canvas.height - trayTop);
+      ctx.restore();
+
+      if (gameState === "assembled") {
+        drawAssembledDisk();
+      } else if (gameState === "broken" || gameState === "complete") {
+        drawBrokenState();
+      }
+    }
+
+    function drawAssembledDisk() {
+      disks.forEach(disk => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(disk.cx, disk.cy, disk.radius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fillStyle = disk.gradient;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0,0,0,0.9)";
+        ctx.stroke();
+        ctx.restore();
+
+        if (previewVisible) {
+          ctx.save();
+          ctx.lineWidth = level === 1 ? 3 : 2;
+          ctx.strokeStyle = "#000";
+          disk.chords.forEach(line => {
+            ctx.beginPath();
+            ctx.moveTo(line.x1, line.y1);
+            ctx.lineTo(line.x2, line.y2);
+            ctx.stroke();
+          });
+          ctx.restore();
+        }
+      });
+    }
+
+    function drawBrokenState() {
+      disks.forEach(disk => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(disk.cx, disk.cy, disk.radius, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.strokeStyle = "rgba(0,0,0,0.15)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      if (hintActive) {
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0,0,0,0.35)";
+        disks.forEach(disk => {
+          disk.chords.forEach(line => {
+            ctx.beginPath();
+            ctx.moveTo(line.x1, line.y1);
+            ctx.lineTo(line.x2, line.y2);
+            ctx.stroke();
+          });
+        });
+        ctx.restore();
+
+        if (level >= 2 && selectedPiece) {
+          const disk = disks[selectedPiece.diskIndex];
+          ctx.save();
+          ctx.translate(disk.cx, disk.cy);
+          ctx.beginPath();
+          const v = selectedPiece.vertices;
+          ctx.moveTo(v[0].x, v[0].y);
+          for (let i = 1; i < v.length; i++) ctx.lineTo(v[i].x, v[i].y);
+          ctx.closePath();
+          ctx.strokeStyle = "rgba(0,150,255,0.8)";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      pieces.forEach(p => drawPiece(p));
+
+      if (gameState === "complete") {
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "32px system-ui";
+        ctx.textAlign = "center";
+
+        if (gameResult === "success") {
+          ctx.fillText("Level Complete!", canvas.width / 2, canvas.height / 2);
+          ctx.font = "18px system-ui";
+          if (level >= 2) {
+            const bonus = Math.floor(remainingTime / 5);
+            ctx.fillText(
+              `Final Score: ${score} (Bonus: +${bonus})`,
+              canvas.width / 2,
+              canvas.height / 2 + 30
+            );
+          } else {
+            ctx.fillText(
+              "Final Score: " + score,
+              canvas.width / 2,
+              canvas.height / 2 + 30
+            );
+          }
+
+          // Notify Swift of completion
+          if (dailyMode && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+            console.log('Notifying Swift of game completion');
+            window.webkit.messageHandlers.gameComplete.postMessage({
+              won: true,
+              score: score,
+              level: level
+            });
+          }
+        } else if (gameResult === "timeout") {
+          ctx.fillText("Time's Up!", canvas.width / 2, canvas.height / 2);
+          ctx.font = "18px system-ui";
+          ctx.fillText(
+            "You ran out of time. Score: " + score,
+            canvas.width / 2,
+            canvas.height / 2 + 30
+          );
+        }
+
+        if (!dailyMode) {
+          ctx.fillText(
+            "Click 'New Disk' to play again.",
+            canvas.width / 2,
+            canvas.height / 2 + 60
+          );
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawPiece(piece) {
+      const disk = disks[piece.diskIndex];
+      ctx.save();
+      const tx = disk.cx + piece.x;
+      const ty = disk.cy + piece.y;
+      ctx.translate(tx, ty);
+
+      ctx.beginPath();
+      const verts = piece.vertices;
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (let i = 1; i < verts.length; i++) ctx.lineTo(verts[i].x, verts[i].y);
+      ctx.closePath();
+
+      ctx.fillStyle = disk.gradient;
+      ctx.fill();
+      ctx.lineWidth = selectedPiece === piece ? 3 : 2;
+      ctx.strokeStyle = selectedPiece === piece ? "rgba(0,150,255,0.9)" : "rgba(0,0,0,0.8)";
+      ctx.stroke();
+
+      const lx = piece.centroidX;
+      const ly = piece.centroidY;
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.font = "16px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(piece.id, lx + 1, ly + 1);
+      ctx.fillStyle = "white";
+      ctx.fillText(piece.id, lx, ly);
+
+      ctx.restore();
+    }
+
+    // ---------- Drag & drop ----------
+    function getMousePos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (evt.clientX - rect.left) * (canvas.width / rect.width),
+        y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    function getTouchPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const touch = evt.touches[0];
+      return {
+        x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+        y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    // Mouse events
+    canvas.addEventListener("mousedown", e => {
+      if (gameState !== "broken") return;
+      const { x, y } = getMousePos(e);
+
+      for (let i = pieces.length - 1; i >= 0; i--) {
+        const p = pieces[i];
+        if (p.isPlaced) continue;
+
+        if (pointInPiece(p, x, y)) {
+          draggingPiece = p;
+          selectedPiece = p;
+
+          const disk = disks[p.diskIndex];
+          const pieceCenterX = disk.cx + p.x;
+          const pieceCenterY = disk.cy + p.y;
+          dragOffsetX = x - pieceCenterX;
+          dragOffsetY = y - pieceCenterY;
+
+          pieces.splice(i, 1);
+          pieces.push(p);
+          draw();
+          break;
+        }
+      }
+    });
+
+    canvas.addEventListener("mousemove", e => {
+      if (!draggingPiece || gameState !== "broken") return;
+      const { x, y } = getMousePos(e);
+
+      const disk = disks[draggingPiece.diskIndex];
+      draggingPiece.x = x - disk.cx - dragOffsetX;
+      draggingPiece.y = y - disk.cy - dragOffsetY;
+
+      draw();
+    });
+
+    canvas.addEventListener("mouseup", handleMouseUp);
+    canvas.addEventListener("mouseleave", handleMouseUp);
+
+    // Touch events
+    canvas.addEventListener("touchstart", e => {
+      e.preventDefault();
+      if (gameState !== "broken") return;
+      const { x, y } = getTouchPos(e);
+
+      for (let i = pieces.length - 1; i >= 0; i--) {
+        const p = pieces[i];
+        if (p.isPlaced) continue;
+
+        if (pointInPiece(p, x, y)) {
+          draggingPiece = p;
+          selectedPiece = p;
+
+          const disk = disks[p.diskIndex];
+          const pieceCenterX = disk.cx + p.x;
+          const pieceCenterY = disk.cy + p.y;
+          dragOffsetX = x - pieceCenterX;
+          dragOffsetY = y - pieceCenterY;
+
+          pieces.splice(i, 1);
+          pieces.push(p);
+          draw();
+          break;
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("touchmove", e => {
+      e.preventDefault();
+      if (!draggingPiece || gameState !== "broken") return;
+      const { x, y } = getTouchPos(e);
+
+      const disk = disks[draggingPiece.diskIndex];
+      draggingPiece.x = x - disk.cx - dragOffsetX;
+      draggingPiece.y = y - disk.cy - dragOffsetY;
+
+      draw();
+    }, { passive: false });
+
+    canvas.addEventListener("touchend", handleTouchEnd);
+    canvas.addEventListener("touchcancel", handleTouchEnd);
+
+    function handleMouseUp() {
+      if (!draggingPiece || gameState !== "broken") return;
+
+      const p = draggingPiece;
+      const dx = p.x;
+      const dy = p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      const snapRadius = 20;
+      if (dist < snapRadius) {
+        if (!p.isPlaced) {
+          score += (level === 1 ? 10 : 15);
+          updateScore();
+        }
+        p.x = 0;
+        p.y = 0;
+        p.isPlaced = true;
+      }
+
+      draggingPiece = null;
+      checkCompletion();
+      draw();
+    }
+
+    function handleTouchEnd() {
+      handleMouseUp();
+    }
+
+    function pointInPiece(piece, x, y) {
+      const disk = disks[piece.diskIndex];
+      ctx.save();
+      ctx.translate(disk.cx + piece.x, disk.cy + piece.y);
+      ctx.beginPath();
+      const verts = piece.vertices;
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (let i = 1; i < verts.length; i++) ctx.lineTo(verts[i].x, verts[i].y);
+      ctx.closePath();
+      const hit = ctx.isPointInPath(x, y);
+      ctx.restore();
+      return hit;
+    }
+
+    function checkCompletion() {
+      const allSnapped = pieces.every(p => {
+        if (!p.isPlaced) return false;
+        const dist = Math.sqrt(p.x * p.x + p.y * p.y);
+        return dist < 1;
+      });
+
+      if (allSnapped) {
+        if (level >= 2 && remainingTime > 0) {
+          const bonus = Math.floor(remainingTime / 5);
+          score += bonus;
+          updateScore();
+        }
+        clearTimer();
+        gameState = "complete";
+        gameResult = "success";
+        statusEl.textContent = "Well done! Final score: " + score;
+        draw();
+      }
+    }
+
+    // ---------- Buttons & level select ----------
+    document.getElementById("newBtn").addEventListener("click", newDisk);
+    document.getElementById("breakBtn").addEventListener("click", () => {
+      if (gameState === "complete") newDisk();
+      else breakDisk();
+    });
+    document.getElementById("hintBtn").addEventListener("click", showHint);
+    levelSelect.addEventListener("change", newDisk);
+
+    // start
+    if (!dailyMode) {
+      newDisk();
+    }
+  </script>
+</body>
+</html>

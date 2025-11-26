@@ -17,6 +17,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case hashtagWords = "Hashtag Words"
     case traceWiz = "TraceWiz"
     case arrowRace = "Arrow Race"
+    case diskBreak = "DiskBreak"
 
     var id: String { self.rawValue }
 
@@ -31,6 +32,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .hashtagWords: return "hashtagwordsicon"
         case .traceWiz: return "tracewizicon"
         case .arrowRace: return "arrowraceicon"
+        case .diskBreak: return "diskbreakicon"
         }
     }
 
@@ -45,6 +47,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .hashtagWords: return "number"
         case .traceWiz: return "scribble.variable"
         case .arrowRace: return "arrow.triangle.2.circlepath"
+        case .diskBreak: return "circle.grid.cross"
         }
     }
 
@@ -58,6 +61,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .hashtagWords: return "Fill the hashtag grid with words"
         case .traceWiz: return "Trace the line without crossing"
         case .arrowRace: return "Race to the finish against Sam"
+        case .diskBreak: return "Rebuild broken disks from fragments"
         }
     }
 }
@@ -232,6 +236,30 @@ class DailyPuzzleManager: ObservableObject {
     /// Get today's Arrow Race level
     func getTodayArrowRaceLevel() -> Int {
         return getArrowRaceLevelForDate(currentDate)
+    }
+
+    /// Get DiskBreak level for date (1, 2, 3)
+    /// Monday/Wed/Fri: L1 (Easy - 5 chords, no timer)
+    /// Tue/Thu: L2 (Medium - 7 chords, 90s timer)
+    /// Sat/Sun: L3 (Hard - 2 disks, 90s timer)
+    func getDiskBreakLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 1: return 3  // Sunday: L3 (2 disks)
+        case 2: return 1  // Monday: L1 (Easy)
+        case 3: return 2  // Tuesday: L2 (Medium)
+        case 4: return 1  // Wednesday: L1 (Easy)
+        case 5: return 2  // Thursday: L2 (Medium)
+        case 6: return 1  // Friday: L1 (Easy)
+        case 7: return 3  // Saturday: L3 (2 disks)
+        default: return 1
+        }
+    }
+
+    /// Get today's DiskBreak level
+    func getTodayDiskBreakLevel() -> Int {
+        return getDiskBreakLevelForDate(currentDate)
     }
 
     /// Get difficulty name for level

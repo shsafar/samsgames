@@ -36,6 +36,8 @@ struct GameInstructionsView: View {
                     TraceWizInstructionsView()
                 case .arrowRace:
                     ArrowRaceInstructionsView()
+                case .diskBreak:
+                    DiskBreakInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

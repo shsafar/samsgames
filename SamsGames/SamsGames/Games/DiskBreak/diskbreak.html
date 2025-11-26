@@ -77,9 +77,9 @@
     }
     #score-timer {
       display: flex;
-      gap: 24px;
-      margin-bottom: 12px;
-      font-size: 15px;
+      gap: 30px;
+      margin-bottom: 6px;
+      font-size: 16px;
       font-weight: 600;
       color: #333;
       justify-content: center;
@@ -93,6 +93,9 @@
       color: #666;
       font-weight: 500;
       font-size: 14px;
+      text-align: center;
+      margin-bottom: 10px;
+      padding: 0 20px;
     }
     canvas {
       background: #fff;
@@ -137,8 +140,8 @@
   <div id="score-timer">
     <div id="score">Score: 0</div>
     <div id="timer">Timer: --</div>
-    <div id="controlsHint">Drag & snap the shards back into place.</div>
   </div>
+  <div id="controlsHint">Drag & snap the shards back into place.</div>
   <canvas id="gameCanvas" width="700" height="700"></canvas>
 
   <script>
@@ -149,7 +152,7 @@
     const timerEl = document.getElementById("timer");
     const levelSelect = document.getElementById("levelSelect");
 
-    const trayTop = 480;
+    const trayTop = 520;
 
     let level = 1; // 1,2,3
     let gameState = "assembled"; // "assembled" | "broken" | "complete"
@@ -514,8 +517,8 @@
       selectedPiece = null;
 
       const baseCx = canvas.width / 2;
-      const baseCy = 260;
-      const baseR = 150;
+      const baseCy = 300;
+      const baseR = 200;
 
       if (level === 1 || level === 2) {
         const chordsCount = level === 1 ? 5 : 7;

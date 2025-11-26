@@ -69,6 +69,10 @@
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       touch-action: none;
+      max-width: 100%;
+      max-height: calc(100vh - 200px);
+      width: auto;
+      height: auto;
     }
 
     /* Hide only level selector and New Disk button in daily mode */
@@ -984,6 +988,23 @@
         draw();
       }
     }
+
+    // ---------- Responsive canvas sizing ----------
+    function resizeCanvas() {
+      const container = document.body;
+      const maxWidth = Math.min(window.innerWidth - 20, 700);
+      const maxHeight = Math.min(window.innerHeight - 200, 700);
+      const size = Math.min(maxWidth, maxHeight);
+
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+    }
+
+    // Initial resize
+    resizeCanvas();
+
+    // Resize on window resize
+    window.addEventListener('resize', resizeCanvas);
 
     // ---------- Buttons & level select ----------
     document.getElementById("newBtn").addEventListener("click", newDisk);

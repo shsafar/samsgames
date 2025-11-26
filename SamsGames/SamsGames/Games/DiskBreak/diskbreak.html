@@ -142,7 +142,7 @@
     <div id="timer">Timer: --</div>
   </div>
   <div id="controlsHint">Drag & snap the shards back into place.</div>
-  <canvas id="gameCanvas" width="700" height="700"></canvas>
+  <canvas id="gameCanvas" width="700" height="850"></canvas>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
@@ -152,7 +152,7 @@
     const timerEl = document.getElementById("timer");
     const levelSelect = document.getElementById("levelSelect");
 
-    const trayTop = 640;
+    const trayTop = 680;
 
     let level = 1; // 1,2,3
     let gameState = "assembled"; // "assembled" | "broken" | "complete"
@@ -1026,11 +1026,24 @@
     function resizeCanvas() {
       const container = document.body;
       const maxWidth = Math.min(window.innerWidth - 20, 700);
-      const maxHeight = Math.min(window.innerHeight - 200, 700);
-      const size = Math.min(maxWidth, maxHeight);
+      const maxHeight = Math.min(window.innerHeight - 200, 850);
 
-      canvas.style.width = size + 'px';
-      canvas.style.height = size + 'px';
+      // Maintain 700:850 aspect ratio
+      const aspectRatio = 700 / 850;
+      let width, height;
+
+      if (maxWidth / maxHeight > aspectRatio) {
+        // Height is the constraint
+        height = maxHeight;
+        width = height * aspectRatio;
+      } else {
+        // Width is the constraint
+        width = maxWidth;
+        height = width / aspectRatio;
+      }
+
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
     }
 
     // Initial resize

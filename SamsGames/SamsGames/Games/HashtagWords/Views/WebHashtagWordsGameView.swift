@@ -24,6 +24,14 @@ struct WebHashtagWordsGameView: View {
     var archiveDate: Date? = nil
     var archiveSeed: Int? = nil
 
+    // Check if already completed today (only for non-archive mode)
+    private var isAlreadyCompleted: Bool {
+        if archiveMode {
+            return false // Archive mode always allows play
+        }
+        return dailyPuzzleManager.isCompletedToday(.hashtagWords)
+    }
+
     // Calculate seed and level
     private let seed: Int
     private let level: Int
@@ -45,7 +53,10 @@ struct WebHashtagWordsGameView: View {
 
     var body: some View {
         Group {
-            if showSplash {
+            if isAlreadyCompleted {
+                // Show completion screen if already completed today
+                HashtagWordsCompletedView()
+            } else if showSplash {
                 splashScreen
             } else {
                 gameView
@@ -53,7 +64,9 @@ struct WebHashtagWordsGameView: View {
         }
         .onAppear {
             dailyPuzzleManager.checkForNewDay()
-            startSplashTimer()
+            if !isAlreadyCompleted {
+                startSplashTimer()
+            }
         }
         .navigationBarHidden(true)
         .alert("Puzzle Completed!", isPresented: $showCompletionAlert) {
@@ -334,6 +347,116 @@ struct WebHashtagWordsGameViewRepresentable: UIViewRepresentable {
                 }
             }
         }
+    }
+}
+
+// MARK: - Already Completed View
+
+struct HashtagWordsCompletedView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    @State private var timeUntilNext = ""
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ZStack {
+            // Purple gradient background
+            LinearGradient(
+                colors: [
+                    Color.purple.opacity(0.6),
+                    Color.purple.opacity(0.8)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Top bar with back button
+                HStack {
+                    Button(action: { dismiss() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.title3)
+                            Text("Back")
+                                .font(.body)
+                        }
+                        .foregroundColor(.white)
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                Spacer()
+
+                VStack(spacing: 30) {
+                    // Completion message
+                    VStack(spacing: 12) {
+                        Text("Puzzle Completed!")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Text("Great job! You've finished today's Hashtag Words puzzle.")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white.opacity(0.9))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+
+                    // Countdown
+                    VStack(spacing: 8) {
+                        Text("Next puzzle in:")
+                            .font(.system(size: 16))
+                            .foregroundColor(.white.opacity(0.8))
+
+                        Text(timeUntilNext)
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(.white)
+                            .monospacedDigit()
+                    }
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.2))
+                    )
+
+                    Text("Try past puzzles in the Archive!")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white.opacity(0.8))
+                }
+
+                Spacer()
+            }
+        }
+        .onReceive(timer) { _ in
+            updateCountdown()
+        }
+        .onAppear {
+            updateCountdown()
+        }
+    }
+
+    private func updateCountdown() {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Get start of tomorrow
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
+              let startOfTomorrow = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: tomorrow) else {
+            timeUntilNext = "Soon!"
+            return
+        }
+
+        let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: startOfTomorrow)
+
+        let hours = components.hour ?? 0
+        let minutes = components.minute ?? 0
+        let seconds = components.second ?? 0
+
+        timeUntilNext = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 }
 

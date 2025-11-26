@@ -81,7 +81,7 @@
       <button id="newGameBtn">New Game</button>
       <button id="hintBtn">Show Hints</button>
       <button id="soundBtn">Sound: On</button>
-      <button id="statsBtn">Stats</button>
+      <button id="statsBtn" style="display:none;">Stats</button>
     </div>
     <div id="currentGuess" class="current">—</div>
   </div>
@@ -575,6 +575,8 @@
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';
     document.getElementById('hintBtn').textContent='Show Hints';
+    // Clear hint timeout when starting new game
+    if(hintTimeout) { clearTimeout(hintTimeout); hintTimeout = null; }
     generate(); renderBoard(); renderWordList(); updateGuess(); startTimer();
   }
 
@@ -734,12 +736,31 @@
 
   // UI handlers
   document.getElementById('newGameBtn').addEventListener('click', newGame);
+
+  let hintTimeout = null;
   document.getElementById('hintBtn').addEventListener('click', ()=>{
-    SHOW_HINTS=!SHOW_HINTS;
-    document.getElementById('hintBtn').textContent = SHOW_HINTS? 'Hide Hints' : 'Show Hints';
-    if(SHOW_HINTS){ state.score-=5; state.penalty+=5; scoreEl.textContent=state.score; penaltyEl.textContent=state.penalty; if(SOUND_ON) snd.hint(); }
-    if(!SHOW_HINTS) hints.innerHTML='';
-    drawHints();
+    // Clear any existing timeout
+    if(hintTimeout) clearTimeout(hintTimeout);
+
+    // Only allow showing hints, not hiding manually
+    if(!SHOW_HINTS) {
+      SHOW_HINTS = true;
+      document.getElementById('hintBtn').textContent = 'Hide Hints';
+      state.score -= 5;
+      state.penalty += 5;
+      scoreEl.textContent = state.score;
+      penaltyEl.textContent = state.penalty;
+      if(SOUND_ON) snd.hint();
+      drawHints();
+
+      // Auto-hide hints after 5 seconds
+      hintTimeout = setTimeout(() => {
+        SHOW_HINTS = false;
+        document.getElementById('hintBtn').textContent = 'Show Hints';
+        hints.innerHTML = '';
+        hintTimeout = null;
+      }, 5000);
+    }
   });
   document.getElementById('soundBtn').addEventListener('click', ()=>{
     SOUND_ON=!SOUND_ON;

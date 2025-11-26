@@ -203,6 +203,10 @@ struct MainMenuView: View {
             WebArrowRaceGameView()
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .diskBreak:
+            WebDiskBreakGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }
@@ -335,6 +339,21 @@ struct GameCard: View {
                 // Show difficulty for Arrow Race
                 if gameType == .arrowRace {
                     let level = dailyPuzzleManager.getTodayArrowRaceLevel()
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption)
+                        Text("\(name) (Level \(level))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for DiskBreak
+                if gameType == .diskBreak {
+                    let level = dailyPuzzleManager.getTodayDiskBreakLevel()
                     let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
                     let name = dailyPuzzleManager.getDifficultyName(for: level)
 

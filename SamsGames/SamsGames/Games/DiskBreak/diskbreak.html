@@ -355,13 +355,13 @@
     function buildRandomChords(disk, num) {
       disk.chords = [];
 
-      // Basic length requirement (increased by 10% to avoid tiny slivers)
-      const minChordFrac = 0.715; // was 0.65, now 0.65 * 1.10 = 0.715
+      // Basic length requirement (increased by 25% to avoid tiny slivers)
+      const minChordFrac = 0.8125; // was 0.65, now 0.65 * 1.25 = 0.8125
       const minChordLen  = disk.radius * minChordFrac;
       const minDelta     = 2 * Math.asin(minChordLen / (2 * disk.radius));
 
-      // Endpoint spacing target (soft, with fallback) (increased by 15% to avoid tiny slivers)
-      const minEndGapBase = 0.2875; // was 0.25, now 0.25 * 1.15 = 0.2875 (~16.5 degrees)
+      // Endpoint spacing target (soft, with fallback) (increased by 40% to avoid tiny slivers)
+      const minEndGapBase = 0.35; // was 0.25, now 0.25 * 1.40 = 0.35 (~20 degrees)
       const maxAttemptsPerChord = 4000;
 
       const endpointAngles = [];
@@ -475,14 +475,6 @@
           }
           cx /= localVerts.length;
           cy /= localVerts.length;
-
-          // Skip pieces that are too small (tiny slivers)
-          const width = maxX - minX;
-          const height = maxY - minY;
-          const minDimension = 15; // Minimum width or height in pixels
-          if (width < minDimension || height < minDimension) {
-            continue; // Skip this tiny piece
-          }
 
           pieces.push({
             id: idCounter++,

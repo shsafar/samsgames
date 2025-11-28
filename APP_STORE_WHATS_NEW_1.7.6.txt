@@ -1,0 +1,29 @@
+🛡️ Better Protection & Improvements!
+
+We've added safety features and improvements to make your puzzle experience even better!
+
+✨ What's New:
+
+• NEW: Exit Warnings for All Games
+  - Prevents accidental exits during gameplay
+  - Confirmation dialog protects your progress
+  - Works across all 9 puzzle games
+
+• DiskBreak Improvements
+  - Larger play area for better visibility
+  - Improved fragment layout and spacing
+  - Enhanced puzzle generation for better pieces
+  - Smoother completion flow
+
+• Better User Experience
+  - Clear exit confirmations with Cancel/Exit options
+  - Improved alert messages and notifications
+  - Enhanced mobile touch interaction
+
+🎮 Universal Exit Protection:
+Never lose progress by accident! When you tap Back during a game, you'll now see a confirmation asking if you're sure you want to exit.
+
+📱 Enhanced for Mobile:
+All improvements optimized for iPhone and iPad with better touch controls and clearer visual feedback.
+
+Bug fixes and performance improvements.

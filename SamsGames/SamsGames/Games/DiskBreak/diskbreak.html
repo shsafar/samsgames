@@ -476,6 +476,14 @@
           cx /= localVerts.length;
           cy /= localVerts.length;
 
+          // Skip pieces that are too small (tiny slivers)
+          const width = maxX - minX;
+          const height = maxY - minY;
+          const minDimension = 15; // Minimum width or height in pixels
+          if (width < minDimension || height < minDimension) {
+            continue; // Skip this tiny piece
+          }
+
           pieces.push({
             id: idCounter++,
             diskIndex,

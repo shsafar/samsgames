@@ -19,6 +19,7 @@ struct WebDoubleBubbleGameView: View {
     @State private var showSplash = true
     @State private var splashScale: CGFloat = 0.5
     @State private var splashOpacity: Double = 0.0
+    @State private var showExitWarning = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -49,7 +50,7 @@ struct WebDoubleBubbleGameView: View {
             VStack(spacing: 0) {
                 // Top bar with back button and help button
                 HStack {
-                    Button(action: { dismiss() }) {
+                    Button(action: { showExitWarning = true }) {
                         HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
                                 .font(.title3)
@@ -118,6 +119,14 @@ struct WebDoubleBubbleGameView: View {
         }
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .doubleBubble)
+        }
+        .alert("Exit Game?", isPresented: $showExitWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure? You may lose your progress if you exit.")
         }
         .onAppear {
             // Check if new day when view appears

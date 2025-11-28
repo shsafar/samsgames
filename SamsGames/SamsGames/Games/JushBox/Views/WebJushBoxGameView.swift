@@ -18,6 +18,7 @@ struct WebJushBoxGameView: View {
     @State private var showInstructions = false
     @State private var splashPhase = 0 // 0 = first splash, 1 = second splash, 2 = game
     @State private var isPulsing = false
+    @State private var showExitWarning = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -64,10 +65,19 @@ struct WebJushBoxGameView: View {
         .navigationBarHidden(true)
         .alert("Puzzle Completed!", isPresented: $showCompletionAlert) {
             Button("OK") {
+                // Dismiss back to main menu
                 dismiss()
             }
         } message: {
             Text("Great job! You completed today's JushBox puzzle!")
+        }
+        .alert("Exit Game?", isPresented: $showExitWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure? You may lose your progress if you exit.")
         }
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .jushBox)
@@ -80,7 +90,7 @@ struct WebJushBoxGameView: View {
         VStack(spacing: 0) {
             // Top bar with back button - respects safe area
             HStack {
-                Button(action: { dismiss() }) {
+                Button(action: { showExitWarning = true }) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))

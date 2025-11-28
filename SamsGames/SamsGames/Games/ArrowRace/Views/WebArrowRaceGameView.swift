@@ -18,6 +18,7 @@ struct WebArrowRaceGameView: View {
     @State private var showInstructions = false
     @State private var showSplash = true
     @State private var isPulsing = false
+    @State private var showExitWarning = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -65,6 +66,14 @@ struct WebArrowRaceGameView: View {
         }
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .arrowRace)
+        }
+        .alert("Exit Game?", isPresented: $showExitWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure? You may lose your progress if you exit.")
         }
     }
 
@@ -130,7 +139,7 @@ struct WebArrowRaceGameView: View {
         VStack(spacing: 0) {
             // Top bar with back button
             HStack {
-                Button(action: { dismiss() }) {
+                Button(action: { showExitWarning = true }) {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))

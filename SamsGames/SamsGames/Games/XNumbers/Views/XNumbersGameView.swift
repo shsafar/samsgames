@@ -15,6 +15,7 @@ struct XNumbersGameView: View {
     @StateObject private var game: XNumbersGameModel
     @State private var showCompletionAlert = false
     @State private var showInstructions = false
+    @State private var showExitWarning = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -74,7 +75,7 @@ struct XNumbersGameView: View {
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .navigationBarLeading) {
-                                Button(action: { dismiss() }) {
+                                Button(action: { showExitWarning = true }) {
                                     HStack(spacing: 4) {
                                         Image(systemName: "chevron.left")
                                             .font(.system(size: 16, weight: .semibold))
@@ -106,6 +107,14 @@ struct XNumbersGameView: View {
             let seconds = game.timeElapsed % 60
             let timeString = String(format: "%d:%02d", minutes, seconds)
             return Text("Great job! You completed today's X-Numbers puzzle in \(timeString)!")
+        }
+        .alert("Exit Game?", isPresented: $showExitWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure? You may lose your progress if you exit.")
         }
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .xNumbers)

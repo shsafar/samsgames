@@ -11,6 +11,7 @@ struct TraceWizGameView: View {
     @State private var showInstructions = false
     @State private var showSplash = true
     @State private var isPulsing = false
+    @State private var showExitWarning = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -78,6 +79,14 @@ struct TraceWizGameView: View {
             } else {
                 Text("Game Over! Try again tomorrow for a new puzzle.")
             }
+        }
+        .alert("Exit Game?", isPresented: $showExitWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure? You may lose your progress if you exit.")
         }
     }
 
@@ -337,7 +346,7 @@ struct TraceWizGameView: View {
                                 .cornerRadius(8)
                             }
 
-                            Button(action: { dismiss() }) {
+                            Button(action: { showExitWarning = true }) {
                                 HStack(spacing: 4) {
                                     Image(systemName: "xmark")
                                         .font(.caption)

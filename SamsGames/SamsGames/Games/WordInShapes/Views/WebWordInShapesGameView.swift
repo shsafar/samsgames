@@ -18,6 +18,7 @@ struct WebWordInShapesGameView: View {
     @State private var gameTime: String = ""
     @State private var gameScore: Int = 0
     @State private var showInstructions = false
+    @State private var showExitWarning = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -52,7 +53,7 @@ struct WebWordInShapesGameView: View {
                 VStack(spacing: 0) {
                     // Top bar with back button and help button
                     HStack {
-                        Button(action: { dismiss() }) {
+                        Button(action: { showExitWarning = true }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "chevron.left")
                                     .font(.title3)
@@ -93,6 +94,14 @@ struct WebWordInShapesGameView: View {
         }
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .wordInShapes)
+        }
+        .alert("Exit Game?", isPresented: $showExitWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure? You may lose your progress if you exit.")
         }
         .onAppear {
             // Check if new day when view appears

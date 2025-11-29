@@ -177,14 +177,14 @@ struct TraceWizGameView: View {
                             gameState.difficulty = difficulty
                             gameState.generateNewPath()
                         }
-                        .onChange(of: geometry.size) { _ in
+                        .onChange(of: geometry.size) { oldValue, newValue in
                             gameState.canvasSize = CGSize(
-                                width: geometry.size.width - 16,
+                                width: newValue.width - 16,
                                 height: geometry.size.height - 200
                             )
                             gameState.generateNewPath()
                         }
-                        .onChange(of: gameState.gameCompleted) { completed in
+                        .onChange(of: gameState.gameCompleted) { oldValue, completed in
                             if completed && !archiveMode && gameState.gameWon {
                                 dailyPuzzleManager.markCompleted(.traceWiz)
                                 statisticsManager.recordCompletion(.traceWiz)

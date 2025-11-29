@@ -201,7 +201,7 @@ struct WebArrowRaceGameViewRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.preferences.javaScriptEnabled = true
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
 
         // Add message handler for game completion
         let contentController = WKUserContentController()

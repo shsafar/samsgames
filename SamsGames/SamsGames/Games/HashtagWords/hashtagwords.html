@@ -1786,8 +1786,14 @@
       if (timeLeft <= 0) {
         clearInterval(timer);
         if (!solved) {
+          solved = true; // Disable further input
           statusEl.textContent = "⏰ Time's up!";
           statusEl.className = "fail";
+          // Disable hint buttons
+          infoTop.classList.add("disabled");
+          infoBottom.classList.add("disabled");
+          infoLeft.classList.add("disabled");
+          infoRight.classList.add("disabled");
         }
       }
     }, 1000);

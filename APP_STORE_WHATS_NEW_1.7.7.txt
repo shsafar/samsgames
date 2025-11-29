@@ -1,0 +1,21 @@
+🔧 Bug Fix Update!
+
+We've fixed an important issue in Hashtag Words to improve your puzzle experience!
+
+✨ What's Fixed:
+
+• Hashtag Words Timer Fix
+  - Game now properly ends when timer reaches zero
+  - Input disabled after timeout
+  - Hint buttons disabled when time runs out
+  - No more playing after time's up!
+
+🎮 Improved Gameplay:
+The timer now works correctly - when time runs out, the puzzle is over. This ensures fair play and consistent scoring across all difficulty levels.
+
+📱 Also Included:
+- Fixed iOS 17 deprecation warnings
+- Improved code compatibility
+- Enhanced stability
+
+Bug fixes and performance improvements.

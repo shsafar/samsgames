@@ -62,7 +62,12 @@ struct WaterTableInstructionsView: View {
 
                     InstructionItem(
                         icon: "exclamationmark.triangle",
-                        text: "Watch Out for Decoys! About 30% of the pieces floating in the water are decoys that don't belong to any pin. Placing a decoy piece costs you 5 points and shows 'DICORY' as a warning."
+                        text: "Watch Out for Decoys! About 15% of the pieces floating in the water are decoys that don't belong to any pin. Placing a decoy piece costs you 5 points and shows 'DICORY' as a warning."
+                    )
+
+                    InstructionItem(
+                        icon: "paintpalette",
+                        text: "Color-Coded Fragments:\n• Brown: Untried pieces - could be real or decoy\n• Yellow: Decoy pieces you've tried - avoid these!\n• Pink: Real pieces tried on wrong pins - can still be used on the correct pin!"
                     )
 
                     InstructionItem(

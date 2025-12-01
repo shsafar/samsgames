@@ -833,57 +833,26 @@ function makeRandomSegments(totalLength){
   segs.push(remaining);
   return segs;
 }
-/* Flash pin outlines 5 times before breaking */
-function flashPinOutlines(callback){
-  let flashes=0;
-  const flashInterval=setInterval(()=>{
-    if(flashes<10){ // 10 half-flashes = 5 complete flashes
-      // Toggle visibility of all pin outlines
-      for(let i=0;i<pinCount;i++){
-        const outline=document.getElementById("pinOutline-"+i);
-        if(outline){
-          outline.style.opacity=flashes%2===0?"1":"0.3";
-          outline.style.strokeWidth=flashes%2===0?"3":"1";
-        }
-      }
-      flashes++;
-    }else{
-      // Reset all outlines to normal
-      for(let i=0;i<pinCount;i++){
-        const outline=document.getElementById("pinOutline-"+i);
-        if(outline){
-          outline.style.opacity="1";
-          outline.style.strokeWidth="1";
-        }
-      }
-      clearInterval(flashInterval);
-      if(callback) callback();
-    }
-  },400); // Flash every 400ms (slower for visibility)
-}
-
 function breakPins(){
   if(gameOver) return;
 
   // Initialize audio context on first user interaction
   ensureAudioCtx();
 
-  // Flash pin outlines 5 times before breaking
-  flashPinOutlines(()=>{
-    clearFragments();
-    clearReveal();
-    document.getElementById("popupOverlay").style.display="none";
+  clearFragments();
+  clearReveal();
+  document.getElementById("popupOverlay").style.display="none";
 
-    lengths=new Array(pinCount).fill(0);
-    pinSolved=new Array(pinCount).fill(false);
-    comboStreak=0;
-    updateScoreAndCombo();
-    for(let i=0;i<pinCount;i++) updatePin(i);
+  lengths=new Array(pinCount).fill(0);
+  pinSolved=new Array(pinCount).fill(false);
+  comboStreak=0;
+  updateScoreAndCombo();
+  for(let i=0;i<pinCount;i++) updatePin(i);
 
-    resetTimer();
-    startTimer();
-    document.getElementById("status").textContent=
-      "Pins shattered! Drag the pieces out of the water onto the correct pins.";
+  resetTimer();
+  startTimer();
+  document.getElementById("status").textContent=
+    "Pins shattered! Drag the pieces out of the water onto the correct pins.";
 
   let nextId=0;
   for(let i=0;i<pinCount;i++){
@@ -984,7 +953,6 @@ function breakPins(){
   }
 
   document.getElementById("piecesLeft").textContent="Pieces: "+fragments.length;
-  }); // End of flashRevealButton callback
 }
 
 /* drag helpers */
@@ -1242,26 +1210,10 @@ function newGame(){
     pinRect.setAttribute("fill",currentPinFillId());
     pinsLayer.appendChild(pinRect);
 
-    // Create target outline (dashed blue rectangle)
-    const outline=document.createElementNS("http://www.w3.org/2000/svg","rect");
-    outline.setAttribute("id","pinOutline-"+i);
-    outline.setAttribute("x",pinX[i]-PIN_WIDTH/2-2);
-    outline.setAttribute("y",TOP_Y-1);
-    outline.setAttribute("width",PIN_WIDTH+4);
-    outline.setAttribute("height",target+2);
-    outline.setAttribute("fill","none");
-    outline.setAttribute("stroke","#4aa9ff");
-    outline.setAttribute("stroke-width","1.4");
-    outline.setAttribute("stroke-dasharray","4,3");
-    outline.setAttribute("opacity","0.9");
-    outline.setAttribute("pointer-events","none");
-    pinsLayer.appendChild(outline);
-
     const angle=randomInt(-4,4);
     pinTilt.push(angle);
     const cx=pinX[i],cy=TOP_Y;
     pinRect.setAttribute("transform",`rotate(${angle} ${cx} ${cy})`);
-    outline.setAttribute("transform",`rotate(${angle} ${cx} ${cy})`);
 
     const lbl=document.createElementNS("http://www.w3.org/2000/svg","text");
     lbl.setAttribute("id","lenLabel-"+i);

@@ -199,12 +199,16 @@ struct WebWaterTableGameView: View {
     }
 
     private func handleGameCompletion() {
-        // Only mark as completed if not in archive mode
-        if !archiveMode {
-            // Mark as completed in daily puzzle manager
+        if archiveMode {
+            // Record completion for the specific archive date
+            if let date = archiveDate {
+                statisticsManager.recordCompletion(.waterTable, date: date)
+            }
+        } else {
+            // Mark as completed in daily puzzle manager (today's puzzle)
             dailyPuzzleManager.markCompleted(.waterTable)
 
-            // Record completion in statistics
+            // Record completion in statistics for today
             statisticsManager.recordCompletion(.waterTable)
         }
 

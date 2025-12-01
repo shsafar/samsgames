@@ -1242,10 +1242,26 @@ function newGame(){
     pinRect.setAttribute("fill",currentPinFillId());
     pinsLayer.appendChild(pinRect);
 
+    // Create target outline (dashed blue rectangle)
+    const outline=document.createElementNS("http://www.w3.org/2000/svg","rect");
+    outline.setAttribute("id","pinOutline-"+i);
+    outline.setAttribute("x",pinX[i]-PIN_WIDTH/2-2);
+    outline.setAttribute("y",TOP_Y-1);
+    outline.setAttribute("width",PIN_WIDTH+4);
+    outline.setAttribute("height",target+2);
+    outline.setAttribute("fill","none");
+    outline.setAttribute("stroke","#4aa9ff");
+    outline.setAttribute("stroke-width","1.4");
+    outline.setAttribute("stroke-dasharray","4,3");
+    outline.setAttribute("opacity","0.9");
+    outline.setAttribute("pointer-events","none");
+    pinsLayer.appendChild(outline);
+
     const angle=randomInt(-4,4);
     pinTilt.push(angle);
     const cx=pinX[i],cy=TOP_Y;
     pinRect.setAttribute("transform",`rotate(${angle} ${cx} ${cy})`);
+    outline.setAttribute("transform",`rotate(${angle} ${cx} ${cy})`);
 
     const lbl=document.createElementNS("http://www.w3.org/2000/svg","text");
     lbl.setAttribute("id","lenLabel-"+i);

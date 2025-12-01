@@ -731,14 +731,18 @@ function updatePin(i){
   updateLabels();
 }
 
-/* Animate water flowing upward through the pin when solved */
+/* Animate water flowing upward through the pin when solved - continuous loop */
+const activeWaterFlows={}; // Track active animations by pin index
+
 function animateWaterFlow(pinIndex){
-  const pinRect=document.getElementById("pin-"+pinIndex);
+  // Don't start a new animation if one is already running
+  if(activeWaterFlows[pinIndex]) return;
+
   const x=pinX[pinIndex]-PIN_WIDTH/2;
   const waterStartY=290; // Start from water level
   const waterEndY=TOP_Y; // End at top of pin
 
-  // Create a temporary water flow element
+  // Create a permanent water flow element
   const flow=document.createElementNS("http://www.w3.org/2000/svg","rect");
   flow.setAttribute("id","waterFlow-"+pinIndex);
   flow.setAttribute("x",x);
@@ -747,37 +751,52 @@ function animateWaterFlow(pinIndex){
   flow.setAttribute("height",0);
   flow.setAttribute("rx",PIN_WIDTH/2);
   flow.setAttribute("ry",PIN_WIDTH/2);
-  flow.setAttribute("fill","rgba(100,180,255,0.7)");
+  flow.setAttribute("fill","rgba(100,180,255,0.5)");
   flow.setAttribute("pointer-events","none");
   boardSvg.appendChild(flow);
 
-  // Animate the flow upward
-  const duration=600; // 600ms animation
-  const startTime=Date.now();
+  activeWaterFlows[pinIndex]=true;
+
+  // Continuous animation loop
+  const duration=1000; // 1 second per cycle
+  let startTime=Date.now();
 
   function animate(){
-    const elapsed=Date.now()-startTime;
-    const progress=Math.min(elapsed/duration,1);
+    // Stop if pin is no longer solved
+    if(!pinSolved[pinIndex]){
+      flow.remove();
+      delete activeWaterFlows[pinIndex];
+      return;
+    }
 
-    // Ease-out animation
-    const eased=1-Math.pow(1-progress,3);
+    const elapsed=(Date.now()-startTime)%duration;
+    const progress=elapsed/duration;
+
+    // Ease-in-out animation
+    const eased=progress<0.5?2*progress*progress:1-Math.pow(-2*progress+2,2)/2;
 
     const currentY=waterStartY-(waterStartY-waterEndY)*eased;
     const currentHeight=(waterStartY-waterEndY)*eased;
 
+    // Pulsing opacity
+    const opacity=0.3+0.3*Math.sin(progress*Math.PI*2);
+
     flow.setAttribute("y",currentY);
     flow.setAttribute("height",currentHeight);
-    flow.setAttribute("fill",`rgba(100,180,255,${0.7*(1-progress)})`); // Fade out
+    flow.setAttribute("fill",`rgba(100,180,255,${opacity})`);
 
-    if(progress<1){
-      requestAnimationFrame(animate);
-    }else{
-      // Remove the flow element when done
-      flow.remove();
-    }
+    requestAnimationFrame(animate);
   }
 
   requestAnimationFrame(animate);
+}
+
+function stopWaterFlow(pinIndex){
+  const flow=document.getElementById("waterFlow-"+pinIndex);
+  if(flow){
+    flow.remove();
+    delete activeWaterFlows[pinIndex];
+  }
 }
 function updateLabels(){
   for(let i=0;i<pinCount;i++){
@@ -819,7 +838,7 @@ function flashRevealButton(callback){
   const btn=document.getElementById("revealBtn");
   let flashes=0;
   const flashInterval=setInterval(()=>{
-    if(flashes<5){
+    if(flashes<10){ // 10 half-flashes = 5 complete flashes
       btn.style.outline=flashes%2===0?"3px solid #7b5fd6":"none";
       flashes++;
     }else{
@@ -827,7 +846,7 @@ function flashRevealButton(callback){
       clearInterval(flashInterval);
       if(callback) callback();
     }
-  },200); // Flash every 200ms
+  },400); // Flash every 400ms (slower for visibility)
 }
 
 function breakPins(){

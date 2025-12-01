@@ -833,16 +833,29 @@ function makeRandomSegments(totalLength){
   segs.push(remaining);
   return segs;
 }
-/* Flash reveal button 5 times before breaking */
-function flashRevealButton(callback){
-  const btn=document.getElementById("revealBtn");
+/* Flash pin outlines 5 times before breaking */
+function flashPinOutlines(callback){
   let flashes=0;
   const flashInterval=setInterval(()=>{
     if(flashes<10){ // 10 half-flashes = 5 complete flashes
-      btn.style.outline=flashes%2===0?"3px solid #7b5fd6":"none";
+      // Toggle visibility of all pin outlines
+      for(let i=0;i<pinCount;i++){
+        const outline=document.getElementById("pinOutline-"+i);
+        if(outline){
+          outline.style.opacity=flashes%2===0?"1":"0.3";
+          outline.style.strokeWidth=flashes%2===0?"3":"1";
+        }
+      }
       flashes++;
     }else{
-      btn.style.outline="none";
+      // Reset all outlines to normal
+      for(let i=0;i<pinCount;i++){
+        const outline=document.getElementById("pinOutline-"+i);
+        if(outline){
+          outline.style.opacity="1";
+          outline.style.strokeWidth="1";
+        }
+      }
       clearInterval(flashInterval);
       if(callback) callback();
     }
@@ -855,8 +868,8 @@ function breakPins(){
   // Initialize audio context on first user interaction
   ensureAudioCtx();
 
-  // Flash reveal button 5 times before breaking
-  flashRevealButton(()=>{
+  // Flash pin outlines 5 times before breaking
+  flashPinOutlines(()=>{
     clearFragments();
     clearReveal();
     document.getElementById("popupOverlay").style.display="none";

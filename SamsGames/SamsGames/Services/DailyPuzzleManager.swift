@@ -18,6 +18,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case traceWiz = "TraceWiz"
     case arrowRace = "Arrow Race"
     case diskBreak = "DiskBreak"
+    case waterTable = "WaterTable"
 
     var id: String { self.rawValue }
 
@@ -33,6 +34,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .traceWiz: return "tracewizicon"
         case .arrowRace: return "arrowraceicon"
         case .diskBreak: return "diskbreakicon"
+        case .waterTable: return "watertableicon"
         }
     }
 
@@ -48,6 +50,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .traceWiz: return "scribble.variable"
         case .arrowRace: return "arrow.triangle.2.circlepath"
         case .diskBreak: return "circle.grid.cross"
+        case .waterTable: return "drop.fill"
         }
     }
 
@@ -62,6 +65,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .traceWiz: return "Trace the line without crossing"
         case .arrowRace: return "Race to the finish against Sam"
         case .diskBreak: return "Rebuild broken disks from fragments"
+        case .waterTable: return "Rebuild pins to match water depth"
         }
     }
 }
@@ -260,6 +264,30 @@ class DailyPuzzleManager: ObservableObject {
     /// Get today's DiskBreak level
     func getTodayDiskBreakLevel() -> Int {
         return getDiskBreakLevelForDate(currentDate)
+    }
+
+    /// Get WaterTable level for date (0, 1, 2 - mapped to levels 1, 2, 3)
+    /// Monday/Wed/Fri: L1 (Easy - 3 pins, no timer)
+    /// Tue/Thu: L2 (Medium - 5 pins, 90s timer)
+    /// Sat/Sun: L3 (Hard - 7 pins, 120s timer)
+    func getWaterTableLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 1: return 2  // Sunday: L3 (7 pins)
+        case 2: return 0  // Monday: L1 (3 pins)
+        case 3: return 1  // Tuesday: L2 (5 pins)
+        case 4: return 0  // Wednesday: L1 (3 pins)
+        case 5: return 1  // Thursday: L2 (5 pins)
+        case 6: return 0  // Friday: L1 (3 pins)
+        case 7: return 2  // Saturday: L3 (7 pins)
+        default: return 0
+        }
+    }
+
+    /// Get today's WaterTable level
+    func getTodayWaterTableLevel() -> Int {
+        return getWaterTableLevelForDate(currentDate)
     }
 
     /// Get difficulty name for level

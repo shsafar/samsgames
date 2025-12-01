@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>WaterTable Depth Puzzle</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background:#f2f2f7;
+    display:flex;
+    justify-content:center;
+    padding:10px;
+  }
+  .game-wrapper{
+    background:#fff;
+    border-radius:14px;
+    padding:12px;
+    box-shadow:0 4px 14px rgba(0,0,0,.15);
+    max-width:420px;
+    width:100%;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  h1{
+    font-size:20px;
+    margin:0 0 4px;
+  }
+  #description{
+    font-size:11px;
+    margin-bottom:4px;
+    line-height:1.25;
+  }
+
+  .mode-row{
+    font-size:11px;
+    margin-bottom:4px;
+  }
+  .mode-row button,
+  .level-row button{
+    padding:3px 6px;
+    margin:0 2px 3px;
+    font-size:11px;
+    border-radius:8px;
+    border:1px solid #555;
+    background:#eee;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .level-row{
+    font-size:11px;
+    margin-bottom:4px;
+  }
+  .mode-row button.active,
+  .level-row button.active{
+    background:#ffd862;
+    border-color:#c29200;
+    font-weight:600;
+  }
+
+  .badge{
+    display:inline-block;
+    font-size:9px;
+    padding:1px 5px;
+    margin-left:4px;
+    border-radius:6px;
+    background:#e5f5ff;
+    color:#00508e;
+  }
+
+  .board{
+    display:block;
+    margin:0 auto 4px;
+    border-radius:12px;
+    background:#e9f3ff;
+    width:100%;
+    height:auto;
+  }
+
+  .buttons-row{
+    margin-top:2px;
+    display:flex;
+    justify-content:center;
+    flex-wrap:nowrap;
+  }
+  .buttons-row button{
+    padding:3px 6px;
+    margin:0 2px;
+    font-size:11px;
+    border-radius:8px;
+    border:1px solid #333;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  #newGameBtn{background:#ffda7c;}
+  #breakBtn{background:#ff9e9e;}
+  #revealBtn{background:#e6d7ff;border-color:#7b5fd6;}
+  #showTargetsBtn{background:#f8e3c4;border-color:#b18b45;}
+  #soundBtn{background:#d4f0ff;border-color:#4a7fa8;}
+
+  #infoRow{
+    margin-top:4px;
+    font-size:11px;
+    font-weight:500;
+    white-space:nowrap;
+  }
+  #infoRow span{margin:0 4px;}
+
+  #status{
+    margin-top:2px;
+    min-height:18px;
+    font-size:11px;
+  }
+
+  #popupOverlay{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+  }
+  #popupBox{
+    background:#fff;
+    border-radius:14px;
+    padding:16px 14px;
+    max-width:260px;
+    width:85%;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);
+  }
+  #popupBox h2{
+    margin:0 0 6px;
+    font-size:18px;
+  }
+  #popupBox p{
+    margin:4px 0 10px;
+    font-size:13px;
+    white-space:pre-line;
+  }
+  #popupBox button{
+    width:100%;
+    background:#ff9e9e;
+    border:1px solid #b73b3b;
+    border-radius:10px;
+    padding:6px 10px;
+    font-size:14px;
+    cursor:pointer;
+  }
+
+  /* DICORY flash overlay — now below the water line */
+  #dicoryFlash{
+    position:absolute;
+    top:260px;         /* moved down into the water area */
+    left:50%;
+    transform:translate(-50%, -10px) scale(0.9);
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:1px;
+    color:#ff9a2b;
+    text-shadow:0 0 4px rgba(255,255,255,0.9),
+                0 2px 2px rgba(0,0,0,0.25);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.12s ease-out, transform 0.12s ease-out;
+    z-index:15;
+  }
+
+  /* Wrong Pin flash overlay — above the pins */
+  #wrongPinFlash{
+    position:absolute;
+    top:100px;         /* above the pins area */
+    left:50%;
+    transform:translate(-50%, -10px) scale(0.9);
+    font-size:24px;
+    font-weight:800;
+    letter-spacing:1px;
+    color:#ff3b3b;
+    text-shadow:0 0 4px rgba(255,255,255,0.9),
+                0 2px 2px rgba(0,0,0,0.25);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.12s ease-out, transform 0.12s ease-out;
+    z-index:15;
+  }
+
+  /* ===== DAILY MODE (hide controls for iOS integration) ===== */
+  body.daily-mode .mode-row,
+  body.daily-mode .level-row {
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="game-wrapper">
+  <h1>WaterTable Depth Puzzle</h1>
+
+  <!-- DICORY overlay -->
+  <div id="dicoryFlash">DICORY</div>
+
+  <!-- Wrong Pin overlay -->
+  <div id="wrongPinFlash">Wrong Pin</div>
+
+  <!-- Modes row -->
+  <div class="mode-row">
+    Mode:
+    <button id="modeNormalBtn" onclick="setMode('normal')">Normal</button>
+    <button id="modeHardBtn" onclick="setMode('hard')">Hard</button>
+    <button id="modeDailyBtn" onclick="setMode('daily')">Daily</button>
+    <span id="unlockBadge" class="badge" style="display:none;"></span>
+  </div>
+
+  <!-- Level row -->
+  <div class="level-row">
+    Level:
+    <button id="btnL1" onclick="setLevel(0)">1 (3 pins)</button>
+    <button id="btnL2" onclick="setLevel(1)">2 (5 pins)</button>
+    <button id="btnL3" onclick="setLevel(2)">3 (7 pins)</button>
+  </div>
+
+  <div id="description">
+    <span style="font-size:10px;">1. Tap <b>Break</b> to shatter pins. Drag pieces from water onto pins.</span><br>
+    <span style="font-size:10px;">2. Match the <b>hidden water depth</b>. Pins turn <b style="color:green;">green</b> and spray when correct.</span><br>
+    <span style="font-size:9px;color:#444;">+10 per correct piece, combo bonus, –5 per Reveal / decoy / Show Targets.</span>
+  </div>
+
+  <!-- Main SVG board -->
+  <svg id="board" class="board" width="360" height="420" viewBox="0 0 360 420">
+    <defs>
+      <!-- pin skins -->
+      <linearGradient id="pinGradientNormal" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffb78a"/>
+        <stop offset="40%" stop-color="#ff965a"/>
+        <stop offset="100%" stop-color="#e3642b"/>
+      </linearGradient>
+      <linearGradient id="pinGradientSteel" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f2f5f8"/>
+        <stop offset="50%" stop-color="#c6d0dd"/>
+        <stop offset="100%" stop-color="#98a4b3"/>
+      </linearGradient>
+      <linearGradient id="pinGradientNeon" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffe57f"/>
+        <stop offset="50%" stop-color="#ffc800"/>
+        <stop offset="100%" stop-color="#ff9300"/>
+      </linearGradient>
+
+      <!-- fragment gradient -->
+      <linearGradient id="fragGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#ffe9b5"/>
+        <stop offset="45%" stop-color="#ffd27f"/>
+        <stop offset="100%" stop-color="#f4a842"/>
+      </linearGradient>
+
+      <filter id="fragShadow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="2" stdDeviation="1.2"
+                      flood-color="rgba(0,0,0,0.35)"/>
+      </filter>
+
+      <!-- water floor gradient -->
+      <linearGradient id="waterFloorGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#c7dcf5"/>
+        <stop offset="50%" stop-color="#a8c3e7"/>
+        <stop offset="100%" stop-color="#8eaed9"/>
+      </linearGradient>
+    </defs>
+
+    <rect x="0" y="0" width="360" height="420" rx="12" ry="12" fill="#e9f3ff"/>
+
+    <polygon id="floorPolygon" fill="url(#waterFloorGradient)" stroke="#607090" stroke-width="4"></polygon>
+
+    <!-- Top bar -->
+    <rect x="40" y="20" width="280" height="5" rx="2.5" ry="2.5" fill="#444"/>
+
+    <g id="anchorsLayer"></g>
+    <g id="pinsLayer"></g>
+    <g id="revealLayer"></g>
+    <g id="fountainsLayer"></g>
+    <g id="labelsLayer"></g>
+  </svg>
+
+  <div class="buttons-row">
+    <button id="newGameBtn" onclick="newGame()">New</button>
+    <button id="breakBtn" onclick="breakPins()">Break</button>
+    <button id="revealBtn" onclick="revealSolution()">Reveal (–5)</button>
+    <button id="showTargetsBtn" onclick="showTargets()">Targets (–15)</button>
+    <button id="soundBtn" onclick="toggleSound()">Sound</button>
+  </div>
+
+  <div id="infoRow">
+    <span id="timer">Time: 0.0s</span> |
+    <span id="piecesLeft">Pieces: 0</span><br>
+    <span id="score">Score: 0</span> |
+    <span id="combo">Combo: x0</span>
+  </div>
+
+  <div id="status"></div>
+
+  <div id="popupOverlay">
+    <div id="popupBox">
+      <h2 id="popupTitle">Congratulations!</h2>
+      <p id="popupText">You solved the puzzle.</p>
+      <button onclick="popupNewGame()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOP_Y = 30;
+const PIN_WIDTH = 22;
+const TOL = 5;
+const MIN_SEG_TRUE = 36; // Increased from 30 (another 20% larger for easier dragging)
+
+const levelConfigs = [
+  { id: 1, pins: 3,  timeLimit: 0   },
+  { id: 2, pins: 5,  timeLimit: 90  },
+  { id: 3, pins: 7,  timeLimit: 120 }
+];
+
+let currentLevelIndex = 0;
+let currentMode = "normal";
+let pinCount = levelConfigs[0].pins;
+let timeLimit = levelConfigs[0].timeLimit;
+
+let pinX = [];
+let pinTilt = [];
+let targetLengths = [];
+let lengths = [];
+let pinSolved = [];
+let fragments = [];
+let dragInfo = null;
+
+let timerId = null;
+let elapsedSeconds = 0;
+let timerRunning = false;
+let gameOver = false;
+
+let score = 0;
+let comboStreak = 0;
+
+let revealTimeoutId = null;
+let showTargetsTimeoutId = null;
+let showTargetsOn = false;
+
+let unlockHard = false;
+let unlockDaily = false;
+let skinMode = "normal";
+
+let floorPoints = [];
+let floorBasePoints = [];
+let tidePhase = 0;
+
+let audioCtx = null;
+let soundEnabled = true;
+
+const boardSvg = document.getElementById("board");
+
+// ===== SEEDED RANDOM NUMBER GENERATOR =====
+let rngSeed = Date.now();
+function setSeed(s){
+  rngSeed = s;
+  console.log("✅ WaterTable seed set:", s);
+}
+function seededRand(){
+  rngSeed = (rngSeed * 9301 + 49297) % 233280;
+  return rngSeed / 233280;
+}
+function rand(){return seededRand();}
+function randomInt(min,max){return Math.floor(rand()*(max-min+1))+min;}
+
+function updateUnlocksFromStorage(){
+  try {
+    unlockHard = localStorage.getItem("wt_unlockHard")==="1";
+    unlockDaily = localStorage.getItem("wt_unlockDaily")==="1";
+    const best = parseInt(localStorage.getItem("wt_bestScore")||"0",10);
+    if(best>400) skinMode="steel";
+    if(best>800) skinMode="neon";
+  }catch(e){}
+  const badge=document.getElementById("unlockBadge");
+  let txt="";
+  if(skinMode==="steel") txt="Steel pins unlocked";
+  if(skinMode==="neon") txt="Neon pins unlocked";
+  if(currentMode==="hard" && !unlockHard) txt="Beat L2 Normal to unlock Hard";
+  if(currentMode==="daily" && !unlockDaily) txt="Beat L3 Normal to unlock Daily";
+  if(txt){badge.style.display="inline-block";badge.textContent=txt;}
+  else badge.style.display="none";
+}
+
+/* mode / level */
+function setMode(mode){
+  if(mode==="hard" && !unlockHard){ currentMode="normal"; updateUnlocksFromStorage(); return;}
+  if(mode==="daily" && !unlockDaily){ currentMode="normal"; updateUnlocksFromStorage(); return;}
+  currentMode=mode;
+  document.getElementById("modeNormalBtn").classList.toggle("active",mode==="normal");
+  document.getElementById("modeHardBtn").classList.toggle("active",mode==="hard");
+  document.getElementById("modeDailyBtn").classList.toggle("active",mode==="daily");
+  updateUnlocksFromStorage();
+  newGame();
+}
+
+// ===== SWIFT CALLABLE: Set level for daily puzzle =====
+window.setLevel = function(idx){
+  currentLevelIndex=idx;
+  pinCount=levelConfigs[idx].pins;
+  timeLimit=levelConfigs[idx].timeLimit;
+  document.getElementById("btnL1").classList.toggle("active",idx===0);
+  document.getElementById("btnL2").classList.toggle("active",idx===1);
+  document.getElementById("btnL3").classList.toggle("active",idx===2);
+  console.log("✅ WaterTable level set:", idx);
+}
+
+// ===== SWIFT CALLABLE: Enable daily mode =====
+window.enableDailyMode = function(){
+  document.body.classList.add("daily-mode");
+  currentMode = "daily";
+  console.log("✅ WaterTable: Daily mode enabled");
+}
+
+/* sound */
+function ensureAudioCtx(){
+  if(!audioCtx){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(AC){
+      audioCtx=new AC();
+      // Resume audio context in case it's suspended (iOS requirement)
+      if(audioCtx.state==='suspended'){
+        audioCtx.resume();
+      }
+    }
+  }
+}
+function playTone(freq,dur,type="sine",gainVal=0.18){
+  if(!soundEnabled) return;
+  ensureAudioCtx();
+  if(!audioCtx) return;
+
+  // Resume if suspended (iOS/Safari requirement)
+  if(audioCtx.state==='suspended'){
+    audioCtx.resume();
+  }
+
+  try{
+    const osc=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    osc.type=type;
+    osc.frequency.value=freq;
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    const now=audioCtx.currentTime;
+    g.gain.setValueAtTime(gainVal,now);
+    g.gain.exponentialRampToValueAtTime(0.001,now+dur);
+    osc.start(now);
+    osc.stop(now+dur);
+  }catch(e){
+    console.log("Audio error:",e);
+  }
+}
+function sClick(){playTone(650,0.09);}
+function sCorrect(){playTone(900,0.13,"triangle",0.2);}
+function sCombo(){playTone(1050,0.18,"square",0.22);}
+function sError(){playTone(250,0.20,"sawtooth",0.18);}
+function sWin(){playTone(720,0.22);setTimeout(()=>playTone(980,0.22),150);}
+function sTimeUp(){playTone(180,0.40,"sine",0.25);}
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  document.getElementById("soundBtn").textContent=soundEnabled?"Sound":"Muted";
+
+  // Initialize audio context when enabling sound
+  if(soundEnabled){
+    ensureAudioCtx();
+  }
+}
+
+/* DICORY flash */
+function flashDicory(){
+  const el=document.getElementById("dicoryFlash");
+  el.style.transition="none";
+  el.style.opacity="0";
+  el.style.transform="translate(-50%, -10px) scale(0.9)";
+  void el.offsetWidth;
+  el.style.transition="opacity 0.12s ease-out, transform 0.12s ease-out";
+  el.style.opacity="1";
+  el.style.transform="translate(-50%, -10px) scale(1.1)";
+  setTimeout(()=>{el.style.opacity="0";},420);
+}
+
+/* Wrong Pin flash */
+function flashWrongPin(){
+  const el=document.getElementById("wrongPinFlash");
+  el.style.transition="none";
+  el.style.opacity="0";
+  el.style.transform="translate(-50%, -10px) scale(0.9)";
+  void el.offsetWidth;
+  el.style.transition="opacity 0.12s ease-out, transform 0.12s ease-out";
+  el.style.opacity="1";
+  el.style.transform="translate(-50%, -10px) scale(1.1)";
+  setTimeout(()=>{el.style.opacity="0";},420);
+}
+
+/* floor */
+function randomFloor(){
+  const pts=[];
+  const segments=6;
+  const minY=180,maxY=300;
+  let currentY=randomInt(minY,maxY);
+  for(let i=0;i<=segments;i++){
+    const x=(360/segments)*i;
+    if(i===0||i===segments) currentY=randomInt(220,270);
+    else{
+      const delta=randomInt(-60,60);
+      currentY=Math.max(minY,Math.min(maxY,currentY+delta));
+    }
+    pts.push({x,y:currentY});
+  }
+  return pts;
+}
+function updateFloorPolygon(){
+  const floorPolygon=document.getElementById("floorPolygon");
+  let pointsStr="0,420 ";
+  const amp=8; // Increased from 3 to 8 for more visible waves
+  tidePhase+=0.04; // Increased from 0.015 to 0.04 for faster animation
+  floorPoints=floorBasePoints.map((p,idx)=>{
+    const y=p.y+Math.sin(tidePhase+idx*0.7)*amp;
+    return {x:p.x,y};
+  });
+  floorPoints.forEach(p=>{pointsStr+=`${p.x},${p.y} `;});
+  pointsStr+="360,420";
+  floorPolygon.setAttribute("points",pointsStr);
+  for(let i=0;i<pinCount;i++){
+    const lbl=document.getElementById("lenLabel-"+i);
+    if(lbl){
+      const floorY=interpolateFloorY(pinX[i],floorPoints);
+      lbl.setAttribute("y",floorY+16);
+    }
+  }
+}
+function interpolateFloorY(x,pts){
+  for(let k=0;k<pts.length-1;k++){
+    const p1=pts[k],p2=pts[k+1];
+    if(x>=p1.x && x<=p2.x){
+      const t=(x-p1.x)/(p2.x-p1.x);
+      return p1.y+t*(p2.y-p1.y);
+    }
+  }
+  if(x<pts[0].x) return pts[0].y;
+  return pts[pts.length-1].y;
+}
+
+/* timer */
+function resetTimer(){
+  stopTimer();
+  elapsedSeconds=0;
+  document.getElementById("timer").textContent="Time: 0.0s";
+}
+function startTimer(){
+  if(timerRunning) return;
+  timerRunning=true;
+  timerId=setInterval(()=>{
+    elapsedSeconds+=0.1;
+    let label="Time: "+elapsedSeconds.toFixed(1)+"s";
+    if(timeLimit>0){
+      const remaining=Math.max(0,timeLimit-elapsedSeconds);
+      label+=` / ${timeLimit}s (left: ${remaining.toFixed(1)}s)`;
+      if(remaining<=0 && !gameOver){
+        gameOver=true;
+        stopTimer();
+        sTimeUp();
+        document.getElementById("status").textContent="⏰ Time's up!";
+        document.getElementById("popupTitle").textContent="Time's up!";
+        document.getElementById("popupText").textContent=
+          `You ran out of time on Level ${levelConfigs[currentLevelIndex].id} (${currentMode}).\nScore: ${score}`;
+        document.getElementById("popupOverlay").style.display="flex";
+
+        // ===== NOTIFY SWIFT OF TIMEOUT =====
+        if(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete){
+          window.webkit.messageHandlers.gameComplete.postMessage({won: false, score: score});
+          console.log("✅ WaterTable: Notified Swift of timeout");
+        }
+      }
+    }
+    document.getElementById("timer").textContent=label;
+  },100);
+}
+function stopTimer(){
+  if(timerId!==null) clearInterval(timerId);
+  timerId=null;
+  timerRunning=false;
+}
+
+/* reveal / targets */
+function clearReveal(){
+  document.getElementById("revealLayer").innerHTML="";
+  if(revealTimeoutId!==null){clearTimeout(revealTimeoutId);revealTimeoutId=null;}
+}
+function revealSolution(){
+  if(gameOver||fragments.length===0) return;
+  score=Math.max(0,score-5);
+  updateScoreAndCombo();
+  clearReveal();
+  const layer=document.getElementById("revealLayer");
+  for(let i=0;i<pinCount;i++){
+    const segs=fragments.filter(f=>f.pinOriginal===i && !f.decoy)
+      .sort((a,b)=>a.id-b.id);
+    let yStart=TOP_Y;
+    segs.forEach(f=>{
+      const r=document.createElementNS("http://www.w3.org/2000/svg","rect");
+      r.setAttribute("x",pinX[i]-PIN_WIDTH/2-2);
+      r.setAttribute("y",yStart-1);
+      r.setAttribute("width",PIN_WIDTH+4);
+      r.setAttribute("height",f.lengthPx+2);
+      r.setAttribute("fill","none");
+      r.setAttribute("stroke","#4aa9ff");
+      r.setAttribute("stroke-width","1.4");
+      r.setAttribute("stroke-dasharray","4,3");
+      r.setAttribute("opacity","0.9");
+      layer.appendChild(r);
+      yStart+=f.lengthPx;
+    });
+  }
+  revealTimeoutId=setTimeout(clearReveal,5000);
+}
+function showTargets(){
+  if(gameOver || currentMode!=="hard") return;
+  score=Math.max(0,score-15);
+  updateScoreAndCombo();
+  showTargetsOn=true;
+  updateLabels();
+  if(showTargetsTimeoutId!==null) clearTimeout(showTargetsTimeoutId);
+  showTargetsTimeoutId=setTimeout(()=>{
+    showTargetsOn=false;
+    updateLabels();
+  },5000);
+}
+
+/* score / combo */
+function updateScoreAndCombo(){
+  document.getElementById("score").textContent="Score: "+score;
+  document.getElementById("combo").textContent="Combo: x"+comboStreak;
+}
+
+/* fountain */
+function showFountain(i,on){
+  const layer=document.getElementById("fountainsLayer");
+  let g=document.getElementById("fountain-"+i);
+  if(on){
+    if(!g){
+      g=document.createElementNS("http://www.w3.org/2000/svg","g");
+      g.setAttribute("id","fountain-"+i);
+      const baseX=pinX[i];
+      const baseY=TOP_Y;
+      for(let k=0;k<3;k++){
+        const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+        c.setAttribute("cx",baseX);
+        c.setAttribute("cy",baseY-3);
+        c.setAttribute("r",3);
+        c.setAttribute("fill","#8dd9ff");
+
+        const animT=document.createElementNS("http://www.w3.org/2000/svg","animateTransform");
+        animT.setAttribute("attributeName","transform");
+        animT.setAttribute("type","translate");
+        animT.setAttribute("values","0 0; 0 -25; 0 0");
+        animT.setAttribute("dur","0.8s");
+        animT.setAttribute("repeatCount","indefinite");
+        animT.setAttribute("begin",(k*0.18)+"s");
+
+        const animO=document.createElementNS("http://www.w3.org/2000/svg","animate");
+        animO.setAttribute("attributeName","opacity");
+        animO.setAttribute("values","0;1;0");
+        animO.setAttribute("dur","0.8s");
+        animO.setAttribute("repeatCount","indefinite");
+        animO.setAttribute("begin",(k*0.18)+"s");
+
+        c.appendChild(animT);
+        c.appendChild(animO);
+        g.appendChild(c);
+      }
+      layer.appendChild(g);
+    }
+    g.style.display="block";
+  }else if(g){
+    g.style.display="none";
+  }
+}
+
+/* pins */
+function currentPinFillId(){
+  if(skinMode==="steel") return "url(#pinGradientSteel)";
+  if(skinMode==="neon") return "url(#pinGradientNeon)";
+  return "url(#pinGradientNormal)";
+}
+function updatePin(i){
+  const pinRect=document.getElementById("pin-"+i);
+  let len=lengths[i];
+  const target=targetLengths[i];
+  const diff=len-target;
+  let fill;
+  let isGreen=false;
+
+  if(Math.abs(diff)<=TOL){
+    len=target;
+    lengths[i]=target;
+    fill="#00aa00";
+    isGreen=true;
+  }else if(len<target-TOL) fill="#cc3b2b";
+  else fill="#ff8800";
+
+  pinRect.setAttribute("width",PIN_WIDTH);
+  pinRect.setAttribute("height",len);
+
+  const x=pinX[i]-PIN_WIDTH/2;
+  pinRect.setAttribute("x",x);
+  pinRect.setAttribute("y",TOP_Y);
+  pinRect.setAttribute("fill",fill);
+
+  const angle=pinTilt[i];
+  const cx=pinX[i],cy=TOP_Y;
+  pinRect.setAttribute("transform",`rotate(${angle} ${cx} ${cy})`);
+
+  if(isGreen){
+    if(!pinSolved[i]){
+      pinSolved[i]=true;
+      sCorrect();
+    }
+    showFountain(i,true);
+  }else{
+    pinSolved[i]=false;
+    showFountain(i,false);
+  }
+  updateLabels();
+}
+function updateLabels(){
+  for(let i=0;i<pinCount;i++){
+    const lbl=document.getElementById("lenLabel-"+i);
+    if(!lbl) continue;
+    const len=lengths[i],target=targetLengths[i];
+    if(currentMode==="hard" && !showTargetsOn) lbl.textContent=`${len}/?`;
+    else lbl.textContent=`${len}/${target}`;
+  }
+}
+
+/* fragments / drag */
+function clearFragments(){
+  fragments=[];
+  Array.from(boardSvg.querySelectorAll(".fragment")).forEach(el=>el.remove());
+  document.getElementById("piecesLeft").textContent="Pieces: 0";
+}
+function makeRandomSegments(totalLength){
+  let count=randomInt(2,5);
+  if(count*MIN_SEG_TRUE>totalLength){
+    count=Math.max(2,Math.floor(totalLength/MIN_SEG_TRUE));
+  }
+  if(count<2) count=2;
+  const segs=[];
+  let remaining=totalLength;
+  let remainingPieces=count;
+  for(let i=0;i<count-1;i++){
+    remainingPieces--;
+    const maxForThis=remaining-MIN_SEG_TRUE*remainingPieces;
+    const seg=randomInt(MIN_SEG_TRUE,Math.max(MIN_SEG_TRUE,maxForThis));
+    segs.push(seg);
+    remaining-=seg;
+  }
+  segs.push(remaining);
+  return segs;
+}
+function breakPins(){
+  if(gameOver) return;
+
+  // Initialize audio context on first user interaction
+  ensureAudioCtx();
+
+  clearFragments();
+  clearReveal();
+  document.getElementById("popupOverlay").style.display="none";
+
+  lengths=new Array(pinCount).fill(0);
+  pinSolved=new Array(pinCount).fill(false);
+  comboStreak=0;
+  updateScoreAndCombo();
+  for(let i=0;i<pinCount;i++) updatePin(i);
+
+  resetTimer();
+  startTimer();
+  document.getElementById("status").textContent=
+    "Pins shattered! Drag the pieces out of the water onto the correct pins.";
+
+  let nextId=0;
+  for(let i=0;i<pinCount;i++){
+    const segs=makeRandomSegments(targetLengths[i]);
+    segs.forEach(segLen=>{
+      const id=nextId++;
+      const x=randomInt(40,305);
+      const y=randomInt(290,320);
+      const baseY=y;
+      const rect=document.createElementNS("http://www.w3.org/2000/svg","rect");
+      rect.setAttribute("id","frag-"+id);
+      rect.setAttribute("class","fragment");
+      rect.setAttribute("x",x);
+      rect.setAttribute("y",y);
+      rect.setAttribute("width",PIN_WIDTH);
+      rect.setAttribute("height",segLen);
+      rect.setAttribute("rx",PIN_WIDTH/2);
+      rect.setAttribute("ry",PIN_WIDTH/2);
+      rect.setAttribute("fill","url(#fragGradient)");
+      rect.setAttribute("stroke","#b07a30");
+      rect.setAttribute("stroke-width",1);
+      rect.setAttribute("filter","url(#fragShadow)");
+      rect.style.cursor="grab";
+      rect.addEventListener("pointerdown",e=>startDrag(e,id));
+      boardSvg.appendChild(rect);
+
+      fragments.push({
+        id,
+        pinOriginal:i,
+        lengthPx:segLen,
+        x,y,height:segLen,
+        assignedPin:null,
+        decoy:false,
+        scored:false,
+        baseY,
+        bobPhase:Math.random()*Math.PI*2
+      });
+    });
+  }
+
+  // Collect all real segment lengths to avoid duplicates in decoys
+  const realLengths=new Set();
+  fragments.forEach(f=>{if(!f.decoy)realLengths.add(f.lengthPx);});
+
+  // Reduced decoy count to 15% (half of original 30%)
+  const decoyCount=Math.round(fragments.length*0.15);
+  for(let d=0;d<decoyCount;d++){
+    const id=nextId++;
+    const x=randomInt(40,305);
+    const y=randomInt(290,320);
+    const baseY=y;
+
+    // Generate decoy length that doesn't match any real segment
+    // Try multiple times to find a unique length
+    let len;
+    let attempts=0;
+    do{
+      // Use variable sizes: some small (15-34), some medium (38-55), some large (56-95)
+      // Avoid MIN_SEG_TRUE (36) range to ensure incompatibility
+      const sizeType=randomInt(1,3);
+      if(sizeType===1) len=randomInt(15,34);      // Small (below MIN_SEG_TRUE)
+      else if(sizeType===2) len=randomInt(38,55); // Medium
+      else len=randomInt(56,95);                   // Large
+      attempts++;
+    }while(realLengths.has(len) && attempts<20); // Keep trying until we find unique length
+
+    const rect=document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttribute("id","frag-"+id);
+    rect.setAttribute("class","fragment");
+    rect.setAttribute("x",x);
+    rect.setAttribute("y",y);
+    rect.setAttribute("width",PIN_WIDTH);
+    rect.setAttribute("height",len);
+    rect.setAttribute("rx",PIN_WIDTH/2);
+    rect.setAttribute("ry",PIN_WIDTH/2);
+    rect.setAttribute("fill","url(#fragGradient)");
+    rect.setAttribute("stroke","#b07a30");
+    rect.setAttribute("stroke-width",1);
+    rect.setAttribute("filter","url(#fragShadow)");
+    rect.style.cursor="grab";
+    rect.addEventListener("pointerdown",e=>startDrag(e,id));
+    boardSvg.appendChild(rect);
+
+    fragments.push({
+      id,
+      pinOriginal:-1,
+      lengthPx:len,
+      x,y,height:len,
+      assignedPin:null,
+      decoy:true,
+      tried:false, // Track if player has tried this decoy
+      scored:false,
+      baseY,
+      bobPhase:Math.random()*Math.PI*2
+    });
+  }
+
+  document.getElementById("piecesLeft").textContent="Pieces: "+fragments.length;
+}
+
+/* drag helpers */
+function clientToSvg(clientX,clientY){
+  const pt=boardSvg.createSVGPoint();
+  pt.x=clientX;pt.y=clientY;
+  return pt.matrixTransform(boardSvg.getScreenCTM().inverse());
+}
+function startDrag(evt,fragId){
+  if(gameOver) return;
+  evt.preventDefault();
+  boardSvg.setPointerCapture(evt.pointerId);
+  const frag=fragments.find(f=>f.id===fragId);
+  if(!frag) return;
+  const p=clientToSvg(evt.clientX,evt.clientY);
+  dragInfo={id:fragId,pointerId:evt.pointerId,offsetX:p.x-frag.x,offsetY:p.y-frag.y};
+  const rect=document.getElementById("frag-"+fragId);
+  rect.style.cursor="grabbing";
+}
+function onPointerMove(evt){
+  if(!dragInfo || evt.pointerId!==dragInfo.pointerId) return;
+  const frag=fragments.find(f=>f.id===dragInfo.id);
+  if(!frag) return;
+  const p=clientToSvg(evt.clientX,evt.clientY);
+  frag.x=p.x-dragInfo.offsetX;
+  frag.y=p.y-dragInfo.offsetY;
+  frag.baseY=frag.y;
+  const rect=document.getElementById("frag-"+frag.id);
+  rect.setAttribute("x",frag.x);
+  rect.setAttribute("y",frag.y);
+}
+function onPointerUp(evt){
+  if(!dragInfo || evt.pointerId!==dragInfo.pointerId) return;
+  const frag=fragments.find(f=>f.id===dragInfo.id);
+  const rect=document.getElementById("frag-"+dragInfo.id);
+  if(!frag||!rect){dragInfo=null;return;}
+  rect.style.cursor="grab";
+  boardSvg.releasePointerCapture(evt.pointerId);
+
+  const p=clientToSvg(evt.clientX,evt.clientY);
+  const dropX=p.x,dropY=p.y;
+
+  let nearestPin=null,bestDist=Infinity;
+  for(let i=0;i<pinCount;i++){
+    const d=Math.abs(dropX-pinX[i]);
+    if(d<bestDist){bestDist=d;nearestPin=i;}
+  }
+
+  let correct=false;
+
+  if(nearestPin!==null && bestDist<35 && dropY<265){
+    if(frag.decoy){
+      // DECOY piece placed near a pin - show DICORY flash, mark as tried
+      frag.assignedPin=null;
+      frag.tried=true;
+      sError();
+      score=Math.max(0,score-5);
+      comboStreak=0;
+      flashDicory();
+    }else if(nearestPin===frag.pinOriginal){
+      // Correct piece on correct pin
+      frag.assignedPin=nearestPin;
+      if(!frag.scored){
+        score+=10;
+        frag.scored=true;
+        comboStreak++;
+        if(comboStreak>0 && comboStreak%3===0){
+          score+=20;
+          sCombo();
+        }else sClick();
+      }
+      correct=true;
+    }else{
+      // Real piece on WRONG pin - show "Wrong Pin" flash
+      frag.assignedPin=null;
+      sError();
+      score=Math.max(0,score-5);
+      comboStreak=0;
+      flashWrongPin();
+    }
+  }else{
+    frag.assignedPin=null;
+  }
+
+  if(!correct){
+    frag.x=randomInt(40,305);
+    frag.y=randomInt(290,320);
+    frag.baseY=frag.y;
+  }
+  dragInfo=null;
+  layoutFragmentsAndUpdatePins();
+}
+boardSvg.addEventListener("pointermove",onPointerMove);
+boardSvg.addEventListener("pointerup",onPointerUp);
+boardSvg.addEventListener("pointercancel",onPointerUp);
+
+/* layout fragments and recompute lengths */
+function layoutFragmentsAndUpdatePins(){
+  lengths=new Array(pinCount).fill(0);
+
+  for(let i=0;i<pinCount;i++){
+    // Only get real (non-decoy) pieces assigned to this pin
+    const frags=fragments.filter(f=>f.assignedPin===i && !f.decoy)
+      .sort((a,b)=>a.id-b.id);
+    let yStart=TOP_Y;
+    frags.forEach(f=>{
+      const h=f.lengthPx;
+      f.height=h;
+      f.x=pinX[i]-PIN_WIDTH/2;
+      f.y=yStart;
+      yStart+=h;
+      const rect=document.getElementById("frag-"+f.id);
+      rect.setAttribute("width",PIN_WIDTH);
+      rect.setAttribute("height",h);
+      rect.setAttribute("x",f.x);
+      rect.setAttribute("y",f.y);
+      const angle=pinTilt[i];
+      const cx=pinX[i],cy=TOP_Y;
+      rect.setAttribute("transform",`rotate(${angle} ${cx} ${cy})`);
+      rect.setAttribute("fill","url(#fragGradient)");
+      rect.setAttribute("stroke","#b07a30");
+      lengths[i]+=h;
+    });
+  }
+
+  fragments.filter(f=>f.assignedPin===null).forEach(f=>{
+    const rect=document.getElementById("frag-"+f.id);
+    rect.removeAttribute("transform");
+    rect.setAttribute("width",PIN_WIDTH);
+    rect.setAttribute("height",f.lengthPx);
+    rect.setAttribute("x",f.x);
+    rect.setAttribute("y",f.y);
+    f.height=f.lengthPx;
+
+    // Color tried decoys yellow in the water
+    if(f.decoy && f.tried){
+      rect.setAttribute("fill","#ffeb3b"); // Yellow for tried decoys
+      rect.setAttribute("stroke","#f9a825");
+    }else{
+      rect.setAttribute("fill","url(#fragGradient)");
+      rect.setAttribute("stroke","#b07a30");
+    }
+  });
+
+  const piecesLeft=fragments.filter(f=>f.assignedPin===null).length;
+  document.getElementById("piecesLeft").textContent="Pieces: "+piecesLeft;
+
+  for(let i=0;i<pinCount;i++) updatePin(i);
+  updateScoreAndCombo();
+  checkWin();
+}
+
+/* win / unlock */
+function checkWin(){
+  if(gameOver) return;
+  for(let i=0;i<pinCount;i++){
+    if(Math.abs(lengths[i]-targetLengths[i])>TOL) return;
+  }
+  gameOver=true;
+  stopTimer();
+  sWin();
+  document.getElementById("status").textContent="✅ All pins rebuilt with correct depth!";
+  document.getElementById("popupTitle").textContent="Congratulations!";
+  const t=elapsedSeconds.toFixed(1);
+  document.getElementById("popupText").textContent=
+    `Level ${levelConfigs[currentLevelIndex].id} (${currentMode}) solved in ${t}s.\nScore: ${score}`;
+  document.getElementById("popupOverlay").style.display="flex";
+
+  // ===== NOTIFY SWIFT OF GAME COMPLETION =====
+  if(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete){
+    window.webkit.messageHandlers.gameComplete.postMessage({won: true, score: score});
+    console.log("✅ WaterTable: Notified Swift of completion");
+  }
+
+  try{
+    const best=parseInt(localStorage.getItem("wt_bestScore")||"0",10);
+    if(score>best) localStorage.setItem("wt_bestScore",String(score));
+    if(currentMode==="normal"){
+      if(currentLevelIndex===1) localStorage.setItem("wt_unlockHard","1");
+      if(currentLevelIndex===2) localStorage.setItem("wt_unlockDaily","1");
+    }
+  }catch(e){}
+  updateUnlocksFromStorage();
+}
+function popupNewGame(){ newGame(); }
+
+/* new game */
+function newGame(){
+  gameOver=false;
+  clearFragments();
+  clearReveal();
+  document.getElementById("popupOverlay").style.display="none";
+  resetTimer();
+  comboStreak=0;
+  score=0;
+  updateScoreAndCombo();
+  document.getElementById("status").textContent=
+    `Level ${levelConfigs[currentLevelIndex].id} (${currentMode}) ready. Tap "Break" to start.`;
+
+  document.getElementById("fountainsLayer").innerHTML="";
+  document.getElementById("labelsLayer").innerHTML="";
+
+  // Always use the current level index configuration
+  pinCount=levelConfigs[currentLevelIndex].pins;
+  timeLimit=levelConfigs[currentLevelIndex].timeLimit;
+
+  floorBasePoints=randomFloor();
+  tidePhase=0;
+  updateFloorPolygon();
+
+  pinX=[];
+  const startX=60,endX=300;
+  if(pinCount===1) pinX.push((startX+endX)/2);
+  else{
+    const step=(endX-startX)/(pinCount-1);
+    for(let i=0;i<pinCount;i++) pinX.push(startX+i*step);
+  }
+
+  targetLengths=[];
+  lengths=[];
+  pinSolved=new Array(pinCount).fill(false);
+  pinTilt=[];
+  const anchorsLayer=document.getElementById("anchorsLayer");
+  const pinsLayer=document.getElementById("pinsLayer");
+  const labelsLayer=document.getElementById("labelsLayer");
+  anchorsLayer.innerHTML="";
+  pinsLayer.innerHTML="";
+  labelsLayer.innerHTML="";
+
+  for(let i=0;i<pinCount;i++){
+    const anchor=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    anchor.setAttribute("cx",pinX[i]);
+    anchor.setAttribute("cy",27.5);
+    anchor.setAttribute("r",4);
+    anchor.setAttribute("fill","#c0392b");
+    anchorsLayer.appendChild(anchor);
+
+    const floorY=interpolateFloorY(pinX[i],floorPoints);
+    const target=Math.max(90,Math.floor(floorY-TOP_Y-4));
+    targetLengths.push(target);
+    lengths.push(target);
+
+    const pinRect=document.createElementNS("http://www.w3.org/2000/svg","rect");
+    pinRect.setAttribute("id","pin-"+i);
+    pinRect.setAttribute("x",pinX[i]-PIN_WIDTH/2);
+    pinRect.setAttribute("y",TOP_Y);
+    pinRect.setAttribute("width",PIN_WIDTH);
+    pinRect.setAttribute("height",target);
+    pinRect.setAttribute("rx",PIN_WIDTH/2);
+    pinRect.setAttribute("ry",PIN_WIDTH/2);
+    pinRect.setAttribute("fill",currentPinFillId());
+    pinsLayer.appendChild(pinRect);
+
+    const angle=randomInt(-4,4);
+    pinTilt.push(angle);
+    const cx=pinX[i],cy=TOP_Y;
+    pinRect.setAttribute("transform",`rotate(${angle} ${cx} ${cy})`);
+
+    const lbl=document.createElementNS("http://www.w3.org/2000/svg","text");
+    lbl.setAttribute("id","lenLabel-"+i);
+    lbl.setAttribute("x",pinX[i]);
+    lbl.setAttribute("y",floorY+16);
+    lbl.setAttribute("text-anchor","middle");
+    lbl.setAttribute("font-size","10");
+    lbl.setAttribute("fill","#333");
+    labelsLayer.appendChild(lbl);
+  }
+  updateLabels();
+}
+
+/* animation loop */
+function animLoop(){
+  const now=performance.now()/1000;
+  const AMP=6; // Increased from 3 to 6 for more pronounced bobbing
+  fragments.filter(f=>f.assignedPin===null).forEach(f=>{
+    const offset=Math.sin(f.bobPhase+now*2.0)*AMP; // Increased speed from 1.5 to 2.0
+    const y=f.baseY+offset;
+    f.y=y;
+    const rect=document.getElementById("frag-"+f.id);
+    rect.setAttribute("y",y);
+  });
+  updateFloorPolygon();
+  requestAnimationFrame(animLoop);
+}
+
+/* init */
+window.onload=()=>{
+  document.getElementById("btnL1").classList.add("active");
+  document.getElementById("modeNormalBtn").classList.add("active");
+  updateUnlocksFromStorage();
+  // Don't call newGame() here - Swift will call initGame() after setting seed/level
+  requestAnimationFrame(animLoop);
+};
+
+// ===== SWIFT CALLABLE: Initialize game after seed/level are set =====
+window.initGame = function(){
+  newGame();
+  console.log("✅ WaterTable: Game initialized");
+};
+</script>
+</body>
+</html>

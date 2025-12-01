@@ -165,6 +165,10 @@ struct ArchiveView: View {
             WebDiskBreakGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .waterTable:
+            WebWaterTableGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

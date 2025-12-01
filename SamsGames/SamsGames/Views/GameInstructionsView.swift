@@ -38,6 +38,8 @@ struct GameInstructionsView: View {
                     ArrowRaceInstructionsView()
                 case .diskBreak:
                     DiskBreakInstructionsView()
+                case .waterTable:
+                    WaterTableInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

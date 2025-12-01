@@ -302,6 +302,21 @@ struct ArchiveGameRow: View {
                             .foregroundColor(.secondary)
                     }
                 }
+
+                // Show difficulty for WaterTable
+                if gameType == .waterTable {
+                    let level = dailyPuzzleManager.getWaterTableLevelForDate(date) + 1 // Convert 0,1,2 to 1,2,3
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption2)
+                        Text("\(name) (L\(level))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
 
             Spacer()

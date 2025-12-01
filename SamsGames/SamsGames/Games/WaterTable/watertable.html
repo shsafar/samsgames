@@ -187,7 +187,8 @@
 
   /* ===== DAILY MODE (hide controls for iOS integration) ===== */
   body.daily-mode .mode-row,
-  body.daily-mode .level-row {
+  body.daily-mode .level-row,
+  body.daily-mode #newGameBtn {
     display: none;
   }
 </style>
@@ -720,6 +721,7 @@ function updatePin(i){
     if(!pinSolved[i]){
       pinSolved[i]=true;
       sCorrect();
+      animateWaterFlow(i); // Animate water flowing up when solved
     }
     showFountain(i,true);
   }else{
@@ -727,6 +729,55 @@ function updatePin(i){
     showFountain(i,false);
   }
   updateLabels();
+}
+
+/* Animate water flowing upward through the pin when solved */
+function animateWaterFlow(pinIndex){
+  const pinRect=document.getElementById("pin-"+pinIndex);
+  const x=pinX[pinIndex]-PIN_WIDTH/2;
+  const waterStartY=290; // Start from water level
+  const waterEndY=TOP_Y; // End at top of pin
+
+  // Create a temporary water flow element
+  const flow=document.createElementNS("http://www.w3.org/2000/svg","rect");
+  flow.setAttribute("id","waterFlow-"+pinIndex);
+  flow.setAttribute("x",x);
+  flow.setAttribute("y",waterStartY);
+  flow.setAttribute("width",PIN_WIDTH);
+  flow.setAttribute("height",0);
+  flow.setAttribute("rx",PIN_WIDTH/2);
+  flow.setAttribute("ry",PIN_WIDTH/2);
+  flow.setAttribute("fill","rgba(100,180,255,0.7)");
+  flow.setAttribute("pointer-events","none");
+  boardSvg.appendChild(flow);
+
+  // Animate the flow upward
+  const duration=600; // 600ms animation
+  const startTime=Date.now();
+
+  function animate(){
+    const elapsed=Date.now()-startTime;
+    const progress=Math.min(elapsed/duration,1);
+
+    // Ease-out animation
+    const eased=1-Math.pow(1-progress,3);
+
+    const currentY=waterStartY-(waterStartY-waterEndY)*eased;
+    const currentHeight=(waterStartY-waterEndY)*eased;
+
+    flow.setAttribute("y",currentY);
+    flow.setAttribute("height",currentHeight);
+    flow.setAttribute("fill",`rgba(100,180,255,${0.7*(1-progress)})`); // Fade out
+
+    if(progress<1){
+      requestAnimationFrame(animate);
+    }else{
+      // Remove the flow element when done
+      flow.remove();
+    }
+  }
+
+  requestAnimationFrame(animate);
 }
 function updateLabels(){
   for(let i=0;i<pinCount;i++){
@@ -763,26 +814,44 @@ function makeRandomSegments(totalLength){
   segs.push(remaining);
   return segs;
 }
+/* Flash reveal button 5 times before breaking */
+function flashRevealButton(callback){
+  const btn=document.getElementById("revealBtn");
+  let flashes=0;
+  const flashInterval=setInterval(()=>{
+    if(flashes<5){
+      btn.style.outline=flashes%2===0?"3px solid #7b5fd6":"none";
+      flashes++;
+    }else{
+      btn.style.outline="none";
+      clearInterval(flashInterval);
+      if(callback) callback();
+    }
+  },200); // Flash every 200ms
+}
+
 function breakPins(){
   if(gameOver) return;
 
   // Initialize audio context on first user interaction
   ensureAudioCtx();
 
-  clearFragments();
-  clearReveal();
-  document.getElementById("popupOverlay").style.display="none";
+  // Flash reveal button 5 times before breaking
+  flashRevealButton(()=>{
+    clearFragments();
+    clearReveal();
+    document.getElementById("popupOverlay").style.display="none";
 
-  lengths=new Array(pinCount).fill(0);
-  pinSolved=new Array(pinCount).fill(false);
-  comboStreak=0;
-  updateScoreAndCombo();
-  for(let i=0;i<pinCount;i++) updatePin(i);
+    lengths=new Array(pinCount).fill(0);
+    pinSolved=new Array(pinCount).fill(false);
+    comboStreak=0;
+    updateScoreAndCombo();
+    for(let i=0;i<pinCount;i++) updatePin(i);
 
-  resetTimer();
-  startTimer();
-  document.getElementById("status").textContent=
-    "Pins shattered! Drag the pieces out of the water onto the correct pins.";
+    resetTimer();
+    startTimer();
+    document.getElementById("status").textContent=
+      "Pins shattered! Drag the pieces out of the water onto the correct pins.";
 
   let nextId=0;
   for(let i=0;i<pinCount;i++){
@@ -816,6 +885,7 @@ function breakPins(){
         x,y,height:segLen,
         assignedPin:null,
         decoy:false,
+        wrongPinTried:false, // Track if tried on wrong pin
         scored:false,
         baseY,
         bobPhase:Math.random()*Math.PI*2
@@ -874,6 +944,7 @@ function breakPins(){
       assignedPin:null,
       decoy:true,
       tried:false, // Track if player has tried this decoy
+      wrongPinTried:false, // Track if tried on wrong pin (not applicable for decoys)
       scored:false,
       baseY,
       bobPhase:Math.random()*Math.PI*2
@@ -881,6 +952,7 @@ function breakPins(){
   }
 
   document.getElementById("piecesLeft").textContent="Pieces: "+fragments.length;
+  }); // End of flashRevealButton callback
 }
 
 /* drag helpers */
@@ -956,6 +1028,7 @@ function onPointerUp(evt){
     }else{
       // Real piece on WRONG pin - show "Wrong Pin" flash
       frag.assignedPin=null;
+      frag.wrongPinTried=true; // Mark as tried on wrong pin
       sError();
       score=Math.max(0,score-5);
       comboStreak=0;
@@ -1015,10 +1088,13 @@ function layoutFragmentsAndUpdatePins(){
     rect.setAttribute("y",f.y);
     f.height=f.lengthPx;
 
-    // Color tried decoys yellow in the water
+    // Color fragments based on their state
     if(f.decoy && f.tried){
       rect.setAttribute("fill","#ffeb3b"); // Yellow for tried decoys
       rect.setAttribute("stroke","#f9a825");
+    }else if(f.wrongPinTried){
+      rect.setAttribute("fill","#ffb3ba"); // Light pink for wrong pin attempts
+      rect.setAttribute("stroke","#ff8a95");
     }else{
       rect.setAttribute("fill","url(#fragGradient)");
       rect.setAttribute("stroke","#b07a30");

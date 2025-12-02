@@ -115,15 +115,15 @@
 
     /* ===== DAILY MODE (hide mode/level controls for iOS integration) ===== */
     body.daily-mode #levelSelect,
-    body.daily-mode label[for="levelSelect"],
-    body.daily-mode #startBtn,
-    body.daily-mode #resetBtn {
+    body.daily-mode label[for="levelSelect"] {
       display: none !important;
     }
 
-    /* In daily mode, hide the info row showing time/score/miss */
+    /* In daily mode, keep the status row visible */
     body.daily-mode #status {
-      display: none !important;
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      padding: 8px !important;
     }
 
     /* Make canvas larger on mobile */
@@ -139,7 +139,68 @@
     }
 
     body.daily-mode #controls {
-      margin-bottom: 4px !important;
+      margin-bottom: 8px !important;
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 8px !important;
+      padding: 12px !important;
+      justify-content: space-between !important;
+    }
+
+    /* Make buttons LARGE and OBVIOUS in daily mode - all 4 buttons side by side */
+    body.daily-mode #startBtn,
+    body.daily-mode #resetBtn,
+    body.daily-mode #revealBtn,
+    body.daily-mode #soundBtn {
+      flex: 1 !important;
+      padding: 20px 12px !important;
+      font-size: 18px !important;
+      font-weight: 700 !important;
+      border-radius: 12px !important;
+      border: none !important;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2) !important;
+      cursor: pointer !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.5px !important;
+      color: white !important;
+      min-height: 60px !important;
+    }
+
+    /* Different color for each button */
+    body.daily-mode #startBtn {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+    }
+    body.daily-mode #startBtn:active {
+      background: linear-gradient(135deg, #0e8679 0%, #2fd66b 100%) !important;
+    }
+
+    body.daily-mode #resetBtn {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%) !important;
+    }
+    body.daily-mode #resetBtn:active {
+      background: linear-gradient(135deg, #e65555 0%, #d5495d 100%) !important;
+    }
+
+    body.daily-mode #revealBtn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+    body.daily-mode #revealBtn:active {
+      background: linear-gradient(135deg, #5568d3 0%, #63408a 100%) !important;
+    }
+
+    body.daily-mode #soundBtn {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    }
+    body.daily-mode #soundBtn:active {
+      background: linear-gradient(135deg, #e07ee6 0%, #dc4659 100%) !important;
+    }
+
+    body.daily-mode #startBtn:active,
+    body.daily-mode #resetBtn:active,
+    body.daily-mode #revealBtn:active,
+    body.daily-mode #soundBtn:active {
+      transform: scale(0.96) !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
     }
   </style>
 </head>
@@ -564,25 +625,25 @@
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // HUD
+    // HUD - always show stats
     ctx.font = "14px system-ui";
-    // Only show stats if not in daily mode
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#444";
+    const timeText = currentConfig.timeLimitSec > 0
+      ? formatTime(remainingMs)
+      : "--:--";
+    ctx.fillText("Time: " + timeText, 20, 20);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#444";
+    ctx.fillText("Score: " + score, canvas.width / 2, 20);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#c62828";
+    ctx.fillText("Miss: " + wrongCount, canvas.width - 20, 20);
+
+    // Only show title if not in daily mode
     if (!isDailyMode) {
-      ctx.textAlign = "left";
-      ctx.fillStyle = "#444";
-      const timeText = currentConfig.timeLimitSec > 0
-        ? formatTime(remainingMs)
-        : "--:--";
-      ctx.fillText("Time: " + timeText, 20, 20);
-
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#444";
-      ctx.fillText("Score: " + score, canvas.width / 2, 20);
-
-      ctx.textAlign = "right";
-      ctx.fillStyle = "#c62828";
-      ctx.fillText("Miss: " + wrongCount, canvas.width - 20, 20);
-
       ctx.textAlign = "center";
       ctx.fillStyle = "#444";
       ctx.font = "16px system-ui";
@@ -847,10 +908,12 @@
       showPopup("Congratulations!", `${currentConfig.label} complete.\nScore: ${finalScore}`);
       statusEl.textContent = `${currentConfig.label} complete! All pins placed.`;
 
-      // Notify Swift of game completion
-      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
-        window.webkit.messageHandlers.gameComplete.postMessage({won: true, score: finalScore});
-      }
+      // Notify Swift of game completion AFTER the win animation completes (3 seconds)
+      setTimeout(() => {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+          window.webkit.messageHandlers.gameComplete.postMessage({won: true, score: finalScore});
+        }
+      }, 3000);
     }
 
     draw();

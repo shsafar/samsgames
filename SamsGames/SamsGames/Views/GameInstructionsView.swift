@@ -40,6 +40,8 @@ struct GameInstructionsView: View {
                     DiskBreakInstructionsView()
                 case .waterTable:
                     WaterTableInstructionsView()
+                case .atomicNails:
+                    AtomicNailsInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

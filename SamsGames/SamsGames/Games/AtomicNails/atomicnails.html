@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Circle Nails – Multi Level</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+    }
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 10px;
+    }
+    #controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    #controls button, #controls select {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #controls button:hover {
+      background: #e6e6e6;
+    }
+    #status {
+      min-height: 18px;
+      font-size: 14px;
+      margin-top: 4px;
+      color: #444;
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #ddd;
+      background: #ffffff;
+      touch-action: none;
+      width: 100%;
+      max-width: 600px;
+      height: auto;
+      display: block;
+    }
+    /* Popup overlay */
+    #popupOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #popupBox {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 16px 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      min-width: 260px;
+      max-width: 90vw;
+      text-align: center;
+    }
+    #popupBox h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+    #popupBox p {
+      margin: 0 0 12px;
+      font-size: 14px;
+      white-space: pre-line;
+    }
+    #popupCloseBtn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #888;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #popupCloseBtn:hover {
+      background: #e6e6e6;
+    }
+
+    /* ===== DAILY MODE (hide controls for iOS integration) ===== */
+    body.daily-mode #controls {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div id="container">
+  <div id="controls">
+    <label for="levelSelect">Level:</label>
+    <select id="levelSelect">
+      <option value="1">Level 1 (5 pins, no timer)</option>
+      <option value="2">Level 2 (10 pins)</option>
+      <option value="3">Level 3 (14 pins)</option>
+    </select>
+    <button id="startBtn">Start</button>
+    <button id="resetBtn">Reset</button>
+    <button id="revealBtn">Reveal Holes</button>
+    <button id="soundBtn">Sound: On</button>
+  </div>
+
+  <canvas id="gameCanvas" width="600" height="600"></canvas>
+  <div id="status"></div>
+</div>
+
+<!-- Popup overlay -->
+<div id="popupOverlay">
+  <div id="popupBox">
+    <h2 id="popupTitle"></h2>
+    <p id="popupMessage"></p>
+    <button id="popupCloseBtn">OK</button>
+  </div>
+</div>
+
+<script>
+  // ===== SEEDED RANDOM NUMBER GENERATOR =====
+  let rngSeed = Date.now();
+  function setSeed(s) {
+    rngSeed = s;
+    console.log("✅ AtomicNails seed set:", s);
+  }
+  function seededRand() {
+    rngSeed = (rngSeed * 9301 + 49297) % 233280;
+    return rngSeed / 233280;
+  }
+
+  // Override Math.random with seeded version
+  const originalRandom = Math.random;
+  Math.random = function() {
+    return seededRand();
+  };
+
+  // --------------- CONFIG ---------------
+  const LEVELS = {
+    1: { label: "Level 1", numPins: 5,  numDecoys: 1, timeLimitSec: 0   }, // 0 = no time limit
+    2: { label: "Level 2", numPins: 10, numDecoys: 2, timeLimitSec: 120 },
+    3: { label: "Level 3", numPins: 14, numDecoys: 4, timeLimitSec: 90  }
+  };
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const revealBtn = document.getElementById('revealBtn');
+  const soundBtn = document.getElementById('soundBtn');
+  const levelSelect = document.getElementById('levelSelect');
+  const statusEl = document.getElementById('status');
+
+  const popupOverlay = document.getElementById('popupOverlay');
+  const popupTitle = document.getElementById('popupTitle');
+  const popupMessage = document.getElementById('popupMessage');
+  const popupCloseBtn = document.getElementById('popupCloseBtn');
+
+  const outerCenter = { x: canvas.width / 2, y: canvas.height / 2 - 40 };
+  const outerRadius = 200;
+  const innerRadius = 80;
+  const headRadius = 10;
+
+  let innerCenter = null;
+  let outerColorInner, outerColorOuter, innerColorInner, innerColorOuter;
+
+  let currentLevelId = 1;
+  let currentConfig = LEVELS[1];
+
+  let slots = [];     // [{angle, innerPoint, outerPoint, length, placed}]
+  let trayNails = []; // [{slotIndex|null, isDecoy, length, placed, headX, headY, homeHeadX, homeHeadY, trayAngle, dirSign}]
+
+  let gameState = "SETUP"; // SETUP | PLAYING | COMPLETE | TIMEUP
+  let draggingNail = null;
+
+  let startTime = null;
+  let remainingMs = 0;
+  let correctCount = 0;
+  let wrongCount = 0;
+  let decoyFlashFrames = 0;
+  let holesVisible = true;
+  let revealTimeoutId = null;
+  let animId = null;
+
+  let soundOn = true;
+  let audioCtx = null;
+
+  // win animation
+  let winAnimationFrames = 0;  // counts down
+  let winAnimationPhase = 0;   // rotation phase
+
+  // --------- UTILS ----------
+  function distance(x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function formatTime(ms) {
+    ms = Math.max(0, ms);
+    const totalSeconds = Math.floor(ms / 1000);
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  }
+
+  function randomInnerCenter() {
+    while (true) {
+      const maxOffset = outerRadius - innerRadius - 40;
+      const r = Math.random() * maxOffset;
+      const theta = Math.random() * Math.PI * 2;
+      const cx = outerCenter.x + r * Math.cos(theta);
+      const cy = outerCenter.y + r * Math.sin(theta);
+      if (distance(cx, cy, outerCenter.x, outerCenter.y) + innerRadius < outerRadius) {
+        return { x: cx, y: cy };
+      }
+    }
+  }
+
+  function initColors() {
+    const baseHue = Math.floor(Math.random() * 360);
+    outerColorInner = `hsl(${baseHue},80%,96%)`;
+    outerColorOuter = `hsl(${baseHue},70%,75%)`;
+
+    const innerHue = (baseHue + 120 + Math.random() * 60) % 360;
+    innerColorInner = `hsl(${innerHue},85%,80%)`;
+    innerColorOuter = `hsl(${innerHue},80%,55%)`;
+  }
+
+  // Find intersection of a ray starting at P1 along dir with the outer circle
+  function findOuterIntersection(P1, dir) {
+    const C0 = outerCenter;
+    const R0 = outerRadius;
+    const Ax = P1.x - C0.x;
+    const Ay = P1.y - C0.y;
+    const Adotd = Ax * dir.x + Ay * dir.y;
+    const A2 = Ax * Ax + Ay * Ay;
+
+    const b = 2 * Adotd;
+    const c = A2 - R0 * R0;
+    const disc = b * b - 4 * c;
+    if (disc < 0) return null;
+
+    const sqrtDisc = Math.sqrt(disc);
+    const s1 = (-b + sqrtDisc) / 2;
+    const s2 = (-b - sqrtDisc) / 2;
+    const s = s1 > 0 ? s1 : s2;
+    return {
+      x: P1.x + dir.x * s,
+      y: P1.y + dir.y * s
+    };
+  }
+
+  function playTone(freq, duration) {
+    if (!soundOn) return;
+    try {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = freq;
+      gain.gain.value = 0.08;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) {
+      // ignore audio errors
+    }
+  }
+
+  function showPopup(title, msg) {
+    popupTitle.textContent = title;
+    popupMessage.textContent = msg;
+    popupOverlay.style.display = "flex";
+  }
+
+  function hidePopup() {
+    popupOverlay.style.display = "none";
+  }
+
+  // ---------- GAME INIT ----------
+  function initGame(levelId) {
+    currentLevelId = levelId;
+    currentConfig = LEVELS[levelId];
+
+    gameState = "SETUP";
+    draggingNail = null;
+    correctCount = 0;
+    wrongCount = 0;
+    decoyFlashFrames = 0;
+    winAnimationFrames = 0;
+    winAnimationPhase = 0;
+    remainingMs = currentConfig.timeLimitSec * 1000;
+    startTime = null;
+
+    if (revealTimeoutId !== null) {
+      clearTimeout(revealTimeoutId);
+      revealTimeoutId = null;
+    }
+    holesVisible = true;
+    revealBtn.disabled = false;
+
+    hidePopup();
+    initColors();
+    innerCenter = randomInnerCenter();
+    slots = [];
+    trayNails = [];
+
+    // angles for real pins
+    const usedAngles = [];
+    const n = currentConfig.numPins;
+    const minSep = (Math.PI * 2) / n * 0.6;
+
+    while (usedAngles.length < n) {
+      let angle = Math.random() * Math.PI * 2;
+      let ok = true;
+      for (const a of usedAngles) {
+        const diff = Math.abs(angle - a);
+        if (diff < minSep || diff > Math.PI * 2 - minSep) {
+          ok = false; break;
+        }
+      }
+      if (!ok) continue;
+      usedAngles.push(angle);
+    }
+
+    // build slots (from inner to outer)
+    usedAngles.forEach(angle => {
+      const dir = { x: Math.cos(angle), y: Math.sin(angle) };
+      const innerPoint = {
+        x: innerCenter.x + dir.x * innerRadius,
+        y: innerCenter.y + dir.y * innerRadius
+      };
+      const outerPoint = findOuterIntersection(innerPoint, dir);
+      const length = distance(innerPoint.x, innerPoint.y, outerPoint.x, outerPoint.y);
+
+      slots.push({
+        angle,
+        innerPoint,
+        outerPoint,
+        length,
+        placed: false
+      });
+    });
+
+    // tray nails for real slots
+    slots.forEach((slot, index) => {
+      trayNails.push({
+        slotIndex: index,
+        isDecoy: false,
+        revealedDecoy: false,
+        length: slot.length,   // exact shaft length
+        placed: false,
+        headX: 0, headY: 0,
+        homeHeadX: 0, homeHeadY: 0,
+        trayAngle: 0,
+        dirSign: 1
+      });
+    });
+
+    // decoys
+    const realLens = slots.map(s => s.length);
+    const minLen = Math.min(...realLens);
+    const maxLen = Math.max(...realLens);
+    const numDecoys = currentConfig.numDecoys;
+
+    for (let d = 0; d < numDecoys; d++) {
+      let decoyLength;
+      while (true) {
+        decoyLength = minLen * 0.5 + Math.random() * (maxLen * 1.6 - minLen * 0.5);
+        const tooClose = realLens.some(L => Math.abs(L - decoyLength) < (maxLen - minLen) * 0.05);
+        if (!tooClose) break;
+      }
+      trayNails.push({
+        slotIndex: null,
+        isDecoy: true,
+        revealedDecoy: false,
+        length: decoyLength,
+        placed: false,
+        headX: 0, headY: 0,
+        homeHeadX: 0, homeHeadY: 0,
+        trayAngle: 0,
+        dirSign: 1
+      });
+    }
+
+    // Lay out tray nails under the circles
+    const margin = 20;
+    const yMin = outerCenter.y + outerRadius + 30;
+    const yMax = canvas.height - margin;
+
+    trayNails.forEach(nail => {
+      const len = nail.length;
+
+      while (true) {
+        const angle = (Math.random() - 0.5) * (Math.PI / 3); // ±30°
+        const dirSign = Math.random() < 0.5 ? -1 : 1;
+        const headX = margin + Math.random() * (canvas.width - 2 * margin);
+        const headY = yMin + Math.random() * (yMax - yMin);
+
+        const tailX = headX + dirSign * len * Math.cos(angle);
+        const tailY = headY + dirSign * len * Math.sin(angle);
+
+        if (
+          tailX > margin &&
+          tailX < canvas.width - margin &&
+          tailY > yMin &&
+          tailY < yMax
+        ) {
+          let overlap = false;
+          for (const other of trayNails) {
+            if (other === nail) continue;
+            if (other.headX === 0 && other.headY === 0) continue;
+            if (distance(headX, headY, other.headX, other.headY) < headRadius * 2 + 6) {
+              overlap = true;
+              break;
+            }
+          }
+          if (overlap) continue;
+
+          nail.trayAngle = angle;
+          nail.dirSign = dirSign;
+          nail.headX = headX;
+          nail.headY = headY;
+          nail.homeHeadX = headX;
+          nail.homeHeadY = headY;
+          break;
+        }
+      }
+    });
+
+    // initial reveal 3s
+    holesVisible = true;
+    revealBtn.disabled = false;
+    revealTimeoutId = setTimeout(() => {
+      holesVisible = false;
+      draw();
+    }, 3000);
+
+    const timerText = currentConfig.timeLimitSec > 0
+      ? `${currentConfig.timeLimitSec}s limit`
+      : `No time limit`;
+    statusEl.textContent =
+      `${currentConfig.label} – ${currentConfig.numPins} pins, ` +
+      `${currentConfig.numDecoys} decoys, ${timerText}. Study the holes, then press Start.`;
+
+    startAnimationLoop();
+    draw();
+  }
+
+  // ----------- ANIMATION LOOP -----------
+  function startAnimationLoop() {
+    if (animId !== null) clearInterval(animId);
+    animId = setInterval(() => {
+      if (currentConfig.timeLimitSec > 0 &&
+          gameState === "PLAYING" &&
+          startTime !== null) {
+        const now = performance.now();
+        remainingMs = currentConfig.timeLimitSec * 1000 - (now - startTime);
+        if (remainingMs <= 0) {
+          remainingMs = 0;
+          if (gameState === "PLAYING") {
+            gameState = "TIMEUP";
+            playTone(150, 0.4);
+            showPopup("Time's Up", `You ran out of time on ${currentConfig.label}.`);
+            statusEl.textContent = "Time is up! Level failed.";
+          }
+        }
+      }
+      if (decoyFlashFrames > 0) decoyFlashFrames--;
+      if (winAnimationFrames > 0) {
+        winAnimationFrames--;
+        winAnimationPhase += 0.3;
+      }
+      draw();
+    }, 50);
+  }
+
+  function drawDoubleShaft(ip, op, color) {
+    const dx = op.x - ip.x;
+    const dy = op.y - ip.y;
+    const L = Math.sqrt(dx * dx + dy * dy);
+    if (L === 0) return;
+    const nx = -dy / L;
+    const ny = dx / L;
+    const offset = 2;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(ip.x + nx * offset, ip.y + ny * offset);
+    ctx.lineTo(op.x + nx * offset, op.y + ny * offset);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(ip.x - nx * offset, ip.y - ny * offset);
+    ctx.lineTo(op.x - nx * offset, op.y - ny * offset);
+    ctx.stroke();
+  }
+
+  function draw() {
+    const score = correctCount * 10 - wrongCount * 5;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // HUD
+    ctx.font = "14px system-ui";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#444";
+    const timeText = currentConfig.timeLimitSec > 0
+      ? formatTime(remainingMs)
+      : "--:--";
+    ctx.fillText("Time: " + timeText, 20, 20);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#444";
+    ctx.fillText("Score: " + score, canvas.width / 2, 20);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#c62828";
+    ctx.fillText("Miss: " + wrongCount, canvas.width - 20, 20);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#444";
+    ctx.font = "16px system-ui";
+    ctx.fillText(`Circle Nails – ${currentConfig.label}`, canvas.width / 2, 40);
+
+    // outer circle
+    const outerGrad = ctx.createRadialGradient(
+      outerCenter.x - outerRadius * 0.3, outerCenter.y - outerRadius * 0.3, outerRadius * 0.2,
+      outerCenter.x, outerCenter.y, outerRadius
+    );
+    outerGrad.addColorStop(0, outerColorInner);
+    outerGrad.addColorStop(1, outerColorOuter);
+    ctx.fillStyle = outerGrad;
+    ctx.beginPath();
+    ctx.arc(outerCenter.x, outerCenter.y, outerRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // inner circle (normal or win animation colors)
+    let innerGrad;
+    if (winAnimationFrames > 0) {
+      innerGrad = ctx.createRadialGradient(
+        innerCenter.x, innerCenter.y, innerRadius * 0.1,
+        innerCenter.x, innerCenter.y, innerRadius
+      );
+      innerGrad.addColorStop(0, "#ffe5e5");
+      innerGrad.addColorStop(1, "#d50000");
+    } else {
+      innerGrad = ctx.createRadialGradient(
+        innerCenter.x - innerRadius * 0.2, innerCenter.y - innerRadius * 0.2, innerRadius * 0.1,
+        innerCenter.x, innerCenter.y, innerRadius
+      );
+      innerGrad.addColorStop(0, innerColorInner);
+      innerGrad.addColorStop(1, innerColorOuter);
+    }
+    ctx.fillStyle = innerGrad;
+    ctx.beginPath();
+    ctx.arc(innerCenter.x, innerCenter.y, innerRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // if winning, draw red spinning sparks + rotating arc
+    if (winAnimationFrames > 0) {
+      const sparkCount = 10;
+      const radius = innerRadius + 15;
+      ctx.fillStyle = "#ff1744";
+      for (let i = 0; i < sparkCount; i++) {
+        const ang = winAnimationPhase + (i * 2 * Math.PI / sparkCount);
+        const sx = innerCenter.x + radius * Math.cos(ang);
+        const sy = innerCenter.y + radius * Math.sin(ang);
+        ctx.beginPath();
+        ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // rotating outer arc
+      ctx.strokeStyle = "rgba(255,0,0,0.85)";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(
+        innerCenter.x,
+        innerCenter.y,
+        innerRadius + 8,
+        winAnimationPhase,
+        winAnimationPhase + Math.PI / 1.5
+      );
+      ctx.stroke();
+    }
+
+    // slots
+    slots.forEach((slot) => {
+      const ip = slot.innerPoint;
+      const op = slot.outerPoint;
+
+      // Only show holes when holesVisible = true (preview or reveal)
+      if (!slot.placed && holesVisible) {
+        ctx.fillStyle = "#555";
+        ctx.beginPath();
+        ctx.arc(op.x, op.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (gameState === "SETUP" || slot.placed) {
+        const color = slot.placed ? "#2e7d32" : "#444";
+        drawDoubleShaft(ip, op, color);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(op.x, op.y, headRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    // tray baseline
+    const trayY = outerCenter.y + outerRadius + 25;
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(40, trayY);
+    ctx.lineTo(canvas.width - 40, trayY);
+    ctx.stroke();
+
+    // tray nails
+    if (gameState !== "SETUP") {
+      trayNails.forEach(nail => {
+        if (nail.placed) return;
+        const len = nail.length;
+        const color = nail.isDecoy && nail.revealedDecoy ? "#ff9100" : "#555";
+
+        ctx.save();
+        if (nail === draggingNail) {
+          const dx = innerCenter.x - nail.headX;
+          const dy = innerCenter.y - nail.headY;
+          const d = Math.sqrt(dx * dx + dy * dy) || 1;
+          const angle = Math.atan2(dy, dx);
+          let maxToInner = d - innerRadius;
+          if (maxToInner < 0) maxToInner = 0;
+          const drawLen = Math.min(len, maxToInner);
+
+          ctx.translate(nail.headX, nail.headY);
+          ctx.rotate(angle);
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(drawLen, 0);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(0, 0, headRadius, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.translate(nail.headX, nail.headY);
+          ctx.rotate(nail.trayAngle);
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(nail.dirSign * len, 0);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(0, 0, headRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+    }
+
+    // decoy flash
+    if (decoyFlashFrames > 0) {
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ff6d00";
+      ctx.font = "bold 40px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText("DECOY", canvas.width / 2, canvas.height / 2);
+    }
+  }
+
+  // ---------- INPUT ----------
+  function canvasToLocal(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
+  }
+
+  function onPointerDown(e) {
+    if (gameState !== "PLAYING") return;
+    const pos = canvasToLocal(e);
+
+    let best = null;
+    let bestDist = Infinity;
+    trayNails.forEach(nail => {
+      if (nail.placed) return;
+      const d = distance(pos.x, pos.y, nail.headX, nail.headY);
+      if (d < bestDist && d < headRadius + 8) {
+        bestDist = d;
+        best = nail;
+      }
+    });
+    if (best) draggingNail = best;
+  }
+
+  function onPointerMove(e) {
+    if (!draggingNail) return;
+    const pos = canvasToLocal(e);
+    draggingNail.headX = pos.x;
+    draggingNail.headY = pos.y;
+    draw();
+  }
+
+  function onPointerUp(e) {
+    if (!draggingNail) return;
+    const pos = canvasToLocal(e);
+
+    let bestIndex = -1;
+    let bestDist = Infinity;
+    slots.forEach((slot, i) => {
+      if (slot.placed) return;
+      const d = distance(pos.x, pos.y, slot.outerPoint.x, slot.outerPoint.y);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIndex = i;
+      }
+    });
+
+    const snapThreshold = 28;
+    const trayThresholdY = outerCenter.y + outerRadius + 15; // board vs tray line
+
+    if (bestIndex !== -1 && bestDist <= snapThreshold) {
+      // dropped near a hole
+      const slot = slots[bestIndex];
+      if (!draggingNail.isDecoy && draggingNail.slotIndex === bestIndex) {
+        // correct placement
+        slot.placed = true;
+        draggingNail.placed = true;
+        correctCount++;
+        playTone(880, 0.12);
+        statusEl.textContent = "Nice! Pin placed.";
+      } else {
+        // wrong hole -> back to tray home
+        wrongCount++;
+        playTone(220, 0.15);
+        statusEl.textContent = "Wrong hole. Try another.";
+        if (draggingNail.isDecoy) {
+          decoyFlashFrames = 20;
+          draggingNail.revealedDecoy = true;
+          playTone(130, 0.25);
+        }
+        draggingNail.headX = draggingNail.homeHeadX;
+        draggingNail.headY = draggingNail.homeHeadY;
+      }
+    } else {
+      // not near any hole
+      if (pos.y < trayThresholdY) {
+        // dropped in board area → snap back to tray home
+        draggingNail.headX = draggingNail.homeHeadX;
+        draggingNail.headY = draggingNail.homeHeadY;
+      } else {
+        // dropped in tray → allow rearranging, new home
+        draggingNail.homeHeadX = draggingNail.headX;
+        draggingNail.homeHeadY = draggingNail.headY;
+      }
+    }
+
+    draggingNail = null;
+
+    if (slots.every(s => s.placed) && gameState === "PLAYING") {
+      gameState = "COMPLETE";
+      playTone(660, 0.2);
+      playTone(990, 0.2);
+      const finalScore = correctCount * 10 - wrongCount * 5;
+      winAnimationFrames = 60;   // ~3 seconds
+      winAnimationPhase = 0;
+      showPopup("Congratulations!", `${currentConfig.label} complete.\nScore: ${finalScore}`);
+      statusEl.textContent = `${currentConfig.label} complete! All pins placed.`;
+
+      // Notify Swift of game completion
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+        window.webkit.messageHandlers.gameComplete.postMessage({won: true, score: finalScore});
+      }
+    }
+
+    draw();
+  }
+
+  // mouse + touch
+  canvas.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length > 0) onPointerDown(e.touches[0]);
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    if (e.touches.length > 0) onPointerMove(e.touches[0]);
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', e => {
+    if (e.changedTouches.length > 0) onPointerUp(e.changedTouches[0]);
+    e.preventDefault();
+  }, { passive: false });
+
+  // ---------- UI HANDLERS ----------
+  startBtn.addEventListener('click', () => {
+    if (gameState === "SETUP") {
+      gameState = "PLAYING";
+      if (currentConfig.timeLimitSec > 0) {
+        startTime = performance.now();
+      } else {
+        startTime = null; // no timer
+      }
+      statusEl.textContent = "Drag each pin by its head to the correct outer hole.";
+      hidePopup();
+      // hide holes as soon as play starts (anti-rim-scan)
+      holesVisible = false;
+      draw();
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    initGame(currentLevelId);
+  });
+
+  revealBtn.addEventListener('click', () => {
+    holesVisible = true;
+    revealBtn.disabled = true;
+    if (revealTimeoutId !== null) clearTimeout(revealTimeoutId);
+    revealTimeoutId = setTimeout(() => {
+      holesVisible = false;
+      revealBtn.disabled = false;
+      draw();
+    }, 3000);
+    draw();
+  });
+
+  levelSelect.addEventListener('change', () => {
+    const levelId = parseInt(levelSelect.value, 10);
+    initGame(levelId);
+  });
+
+  soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    soundBtn.textContent = soundOn ? "Sound: On" : "Sound: Off";
+  });
+
+  popupCloseBtn.addEventListener('click', hidePopup);
+  popupOverlay.addEventListener('click', e => {
+    if (e.target === popupOverlay) hidePopup();
+  });
+
+  // ===== SWIFT INTEGRATION =====
+  window.setSeed = setSeed;
+  window.setLevel = function(level) {
+    currentLevelId = level;
+    currentConfig = LEVELS[level];
+    console.log("✅ AtomicNails level set to:", level);
+  };
+  window.enableDailyMode = function() {
+    document.body.classList.add('daily-mode');
+    console.log("✅ AtomicNails daily mode enabled");
+  };
+  window.startGame = function() {
+    initGame(currentLevelId);
+    console.log("✅ AtomicNails game started");
+  };
+
+  // -------- START --------
+  // Don't auto-start - Swift will call startGame() after setting seed/level
+  // initGame(currentLevelId);
+</script>
+</body>
+</html>

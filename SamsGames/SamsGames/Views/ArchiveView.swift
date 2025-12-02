@@ -169,6 +169,10 @@ struct ArchiveView: View {
             WebWaterTableGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .atomicNails:
+            WebAtomicNailsGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }
@@ -306,6 +310,21 @@ struct ArchiveGameRow: View {
                 // Show difficulty for WaterTable
                 if gameType == .waterTable {
                     let level = dailyPuzzleManager.getWaterTableLevelForDate(date) + 1 // Convert 0,1,2 to 1,2,3
+                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+
+                    HStack(spacing: 4) {
+                        Text(emoji)
+                            .font(.caption2)
+                        Text("\(name) (L\(level))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Show difficulty for Atomic Nails
+                if gameType == .atomicNails {
+                    let level = dailyPuzzleManager.getAtomicNailsLevelForDate(date)
                     let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
                     let name = dailyPuzzleManager.getDifficultyName(for: level)
 

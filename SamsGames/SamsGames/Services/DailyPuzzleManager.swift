@@ -19,6 +19,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case arrowRace = "Arrow Race"
     case diskBreak = "DiskBreak"
     case waterTable = "WaterTable"
+    case atomicNails = "Atomic Nails"
 
     var id: String { self.rawValue }
 
@@ -35,6 +36,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .arrowRace: return "arrowraceicon"
         case .diskBreak: return "diskbreakicon"
         case .waterTable: return "watertableicon"
+        case .atomicNails: return "atomicnailsicon"
         }
     }
 
@@ -51,6 +53,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .arrowRace: return "arrow.triangle.2.circlepath"
         case .diskBreak: return "circle.grid.cross"
         case .waterTable: return "drop.fill"
+        case .atomicNails: return "scope"
         }
     }
 
@@ -66,6 +69,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .arrowRace: return "Race to the finish against Sam"
         case .diskBreak: return "Rebuild broken disks from fragments"
         case .waterTable: return "Rebuild pins to match water depth"
+        case .atomicNails: return "Match nails to hidden holes by precision"
         }
     }
 }
@@ -288,6 +292,30 @@ class DailyPuzzleManager: ObservableObject {
     /// Get today's WaterTable level
     func getTodayWaterTableLevel() -> Int {
         return getWaterTableLevelForDate(currentDate)
+    }
+
+    /// Get Atomic Nails level for date (1, 2, 3)
+    /// Monday/Wed/Fri: L1 (Easy - 5 pins, no timer)
+    /// Tue/Thu: L2 (Medium - 10 pins, 120s timer)
+    /// Sat/Sun: L3 (Hard - 14 pins, 90s timer)
+    func getAtomicNailsLevelForDate(_ date: Date) -> Int {
+        let weekday = calendar.component(.weekday, from: date)
+
+        switch weekday {
+        case 1: return 3  // Sunday: L3 (14 pins)
+        case 2: return 1  // Monday: L1 (5 pins)
+        case 3: return 2  // Tuesday: L2 (10 pins)
+        case 4: return 1  // Wednesday: L1 (5 pins)
+        case 5: return 2  // Thursday: L2 (10 pins)
+        case 6: return 1  // Friday: L1 (5 pins)
+        case 7: return 3  // Saturday: L3 (14 pins)
+        default: return 1
+        }
+    }
+
+    /// Get today's Atomic Nails level
+    func getTodayAtomicNailsLevel() -> Int {
+        return getAtomicNailsLevelForDate(currentDate)
     }
 
     /// Get difficulty name for level

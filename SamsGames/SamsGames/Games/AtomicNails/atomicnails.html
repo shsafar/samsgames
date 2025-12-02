@@ -92,9 +92,24 @@
       background: #e6e6e6;
     }
 
-    /* ===== DAILY MODE (hide controls for iOS integration) ===== */
-    body.daily-mode #controls {
+    /* ===== DAILY MODE (hide mode/level controls for iOS integration) ===== */
+    body.daily-mode #levelSelect,
+    body.daily-mode label[for="levelSelect"],
+    body.daily-mode #startBtn,
+    body.daily-mode #resetBtn {
       display: none;
+    }
+
+    /* Make canvas larger on mobile */
+    body.daily-mode canvas {
+      max-width: 100vw;
+      width: 100vw;
+      height: auto;
+      aspect-ratio: 1;
+    }
+
+    body.daily-mode #container {
+      padding-top: 0;
     }
   </style>
 </head>

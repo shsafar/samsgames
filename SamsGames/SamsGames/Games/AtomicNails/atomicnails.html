@@ -36,6 +36,27 @@
     #controls button:hover {
       background: #e6e6e6;
     }
+
+    /* Different button colors */
+    #revealBtn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+      font-weight: 600;
+    }
+    #revealBtn:hover {
+      background: linear-gradient(135deg, #5568d3 0%, #63408a 100%);
+    }
+
+    #soundBtn {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border-color: #f093fb;
+      font-weight: 600;
+    }
+    #soundBtn:hover {
+      background: linear-gradient(135deg, #e07ee6 0%, #dc4659 100%);
+    }
     #status {
       min-height: 18px;
       font-size: 14px;
@@ -97,19 +118,28 @@
     body.daily-mode label[for="levelSelect"],
     body.daily-mode #startBtn,
     body.daily-mode #resetBtn {
-      display: none;
+      display: none !important;
+    }
+
+    /* In daily mode, hide the info row showing time/score/miss */
+    body.daily-mode #status {
+      display: none !important;
     }
 
     /* Make canvas larger on mobile */
     body.daily-mode canvas {
-      max-width: 100vw;
-      width: 100vw;
-      height: auto;
-      aspect-ratio: 1;
+      max-width: 100vw !important;
+      width: 100vw !important;
+      height: auto !important;
+      aspect-ratio: 1 !important;
     }
 
     body.daily-mode #container {
-      padding-top: 0;
+      padding-top: 0 !important;
+    }
+
+    body.daily-mode #controls {
+      margin-bottom: 4px !important;
     }
   </style>
 </head>
@@ -191,6 +221,7 @@
 
   let currentLevelId = 1;
   let currentConfig = LEVELS[1];
+  let isDailyMode = false; // Track if we're in daily mode
 
   let slots = [];     // [{angle, innerPoint, outerPoint, length, placed}]
   let trayNails = []; // [{slotIndex|null, isDecoy, length, placed, headX, headY, homeHeadX, homeHeadY, trayAngle, dirSign}]
@@ -535,25 +566,28 @@
 
     // HUD
     ctx.font = "14px system-ui";
-    ctx.textAlign = "left";
-    ctx.fillStyle = "#444";
-    const timeText = currentConfig.timeLimitSec > 0
-      ? formatTime(remainingMs)
-      : "--:--";
-    ctx.fillText("Time: " + timeText, 20, 20);
+    // Only show stats if not in daily mode
+    if (!isDailyMode) {
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#444";
+      const timeText = currentConfig.timeLimitSec > 0
+        ? formatTime(remainingMs)
+        : "--:--";
+      ctx.fillText("Time: " + timeText, 20, 20);
 
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#444";
-    ctx.fillText("Score: " + score, canvas.width / 2, 20);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#444";
+      ctx.fillText("Score: " + score, canvas.width / 2, 20);
 
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#c62828";
-    ctx.fillText("Miss: " + wrongCount, canvas.width - 20, 20);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#c62828";
+      ctx.fillText("Miss: " + wrongCount, canvas.width - 20, 20);
 
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#444";
-    ctx.font = "16px system-ui";
-    ctx.fillText(`Circle Nails – ${currentConfig.label}`, canvas.width / 2, 40);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#444";
+      ctx.font = "16px system-ui";
+      ctx.fillText(`Circle Nails – ${currentConfig.label}`, canvas.width / 2, 40);
+    }
 
     // outer circle
     const outerGrad = ctx.createRadialGradient(
@@ -899,6 +933,7 @@
   };
   window.enableDailyMode = function() {
     document.body.classList.add('daily-mode');
+    isDailyMode = true;
     console.log("✅ AtomicNails daily mode enabled");
   };
   window.startGame = function() {

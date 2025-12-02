@@ -302,6 +302,7 @@
 
   let soundOn = true;
   let audioCtx = null;
+  let audioInitialized = false;
 
   // win animation
   let winAnimationFrames = 0;  // counts down
@@ -372,12 +373,27 @@
     };
   }
 
+  function initAudioContext() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+    }
+    // Resume audio context if suspended (required for iOS)
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    audioInitialized = true;
+  }
+
   function playTone(freq, duration) {
     if (!soundOn) return;
     try {
       if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
+        initAudioContext();
+      }
+      // Resume if suspended (iOS requirement)
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
       }
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -396,8 +412,11 @@
     if (!soundOn) return;
     try {
       if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
+        initAudioContext();
+      }
+      // Resume if suspended (iOS requirement)
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
       }
       const now = audioCtx.currentTime;
 
@@ -463,8 +482,11 @@
     if (!soundOn) return;
     try {
       if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
+        initAudioContext();
+      }
+      // Resume if suspended (iOS requirement)
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
       }
       const now = audioCtx.currentTime;
 
@@ -994,6 +1016,10 @@
   }
 
   function onPointerDown(e) {
+    // Initialize audio on first user interaction (iOS requirement)
+    if (!audioInitialized) {
+      initAudioContext();
+    }
     if (gameState !== "PLAYING") return;
     const pos = canvasToLocal(e);
 
@@ -1154,6 +1180,10 @@
 
   // ---------- UI HANDLERS ----------
   startBtn.addEventListener('click', () => {
+    // Initialize audio on first user interaction (iOS requirement)
+    if (!audioInitialized) {
+      initAudioContext();
+    }
     if (gameState === "SETUP") {
       gameState = "PLAYING";
       if (currentConfig.timeLimitSec > 0) {

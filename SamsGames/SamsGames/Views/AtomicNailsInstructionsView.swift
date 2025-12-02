@@ -57,12 +57,17 @@ struct AtomicNailsInstructionsView: View {
 
                     InstructionItem(
                         icon: "xmark.circle",
-                        text: "Wrong Placement: If any detail doesn't match (wrong length, wrong angle, or wrong hole), the nail pops back to the pile at the bottom. You'll lose 5 points for each wrong attempt."
+                        text: "Wrong Placement: If any detail doesn't match (wrong length, wrong angle, or wrong hole), the nail pops back to the pile at the bottom. You'll lose 5 points for each wrong attempt. Too short? You'll see 'Nope!' appear!"
                     )
 
                     InstructionItem(
                         icon: "exclamationmark.triangle",
                         text: "Beware of Decoys! Some nails in the pile are fake - they don't belong to any hole on the ring. Placing a decoy costs you 5 points and shows 'Decoy!' as a warning. Watch for unusual lengths!"
+                    )
+
+                    InstructionItem(
+                        icon: "burst.fill",
+                        text: "DANGER - Explosion Hazard! If a nail is TOO LONG and its tip pierces through the atomic core (inner circle), the core will EXPLODE! This resets the entire puzzle and you must start over. Be very careful with long nails!"
                     )
 
                     InstructionItem(
@@ -82,7 +87,7 @@ struct AtomicNailsInstructionsView: View {
 
                     InstructionItem(
                         icon: "lightbulb",
-                        text: "Pro Tips:\n• Look carefully at nail lengths before dragging\n• Use the Reveal Holes button when stuck\n• Decoys are usually very short or very long\n• In timed levels, work quickly but carefully!"
+                        text: "Pro Tips:\n• Look carefully at nail lengths before dragging\n• Use the Reveal Holes button when stuck\n• Decoys are usually very short or very long\n• NEVER try a nail that looks too long - it might explode the core!\n• In timed levels, work quickly but carefully!"
                     )
 
                     InstructionItem(

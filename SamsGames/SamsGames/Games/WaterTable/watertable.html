@@ -167,15 +167,15 @@
     z-index:15;
   }
 
-  /* Wrong Pin flash overlay — in the same position as DICORY */
+  /* Wrong Shaft flash overlay — in the same position as DICORY */
   #wrongPinFlash{
     position:absolute;
     top:260px;         /* same position as DICORY (in the water area) */
     left:50%;
     transform:translate(-50%, -10px) scale(0.9);
-    font-size:26px;
+    font-size:22px;    /* Slightly smaller for two-line message */
     font-weight:800;
-    letter-spacing:1px;
+    letter-spacing:0.5px;
     color:#ff3b3b;
     text-shadow:0 0 4px rgba(255,255,255,0.9),
                 0 2px 2px rgba(0,0,0,0.25);
@@ -183,6 +183,8 @@
     pointer-events:none;
     transition:opacity 0.12s ease-out, transform 0.12s ease-out;
     z-index:15;
+    line-height:1.3;
+    text-align:center;
   }
 
   /* ===== DAILY MODE (hide controls for iOS integration) ===== */
@@ -200,8 +202,8 @@
   <!-- DICORY overlay -->
   <div id="dicoryFlash">DICORY</div>
 
-  <!-- Wrong Pin overlay -->
-  <div id="wrongPinFlash">Wrong Pin</div>
+  <!-- Wrong Shaft overlay -->
+  <div id="wrongPinFlash">Wrong Shaft!<br>Try Again</div>
 
   <!-- Modes row -->
   <div class="mode-row">

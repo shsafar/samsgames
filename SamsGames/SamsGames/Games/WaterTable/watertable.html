@@ -167,13 +167,13 @@
     z-index:15;
   }
 
-  /* Wrong Pin flash overlay — above the pins */
+  /* Wrong Pin flash overlay — in the same position as DICORY */
   #wrongPinFlash{
     position:absolute;
-    top:100px;         /* above the pins area */
+    top:260px;         /* same position as DICORY (in the water area) */
     left:50%;
     transform:translate(-50%, -10px) scale(0.9);
-    font-size:24px;
+    font-size:26px;
     font-weight:800;
     letter-spacing:1px;
     color:#ff3b3b;
@@ -495,7 +495,7 @@ function flashWrongPin(){
   el.style.transition="opacity 0.12s ease-out, transform 0.12s ease-out";
   el.style.opacity="1";
   el.style.transform="translate(-50%, -10px) scale(1.1)";
-  setTimeout(()=>{el.style.opacity="0";},420);
+  setTimeout(()=>{el.style.opacity="0";},800); // Increased from 420ms to 800ms for longer visibility
 }
 
 /* floor */

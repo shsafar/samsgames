@@ -887,12 +887,30 @@
       const ip = slot.innerPoint;
       const op = slot.outerPoint;
 
-      // Only show holes when holesVisible = true (preview or reveal)
-      if (!slot.placed && holesVisible) {
+      // Draw visible outer circle dots (target-like) - always visible
+      if (!slot.placed) {
+        // Outer ring (target appearance)
+        ctx.strokeStyle = "#d32f2f";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(op.x, op.y, 8, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner dot
         ctx.fillStyle = "#555";
         ctx.beginPath();
         ctx.arc(op.x, op.y, 4, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      // Show holes when holesVisible = true (preview or reveal)
+      if (!slot.placed && holesVisible) {
+        // Add yellow highlight during reveal
+        ctx.strokeStyle = "#ffc107";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(op.x, op.y, 10, 0, Math.PI * 2);
+        ctx.stroke();
       }
 
       if (gameState === "SETUP" || slot.placed) {
@@ -1111,9 +1129,11 @@
           const droppedSlot = slots[bestIndex];  // The hole where it was actually dropped
           if (draggingNail.length < droppedSlot.length - 10) {
             // Nail is too short for this hole
-            nopeFlashFrames = 30;  // Increased from 20 to make it more visible
+            nopeFlashFrames = 30;  // Show "NOPE!" flash
             playNopeSound();
             statusEl.textContent = "Too short for this hole!";
+            // Force immediate draw to show flash
+            draw();
           } else {
             statusEl.textContent = "Wrong hole. Try another.";
           }

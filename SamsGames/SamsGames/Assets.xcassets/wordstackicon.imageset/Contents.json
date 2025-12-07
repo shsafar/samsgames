@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "WordInShapesIcon.png.png",
+      "filename" : "wordstackicon.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "WordInShapesIcon.png 1.png",
+      "filename" : "wordstackicon 2.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "WordInShapesIcon.png 2.png",
+      "filename" : "wordstackicon 1.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

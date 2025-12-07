@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WordStacks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #ffffff;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-top: 12px;
+      font-size: 22px;
+    }
+
+    #top-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin: 4px 0 10px;
+      font-size: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    #top-bar .label {
+      font-weight: 600;
+    }
+
+    #controls {
+      margin-bottom: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    #controls button {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #888;
+      cursor: pointer;
+      background: #f2f2f2;
+      color: #222;
+      font-size: 14px;
+      min-width: 90px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #controls button:active {
+      background: #e0e0e0;
+    }
+
+    #game-area {
+      width: 440px;
+      max-width: 96vw;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 6px;
+      background: #fff;
+      box-shadow: 0 0 6px rgba(0,0,0,0.06);
+      height: 70vh;
+      max-height: 560px;
+      position: relative;
+      overflow-y: auto;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+
+    #board {
+      position: relative;
+      width: 100%;
+      height: 2100px; /* enough vertical space for shapes 1–21 */
+    }
+
+    #lines-svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .node {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      margin-left: -16px;
+      margin-top: -16px;
+      border-radius: 50%;
+      border: 2px solid #999;
+      background: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 15px;
+      box-sizing: border-box;
+      z-index: 10;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .node.fixed {
+      background: #f0f0f0;
+    }
+
+    .node.shared {
+      background: #ffecb3;
+      border-color: #ffb300;
+      color: #000;
+      box-shadow: 0 0 8px rgba(255,179,0,0.7);
+    }
+
+    .node input {
+      width: 100%;
+      height: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      color: #222;
+    }
+
+    .node.solved {
+      border-color: #1a8b2a;
+      color: #1a8b2a;
+      background: #e0f7e4;
+    }
+
+    .node.wrong {
+      border-color: #d32f2f;
+      background: #ffebee;
+    }
+
+    .shape-label {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      margin-left: -11px;
+      margin-top: -11px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 13px;
+      color: #555;
+      z-index: 5;
+    }
+
+    .shape-label.solved {
+      color: #1a8b2a;
+    }
+
+    .path-solved {
+      stroke: #1a8b2a !important;
+    }
+
+    /* CLUE BOX: fixed to the RIGHT, wraps to 2+ lines if needed */
+    .clue-box {
+      position: absolute;
+      right: 8px;
+      max-width: 52%;
+      font-size: 12px;
+      color: #333;
+      z-index: 1;
+      text-align: left;
+      line-height: 1.3;
+      word-wrap: break-word;
+    }
+
+    .clue-box .clue {
+      font-style: italic;
+    }
+
+    #message {
+      margin: 8px 8px 12px;
+      font-size: 14px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 19px; }
+      #top-bar { font-size: 14px; }
+      .node { width: 30px; height: 30px; margin-left: -15px; margin-top: -15px; }
+      .clue-box { font-size: 11px; max-width: 56%; }
+    }
+
+    /* ===== DAILY MODE (iOS integration) ===== */
+    body.daily-mode #btn-new,
+    body.daily-mode #btn-restart {
+      display: none !important;
+    }
+
+    /* Make controls larger and more touch-friendly in daily mode */
+    body.daily-mode #controls button {
+      padding: 14px 20px !important;
+      font-size: 16px !important;
+      min-width: 120px !important;
+      font-weight: 600 !important;
+      border-radius: 12px !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    }
+
+    body.daily-mode #btn-reveal {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+      border-color: #667eea !important;
+    }
+
+    body.daily-mode #btn-next {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+      color: white !important;
+      border-color: #11998e !important;
+    }
+
+    body.daily-mode #game-area {
+      height: 75vh !important;
+      max-height: none !important;
+    }
+
+    body.daily-mode .node {
+      width: 38px !important;
+      height: 38px !important;
+      margin-left: -19px !important;
+      margin-top: -19px !important;
+      font-size: 17px !important;
+    }
+
+    body.daily-mode .node input {
+      font-size: 17px !important;
+    }
+  </style>
+</head>
+<body>
+  <h1>WordStacks</h1>
+
+  <div id="top-bar">
+    <span class="label">Time:</span> <span id="time-display">120</span>s
+    <span class="label">Solved:</span> <span id="score-display">0</span>
+  </div>
+
+  <div id="controls">
+    <button id="btn-new">New Game</button>
+    <button id="btn-restart">Restart</button>
+    <button id="btn-reveal">Reveal</button>
+    <button id="btn-next">Next Word</button>
+  </div>
+
+  <div id="game-area">
+    <div id="board">
+      <svg id="lines-svg"></svg>
+    </div>
+  </div>
+
+  <div id="message"></div>
+
+  <script>
+    // ===== SEEDED RANDOM NUMBER GENERATOR =====
+    let rngSeed = Date.now();
+    function setSeed(s) {
+      rngSeed = s;
+      console.log("✅ WordStacks seed set:", s);
+    }
+    function seededRand() {
+      rngSeed = (rngSeed * 9301 + 49297) % 233280;
+      return rngSeed / 233280;
+    }
+
+    // Override Math.random with seeded version
+    const originalRandom = Math.random;
+    Math.random = function() {
+      return seededRand();
+    };
+
+    // ===== AUDIO CONTEXT FOR SOUNDS =====
+    let audioCtx = null;
+    let soundEnabled = true;
+    let audioInitialized = false;
+
+    function initAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      audioInitialized = true;
+    }
+
+    function playTone(freq, duration, type = 'sine') {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) initAudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.value = 0.1;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // ignore audio errors
+      }
+    }
+
+    function playCorrect() { playTone(880, 0.15, 'triangle'); }
+    function playWrong() { playTone(250, 0.20, 'square'); }
+    function playShapeSolved() {
+      playTone(660, 0.15);
+      setTimeout(() => playTone(880, 0.15), 100);
+    }
+    function playWin() {
+      playTone(523, 0.2);
+      setTimeout(() => playTone(659, 0.2), 150);
+      setTimeout(() => playTone(784, 0.25), 300);
+    }
+
+    // ===== DAILY MODE TRACKING =====
+    let isDailyMode = false;
+
+    const MAX_WORDS = 21;
+    const ROUND_TIME = 120; // seconds
+
+    /* Small sample WORD_BANK – you can paste your 70-word lists in here */
+    const WORD_BANK = {
+      hex: [
+        { word: "PLANET", clue: "A large body orbiting a star." },
+        { word: "STREAM", clue: "Small flowing body of water." },
+        { word: "BOTTLE", clue: "Container for liquids." },
+        { word: "MARKET", clue: "Place for buying and selling." },
+        { word: "GARDEN", clue: "Place where plants are grown." },
+        { word: "POCKET", clue: "Small pouch in clothing." },
+        { word: "TARGET", clue: "Something aimed at." },
+        { word: "ORANGE", clue: "Citrus fruit and a color." },
+        { word: "FIGURE", clue: "Shape of a person or object." },
+        { word: "ABSENT", clue: "Not present." },
+        { word: "GOBLET", clue: "Stemmed drinking cup." },
+        { word: "SILVER", clue: "Precious gray-white metal." },
+        { word: "FATHER", clue: "Male parent." },
+        { word: "MOTHER", clue: "Female parent." },
+        { word: "LETTER", clue: "Written message sent to someone." },
+        { word: "POWDER", clue: "Dry substance of fine grains." },
+        { word: "SPIDER", clue: "Eight-legged web maker." },
+        { word: "JUNGLE", clue: "Dense tropical forest." },
+        { word: "BRIDGE", clue: "Structure crossing water or road." },
+        { word: "FLOWER", clue: "Blooming part of a plant." },
+        { word: "CANDLE", clue: "Stick of wax that burns to give light." },
+        { word: "ENGINE", clue: "Machine that provides power." },
+        { word: "GUITAR", clue: "Stringed musical instrument." },
+        { word: "LADDER", clue: "Climbing tool with rungs." },
+        { word: "PUZZLE", clue: "Game that tests ingenuity." },
+        { word: "ROCKET", clue: "Vehicle driven by jet propulsion." },
+        { word: "TUNNEL", clue: "Passage dug through ground or rock." },
+        { word: "BRICKS", clue: "Blocks used to build walls." },
+        { word: "VELVET", clue: "Soft fabric with a short pile." },
+        { word: "WINDOW", clue: "Opening in a wall that lets in light." }
+      ],
+
+      pentagon: [
+        { word: "STONE", clue: "Hard piece of rock." },
+        { word: "LIGHT", clue: "Makes things visible." },
+        { word: "RIVER", clue: "Natural flowing watercourse." },
+        { word: "BOARD", clue: "Flat piece of wood." },
+        { word: "FRAME", clue: "Structure that surrounds something." },
+        { word: "PLANT", clue: "Living thing with leaves and roots." },
+        { word: "SHEET", clue: "Large thin piece of cloth or paper." },
+        { word: "TRAIN", clue: "Connected series of rail cars." },
+        { word: "SOUND", clue: "What you hear." },
+        { word: "WHEEL", clue: "Round thing that helps things roll." },
+        { word: "SMALL", clue: "Not large." },
+        { word: "CLOUD", clue: "Visible mass of water droplets in sky." },
+        { word: "SHORE", clue: "Land along the edge of water." },
+        { word: "FIELD", clue: "Open area of land." },
+        { word: "FRUIT", clue: "Sweet edible plant part with seeds." },
+        { word: "HOUSE", clue: "Building where people live." },
+        { word: "WATER", clue: "Clear liquid essential for life." },
+        { word: "EARTH", clue: "Planet we live on." },
+        { word: "METAL", clue: "Hard, shiny material like iron or gold." },
+        { word: "GLASS", clue: "Hard, clear material used in windows." },
+        { word: "TABLE", clue: "Piece of furniture with a flat top." },
+        { word: "CHAIR", clue: "Seat for one person." },
+        { word: "BREAD", clue: "Baked food made from flour." },
+        { word: "CHEST", clue: "Box with a lid for storage." },
+        { word: "HEART", clue: "Organ that pumps blood." },
+        { word: "SMILE", clue: "Happy expression on the face." },
+        { word: "DREAM", clue: "Images or ideas during sleep." },
+        { word: "NIGHT", clue: "Time when it is dark." },
+        { word: "ARROW", clue: "Thin pointed missile shot from a bow." },
+        { word: "CROWN", clue: "Decorative headpiece worn by royalty." }
+      ],
+
+      square: [
+        { word: "MOON", clue: "Earth's natural satellite." },
+        { word: "FISH", clue: "Animal that lives in water." },
+        { word: "TREE", clue: "Tall plant with a trunk." },
+        { word: "WIND", clue: "Air in motion." },
+        { word: "STAR", clue: "Luminous body in space." },
+        { word: "BIRD", clue: "Animal with feathers and wings." },
+        { word: "ROAD", clue: "Path for vehicles." },
+        { word: "BOOK", clue: "Printed pages bound together." },
+        { word: "HAND", clue: "End of the arm with fingers." },
+        { word: "RING", clue: "Circular band worn on a finger." },
+        { word: "SHIP", clue: "Large boat for traveling by sea." },
+        { word: "CORN", clue: "Yellow grain eaten as food." },
+        { word: "LAMP", clue: "Object that gives light indoors." },
+        { word: "TIME", clue: "Measure of when things happen." },
+        { word: "LEAF", clue: "Thin green part of a plant." },
+        { word: "BELL", clue: "Hollow object that rings when struck." },
+        { word: "CHEF", clue: "Professional cook." },
+        { word: "FORK", clue: "Utensil with prongs for eating." },
+        { word: "GIFT", clue: "Something given to someone." },
+        { word: "GOAL", clue: "Target or objective." },
+        { word: "HILL", clue: "Small raised area of land." },
+        { word: "KITE", clue: "Toy that flies on a string." },
+        { word: "LAKE", clue: "Large inland body of water." },
+        { word: "PARK", clue: "Public green space for recreation." },
+        { word: "RICE", clue: "Small white grain eaten as food." },
+        { word: "SALT", clue: "White crystals used to season food." },
+        { word: "TOWN", clue: "Place where many people live." },
+        { word: "WAVE", clue: "Moving ridge on the surface of water." },
+        { word: "WOOD", clue: "Material that comes from trees." },
+        { word: "ROOM", clue: "Part of a building with walls and a door." }
+      ],
+
+      triangle: [
+        { word: "CAT", clue: "Common house pet." },
+        { word: "SUN", clue: "Star at the center of our system." },
+        { word: "KEY", clue: "Used to open a lock." },
+        { word: "ICE", clue: "Frozen water." },
+        { word: "MAP", clue: "Diagram of an area." },
+        { word: "DOG", clue: "Loyal four-legged pet." },
+        { word: "BUS", clue: "Large road vehicle for passengers." },
+        { word: "CAR", clue: "Four-wheeled vehicle." },
+        { word: "BED", clue: "Furniture used for sleeping." },
+        { word: "BOX", clue: "Container with flat sides." },
+        { word: "HAT", clue: "Clothing worn on the head." },
+        { word: "PEN", clue: "Tool for writing with ink." },
+        { word: "JAR", clue: "Glass container with a lid." },
+        { word: "FOG", clue: "Low cloud that reduces visibility." },
+        { word: "ANT", clue: "Small insect that lives in colonies." },
+        { word: "ROW", clue: "Line of things or people." },
+        { word: "BEE", clue: "Insect that makes honey." },
+        { word: "CAP", clue: "Soft hat with a visor." },
+        { word: "GAS", clue: "Substance like air that is not solid or liquid." },
+        { word: "INK", clue: "Colored liquid used for writing." },
+        { word: "LID", clue: "Cover for a container." },
+        { word: "MUD", clue: "Wet, soft earth." },
+        { word: "NAP", clue: "Short period of sleep." },
+        { word: "OAK", clue: "Type of tree with strong wood." },
+        { word: "PAN", clue: "Shallow cooking vessel." },
+        { word: "RIM", clue: "Outer edge of something round." },
+        { word: "SAW", clue: "Tool with teeth for cutting wood." },
+        { word: "ZIP", clue: "Fastener made of two rows of teeth." },
+        { word: "EGG", clue: "Hard-shelled food from birds." },
+        { word: "JET", clue: "Fast airplane." }
+      ]
+    };
+
+    const SHAPE_TYPES = ["hex", "pentagon", "square", "triangle"];
+
+    const board = document.getElementById("board");
+    const svg = document.getElementById("lines-svg");
+    const gameArea = document.getElementById("game-area");
+    const msgEl = document.getElementById("message");
+
+    let shapes = [];
+    let usedWords = new Set();
+    let timeLeft = ROUND_TIME;
+    let timerId = null;
+    let score = 0;
+
+    function randomChoice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function getRadius() {
+      return 46;
+    }
+
+    function polygonBottomFirst(count, cx, cy, r) {
+      const pts = [];
+      const startAngle = Math.PI / 2; // bottom point first
+      const step = (2 * Math.PI) / count;
+      for (let i = 0; i < count; i++) {
+        const angle = startAngle + step * i;
+        pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+      }
+      return pts;
+    }
+
+    function getShapeSize(type) {
+      if (type === "triangle") return 3;
+      if (type === "square") return 4;
+      if (type === "pentagon") return 5;
+      return 6;
+    }
+
+    function findWordsWithLetter(shapeType, letter) {
+      const up = letter.toUpperCase();
+      return WORD_BANK[shapeType].filter(
+        e => e.word.toUpperCase().includes(up) &&
+             !usedWords.has(shapeType + ":" + e.word.toUpperCase())
+      );
+    }
+
+    function pickAnyUnused(shapeType) {
+      const pool = WORD_BANK[shapeType].filter(
+        e => !usedWords.has(shapeType + ":" + e.word.toUpperCase())
+      );
+      if (pool.length === 0) return randomChoice(WORD_BANK[shapeType]);
+      return randomChoice(pool);
+    }
+
+    function computeHiddenIndices(length, sharedIndex) {
+      if (length <= 2) return new Set([0]);
+      const all = [];
+      for (let i = 0; i < length; i++) all.push(i);
+      const pool = all.filter(i => i !== sharedIndex);
+      const maxHide = Math.max(1, Math.floor(length / 2));
+      const hideCount = Math.min(pool.length, Math.floor(Math.random() * maxHide) + 1);
+      const hidden = new Set();
+      const p = [...pool];
+      while (hidden.size < hideCount && p.length) {
+        const idx = Math.floor(Math.random() * p.length);
+        hidden.add(p.splice(idx, 1)[0]);
+      }
+      return hidden;
+    }
+
+    function setMessage(text) {
+      msgEl.textContent = text || "";
+    }
+
+    function startTimer() {
+      const tEl = document.getElementById("time-display");
+      if (timerId) clearInterval(timerId);
+      timeLeft = ROUND_TIME;
+      tEl.textContent = timeLeft;
+      timerId = setInterval(() => {
+        timeLeft--;
+        if (timeLeft < 0) timeLeft = 0;
+        tEl.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          timerId = null;
+          setMessage("Time is up!");
+
+          // Notify Swift of timeout
+          if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+            window.webkit.messageHandlers.gameComplete.postMessage({won: false, score: score});
+            console.log("✅ WordStacks: Notified Swift of timeout");
+          }
+        }
+      }, 1000);
+    }
+
+    function drawShape(shape) {
+      const pts = shape.nodes.map(n => [n.x, n.y]);
+      if (pts.length > 1) {
+        let d = "";
+        for (let i = 0; i < pts.length; i++) {
+          const [x, y] = pts[i];
+          d += (i === 0 ? "M" : "L") + x + " " + y + " ";
+        }
+        d += "Z";
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        path.setAttribute("stroke", "#cccccc");
+        path.setAttribute("stroke-width", "2");
+        path.setAttribute("fill", "none");
+        svg.appendChild(path);
+        shape.pathEl = path;
+      }
+
+      const lbl = document.createElement("div");
+      lbl.className = "shape-label";
+      lbl.textContent = shape.index;
+      lbl.style.left = shape.center.x + "px";
+      lbl.style.top = shape.center.y + "px";
+      board.appendChild(lbl);
+      shape.labelEl = lbl;
+
+      const clueBox = document.createElement("div");
+      clueBox.className = "clue-box";
+      clueBox.style.top = (shape.center.y - 10) + "px"; // vertical aligned to center
+      const clueDiv = document.createElement("div");
+      clueDiv.className = "clue";
+      clueDiv.textContent = shape.clue;
+      clueBox.appendChild(clueDiv);
+      board.appendChild(clueBox);
+      shape.clueEl = clueBox;
+
+      shape.nodes.forEach(node => {
+        const div = document.createElement("div");
+        div.className = "node";
+        div.style.left = node.x + "px";
+        div.style.top = node.y + "px";
+
+        if (node.shared) div.classList.add("shared");
+
+        if (node.fixed) {
+          div.classList.add("fixed");
+          div.textContent = node.letter;
+        } else {
+          const input = document.createElement("input");
+          input.type = "text";
+          input.maxLength = 1;
+          input.dataset.answer = node.letter;
+          input.addEventListener("input", () => {
+            // Initialize audio on first user interaction
+            if (!audioInitialized) initAudioContext();
+
+            const val = input.value.toUpperCase().slice(0, 1);
+            input.value = val;
+            const expected = input.dataset.answer;
+            const nodeDiv = input.parentElement;
+            if (val && val !== expected) {
+              nodeDiv.classList.add("wrong");
+              playWrong();
+            } else {
+              nodeDiv.classList.remove("wrong");
+              if (val === expected) playCorrect();
+            }
+            checkShapeSolved(shape);
+          });
+          div.appendChild(input);
+          node.inputEl = input;
+        }
+
+        board.appendChild(div);
+        node.el = div;
+      });
+
+      setTimeout(() => {
+        const target = shape.center.y - gameArea.clientHeight / 2;
+        gameArea.scrollTop = Math.max(0, target);
+      }, 0);
+    }
+
+    function markSharedNode(shape, nodeIndex) {
+      if (!shape) return;
+      if (nodeIndex < 0 || nodeIndex >= shape.nodes.length) return;
+      const node = shape.nodes[nodeIndex];
+      node.shared = true;
+      if (node.el) node.el.classList.add("shared");
+    }
+
+    function maybeAdvanceOrFinish(solvedShape) {
+      if (score >= MAX_WORDS) {
+        playWin();
+        setMessage("Congratulations! You solved " + MAX_WORDS + " words!");
+
+        // Notify Swift of game completion
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameComplete) {
+          window.webkit.messageHandlers.gameComplete.postMessage({won: true, score: score});
+          console.log("✅ WordStacks: Notified Swift of completion");
+        }
+
+        if (!isDailyMode) {
+          setTimeout(() => {
+            alert("Congratulations! You solved " + MAX_WORDS + " words.\nStarting a new game.");
+            newGame();
+          }, 1000);
+        }
+        return;
+      }
+
+      if (!solvedShape) return;
+
+      const topIndex = Math.max(...shapes.map(s => s.index));
+      if (solvedShape.index === topIndex) {
+        addShape(solvedShape);  // auto-next
+      }
+    }
+
+    function checkShapeSolved(shape) {
+      if (shape.solved) return;
+      let ok = true;
+      for (const node of shape.nodes) {
+        if (!node.fixed) {
+          if (!node.inputEl || node.inputEl.value.toUpperCase() !== node.letter) {
+            ok = false;
+            break;
+          }
+        }
+      }
+      if (!ok) return;
+
+      shape.solved = true;
+      shape.nodes.forEach(n => {
+        if (n.el) {
+          n.el.classList.remove("wrong");
+          n.el.classList.add("solved");
+        }
+      });
+      if (shape.pathEl) shape.pathEl.classList.add("path-solved");
+      if (shape.labelEl) shape.labelEl.classList.add("solved");
+
+      score++;
+      document.getElementById("score-display").textContent = score;
+      playShapeSolved();
+      setMessage("Shape " + shape.index + " solved.");
+      maybeAdvanceOrFinish(shape);
+    }
+
+    function addShape(prevShape) {
+      if (shapes.length >= MAX_WORDS) {
+        return;
+      }
+
+      const index = shapes.length + 1;
+      const boardRect = board.getBoundingClientRect();
+      const width = boardRect.width;
+
+      let shapeType, entry, word, clue;
+      let center, radius;
+      let sharedLetter = null;
+
+      if (!prevShape) {
+        // FIRST SHAPE – always hex
+        shapeType = "hex";
+        entry = pickAnyUnused(shapeType);
+        word = entry.word.toUpperCase();
+        clue = entry.clue;
+        radius = getRadius();
+        center = { x: width * 0.35, y: board.clientHeight - radius - 40 };
+
+        const count = getShapeSize(shapeType);
+        const base = polygonBottomFirst(count, center.x, center.y, radius);
+        const sharedIndex = 0;
+        const hidden = computeHiddenIndices(word.length, sharedIndex);
+        const nodes = [];
+        for (let i = 0; i < word.length; i++) {
+          const polyIndex = (i - sharedIndex + count) % count;
+          const pos = base[polyIndex];
+          const ch = word[i];
+          const fixed = !hidden.has(i);
+          nodes.push({
+            x: pos.x,
+            y: pos.y,
+            letter: ch,
+            fixed,
+            shared: false,
+            el: null,
+            inputEl: null
+          });
+        }
+
+        usedWords.add(shapeType + ":" + word);
+
+        const shape = {
+          index,
+          type: shapeType,
+          word,
+          clue,
+          center,
+          radius,
+          nodes,
+          solved: false,
+          pathEl: null,
+          labelEl: null,
+          clueEl: null
+        };
+
+        // clamp first shape horizontally
+        const boardWidth = board.clientWidth;
+        const margin = 28;
+        const minCX = shape.radius + margin;
+        const maxCX = boardWidth - shape.radius - margin;
+        let dx = 0;
+        if (shape.center.x < minCX) dx = minCX - shape.center.x;
+        else if (shape.center.x > maxCX) dx = maxCX - shape.center.x;
+        if (dx !== 0) {
+          shape.center.x += dx;
+          shape.nodes.forEach(n => { n.x += dx; });
+        }
+
+        shapes.push(shape);
+        drawShape(shape);
+        return;
+      }
+
+      // SUBSEQUENT SHAPES
+      let topNodeIndex = 0;
+      let minY = Infinity;
+      prevShape.nodes.forEach((n, i) => {
+        if (n.y < minY) {
+          minY = n.y;
+          topNodeIndex = i;
+        }
+      });
+      const S = prevShape.nodes[topNodeIndex];
+      sharedLetter = S.letter;
+
+      let chosen = null;
+      for (let attempt = 0; attempt < 20 && !chosen; attempt++) {
+        const candidateType = randomChoice(SHAPE_TYPES);
+        const candidates = findWordsWithLetter(candidateType, sharedLetter);
+        if (candidates.length) {
+          chosen = { type: candidateType, entry: randomChoice(candidates) };
+        }
+      }
+      if (!chosen) {
+        const fallbackType = randomChoice(SHAPE_TYPES);
+        chosen = { type: fallbackType, entry: pickAnyUnused(fallbackType) };
+      }
+
+      shapeType = chosen.type;
+      entry = chosen.entry;
+      word = entry.word.toUpperCase();
+      clue = entry.clue;
+      radius = getRadius();
+
+      const indices = [];
+      for (let i = 0; i < word.length; i++) {
+        if (word[i] === sharedLetter) indices.push(i);
+      }
+      const newSharedIndex = indices.length ? randomChoice(indices) : 0;
+
+      const jitter = (Math.random() - 0.5) * radius * 0.6;
+      center = { x: S.x + jitter, y: S.y - radius };
+
+      markSharedNode(prevShape, topNodeIndex);
+
+      const count = getShapeSize(shapeType);
+      const base = polygonBottomFirst(count, center.x, center.y, radius);
+      const hidden = computeHiddenIndices(word.length, newSharedIndex);
+      const nodes = [];
+      for (let i = 0; i < word.length; i++) {
+        const polyIndex = (i - newSharedIndex + count) % count;
+        const pos = base[polyIndex];
+        const ch = word[i];
+        const isShared = (i === newSharedIndex);
+        const fixed = !hidden.has(i);
+        nodes.push({
+          x: pos.x,
+          y: pos.y,
+          letter: ch,
+          fixed,
+          shared: isShared,
+          el: null,
+          inputEl: null
+        });
+      }
+
+      usedWords.add(shapeType + ":" + word);
+
+      const shape = {
+        index,
+        type: shapeType,
+        word,
+        clue,
+        center,
+        radius,
+        nodes,
+        solved: false,
+        pathEl: null,
+        labelEl: null,
+        clueEl: null
+      };
+
+      // clamp subsequent shapes horizontally
+      const boardWidth2 = board.clientWidth;
+      const margin2 = 28;
+      const minCX2 = shape.radius + margin2;
+      const maxCX2 = boardWidth2 - shape.radius - margin2;
+      let dx2 = 0;
+      if (shape.center.x < minCX2) dx2 = minCX2 - shape.center.x;
+      else if (shape.center.x > maxCX2) dx2 = maxCX2 - shape.center.x;
+      if (dx2 !== 0) {
+        shape.center.x += dx2;
+        shape.nodes.forEach(n => { n.x += dx2; });
+      }
+
+      shapes.push(shape);
+      drawShape(shape);
+    }
+
+    function clearBoard() {
+      shapes = [];
+      usedWords.clear();
+      while (board.firstChild) board.removeChild(board.firstChild);
+      board.appendChild(svg);
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+    }
+
+    function newGame() {
+      clearBoard();
+      score = 0;
+      document.getElementById("score-display").textContent = score;
+      setMessage("");
+      addShape(null);
+      startTimer();
+      setTimeout(() => {
+        gameArea.scrollTop = gameArea.scrollHeight;
+      }, 0);
+    }
+
+    function restartGame() {
+      newGame();
+      setMessage("Restarted.");
+    }
+
+    function revealTop() {
+      if (!shapes.length) return;
+      const topIndex = Math.max(...shapes.map(s => s.index));
+      const top = shapes.find(s => s.index === topIndex);
+      if (!top) return;
+      top.nodes.forEach(node => {
+        if (!node.fixed && node.inputEl) {
+          node.inputEl.value = node.letter;
+          if (node.el) node.el.classList.remove("wrong");
+        }
+      });
+      checkShapeSolved(top);
+    }
+
+    function nextWordManual() {
+      if (shapes.length >= MAX_WORDS) {
+        setMessage("Maximum of " + MAX_WORDS + " words reached.");
+        return;
+      }
+      if (!shapes.length) {
+        addShape(null);
+        return;
+      }
+      const topIndex = Math.max(...shapes.map(s => s.index));
+      const top = shapes.find(s => s.index === topIndex);
+      if (top && !top.solved) {
+        alert("Solve the current word before moving to the next one.");
+        return;
+      }
+      addShape(top);
+    }
+
+    document.getElementById("btn-new").addEventListener("click", newGame);
+    document.getElementById("btn-restart").addEventListener("click", restartGame);
+    document.getElementById("btn-reveal").addEventListener("click", revealTop);
+    document.getElementById("btn-next").addEventListener("click", nextWordManual);
+
+    // ===== SWIFT INTEGRATION =====
+    window.setSeed = setSeed;
+    window.enableDailyMode = function() {
+      document.body.classList.add('daily-mode');
+      isDailyMode = true;
+      console.log("✅ WordStacks: Daily mode enabled");
+    };
+    window.startGame = function() {
+      newGame();
+      console.log("✅ WordStacks: Game started");
+    };
+
+    // Don't auto-start - Swift will call startGame() after setting seed
+    // newGame();
+  </script>
+</body>
+</html>

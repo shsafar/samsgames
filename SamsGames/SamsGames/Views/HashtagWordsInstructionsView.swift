@@ -83,7 +83,7 @@ struct HashtagWordsInstructionsView: View {
     }
 }
 
-struct InstructionItem: View {
+private struct InstructionItem: View {
     let icon: String
     let text: String
 

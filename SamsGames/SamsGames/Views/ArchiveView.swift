@@ -173,6 +173,10 @@ struct ArchiveView: View {
             WebAtomicNailsGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .wordStacks:
+            WebWordStacksGameView(archiveMode: true, archiveDate: date, archiveSeed: seed)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

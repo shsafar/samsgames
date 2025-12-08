@@ -215,6 +215,10 @@ struct MainMenuView: View {
             WebAtomicNailsGameView()
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .wordStacks:
+            WebWordStacksGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

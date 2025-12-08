@@ -20,6 +20,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case diskBreak = "DiskBreak"
     case waterTable = "WaterTable"
     case atomicNails = "Atomic Nails"
+    case wordStacks = "WordStacks"
 
     var id: String { self.rawValue }
 
@@ -37,6 +38,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .diskBreak: return "diskbreakicon"
         case .waterTable: return "watertableicon"
         case .atomicNails: return "atomicnailsicon"
+        case .wordStacks: return "wordstackicon"
         }
     }
 
@@ -54,6 +56,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .diskBreak: return "circle.grid.cross"
         case .waterTable: return "drop.fill"
         case .atomicNails: return "scope"
+        case .wordStacks: return "square.stack.3d.up.fill"
         }
     }
 
@@ -70,6 +73,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .diskBreak: return "Rebuild broken disks from fragments"
         case .waterTable: return "Rebuild pins to match water depth"
         case .atomicNails: return "Match nails to hidden holes by precision"
+        case .wordStacks: return "Build a tower of shape-based words"
         }
     }
 }

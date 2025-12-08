@@ -266,7 +266,6 @@
     <button id="btn-new">New Game</button>
     <button id="btn-restart">Restart</button>
     <button id="btn-reveal">Reveal</button>
-    <button id="btn-next">Next Word</button>
     <button id="btn-sound">🔊</button>
   </div>
 
@@ -944,28 +943,9 @@
       checkShapeSolved(top);
     }
 
-    function nextWordManual() {
-      if (shapes.length >= MAX_WORDS) {
-        setMessage("Maximum of " + MAX_WORDS + " words reached.");
-        return;
-      }
-      if (!shapes.length) {
-        addShape(null);
-        return;
-      }
-      const topIndex = Math.max(...shapes.map(s => s.index));
-      const top = shapes.find(s => s.index === topIndex);
-      if (top && !top.solved) {
-        alert("Solve the current word before moving to the next one.");
-        return;
-      }
-      addShape(top);
-    }
-
     document.getElementById("btn-new").addEventListener("click", newGame);
     document.getElementById("btn-restart").addEventListener("click", restartGame);
     document.getElementById("btn-reveal").addEventListener("click", revealTop);
-    document.getElementById("btn-next").addEventListener("click", nextWordManual);
     document.getElementById("btn-sound").addEventListener("click", toggleSound);
 
     function toggleSound() {

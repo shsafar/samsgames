@@ -83,6 +83,30 @@ struct HashtagWordsInstructionsView: View {
     }
 }
 
+struct InstructionItem: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundColor(.blue)
+                .frame(width: 30)
+
+            Text(text)
+                .font(.system(size: 16))
+                .foregroundColor(.white.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.05))
+        )
+    }
+}
+
 #Preview {
     HashtagWordsInstructionsView()
         .background(Color(red: 0.1, green: 0.1, blue: 0.15))

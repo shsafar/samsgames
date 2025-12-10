@@ -87,7 +87,9 @@ struct MainMenuView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showArchive = true }) {
-                        Image(systemName: "calendar")
+                        Text("Archive")
+                            .font(.body)
+                            .foregroundColor(.blue)
                     }
                 }
             }

@@ -44,6 +44,8 @@ struct GameInstructionsView: View {
                     AtomicNailsInstructionsView()
                 case .wordStacks:
                     WordStacksInstructionsView()
+                case .sumStacks:
+                    SumStacksInstructionsView()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

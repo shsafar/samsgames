@@ -68,7 +68,7 @@ struct XNumbersInstructionsView: View {
     }
 }
 
-private struct InstructionItem: View {
+struct InstructionItem: View {
     let icon: String
     let text: String
 

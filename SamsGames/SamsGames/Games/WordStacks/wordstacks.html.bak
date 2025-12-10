@@ -60,15 +60,9 @@
       background: #e0e0e0;
     }
 
-    /* Daily mode hides New Game and Restart buttons */
-    body.daily-mode #btn-new,
-    body.daily-mode #btn-restart {
-      display: none;
-    }
-
     #game-area {
-      width: 100%;
-      max-width: 380px;
+      width: 440px;
+      max-width: 96vw;
       border: 1px solid #ccc;
       border-radius: 10px;
       padding: 6px;
@@ -80,15 +74,12 @@
       overflow-y: auto;
       overflow-x: hidden;
       box-sizing: border-box;
-      margin: 0 auto;
     }
 
     #board {
       position: relative;
       width: 100%;
       height: 2100px; /* enough vertical space for shapes 1–21 */
-      padding: 0 10px;
-      box-sizing: border-box;
     }
 
     #lines-svg {
@@ -201,85 +192,6 @@
       text-align: center;
     }
 
-    /* Fireworks Canvas */
-    #fireworks-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 9999;
-      display: none;
-    }
-
-    /* Custom Keyboard */
-    #custom-keyboard {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      max-width: 100%;
-      width: 100%;
-      background: #d1d5db;
-      padding: 4px 4px 8px 4px;
-      display: none;
-      z-index: 1000;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-      box-sizing: border-box;
-    }
-
-    #custom-keyboard.show {
-      display: block;
-    }
-
-    .keyboard-row {
-      display: flex;
-      justify-content: center;
-      gap: 2px;
-      margin-bottom: 3px;
-      max-width: 100%;
-      padding: 0 2px;
-    }
-
-    .keyboard-row:last-child {
-      margin-bottom: 0;
-    }
-
-    .key-btn {
-      background: #fff;
-      border: 1px solid #999;
-      border-radius: 4px;
-      padding: 8px 2px;
-      min-width: 24px;
-      max-width: 34px;
-      width: 32px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      flex-shrink: 1;
-      box-sizing: border-box;
-    }
-
-    .key-btn:active {
-      background: #e0e0e0;
-    }
-
-    .key-btn.wide {
-      min-width: 50px;
-      max-width: 64px;
-      width: 60px;
-      font-size: 13px;
-      flex-shrink: 1;
-    }
-
-    /* Hide Next Word button */
-    #btn-next {
-      display: none;
-    }
-
     @media (max-width: 480px) {
       h1 { font-size: 19px; }
       #top-bar { font-size: 14px; }
@@ -292,7 +204,7 @@
   <h1>WordStacks</h1>
 
   <div id="top-bar">
-    <span class="label">Time:</span> <span id="time-display">0</span>s
+    <span class="label">Time:</span> <span id="time-display">120</span>s
     <span class="label">Solved:</span> <span id="score-display">0</span>
   </div>
 
@@ -301,7 +213,6 @@
     <button id="btn-restart">Restart</button>
     <button id="btn-reveal">Reveal</button>
     <button id="btn-next">Next Word</button>
-    <button id="btn-sound">🔊 Sound ON</button>
   </div>
 
   <div id="game-area">
@@ -312,55 +223,8 @@
 
   <div id="message"></div>
 
-  <!-- Fireworks Canvas -->
-  <canvas id="fireworks-canvas"></canvas>
-
-  <!-- Custom Keyboard -->
-  <div id="custom-keyboard">
-    <div class="keyboard-row">
-      <div class="key-btn" data-key="Q">Q</div>
-      <div class="key-btn" data-key="W">W</div>
-      <div class="key-btn" data-key="E">E</div>
-      <div class="key-btn" data-key="R">R</div>
-      <div class="key-btn" data-key="T">T</div>
-      <div class="key-btn" data-key="Y">Y</div>
-      <div class="key-btn" data-key="U">U</div>
-      <div class="key-btn" data-key="I">I</div>
-      <div class="key-btn" data-key="O">O</div>
-      <div class="key-btn" data-key="P">P</div>
-    </div>
-    <div class="keyboard-row">
-      <div class="key-btn" data-key="A">A</div>
-      <div class="key-btn" data-key="S">S</div>
-      <div class="key-btn" data-key="D">D</div>
-      <div class="key-btn" data-key="F">F</div>
-      <div class="key-btn" data-key="G">G</div>
-      <div class="key-btn" data-key="H">H</div>
-      <div class="key-btn" data-key="J">J</div>
-      <div class="key-btn" data-key="K">K</div>
-      <div class="key-btn" data-key="L">L</div>
-    </div>
-    <div class="keyboard-row">
-      <div class="key-btn" data-key="Z">Z</div>
-      <div class="key-btn" data-key="X">X</div>
-      <div class="key-btn" data-key="C">C</div>
-      <div class="key-btn" data-key="V">V</div>
-      <div class="key-btn" data-key="B">B</div>
-      <div class="key-btn" data-key="N">N</div>
-      <div class="key-btn" data-key="M">M</div>
-      <div class="key-btn wide" data-key="CLEAR">Clear</div>
-    </div>
-  </div>
-
   <script>
     const MAX_WORDS = 21;
-
-    // Seeded random number generator for daily puzzles
-    let seed = Date.now();
-    function seededRandom() {
-      seed = (seed * 9301 + 49297) % 233280;
-      return seed / 233280;
-    }
     const ROUND_TIME = 120; // seconds
 
     /* Small sample WORD_BANK – you can paste your 70-word lists in here */
@@ -395,46 +259,7 @@
         { word: "TUNNEL", clue: "Passage dug through ground or rock." },
         { word: "BRICKS", clue: "Blocks used to build walls." },
         { word: "VELVET", clue: "Soft fabric with a short pile." },
-        { word: "WINDOW", clue: "Opening in a wall that lets in light." },
-        { word: "BUTTON", clue: "Small fastener on clothing." },
-        { word: "CASTLE", clue: "Large fortified building." },
-        { word: "DESERT", clue: "Dry sandy region with little rain." },
-        { word: "FOREST", clue: "Large area covered with trees." },
-        { word: "GLOBAL", clue: "Relating to the whole world." },
-        { word: "HELMET", clue: "Protective head covering." },
-        { word: "ISLAND", clue: "Land surrounded by water." },
-        { word: "KERNEL", clue: "Seed or central part." },
-        { word: "LISTEN", clue: "Pay attention to sound." },
-        { word: "MOMENT", clue: "Brief period of time." },
-        { word: "NORMAL", clue: "Usual or typical." },
-        { word: "PENCIL", clue: "Writing tool with graphite." },
-        { word: "RESULT", clue: "Outcome or consequence." },
-        { word: "SIMPLE", clue: "Easy or uncomplicated." },
-        { word: "TEMPLE", clue: "Place of worship." },
-        { word: "URGENT", clue: "Requiring immediate attention." },
-        { word: "VICTIM", clue: "Person harmed or injured." },
-        { word: "WALLET", clue: "Small folding case for money." },
-        { word: "YELLOW", clue: "Color of sunshine." },
-        { word: "ZIPPER", clue: "Sliding fastener for clothes." },
-        { word: "BEACON", clue: "Signal fire or guiding light." },
-        { word: "CAFTAN", clue: "Long loose robe." },
-        { word: "DANGER", clue: "Possibility of harm or loss." },
-        { word: "EAGLES", clue: "Large birds of prey." },
-        { word: "FABRIC", clue: "Cloth or material." },
-        { word: "GALLON", clue: "Unit of liquid measure." },
-        { word: "HAMMER", clue: "Tool for driving nails." },
-        { word: "INSECT", clue: "Small six-legged creature." },
-        { word: "JACKET", clue: "Short coat." },
-        { word: "KITTEN", clue: "Young cat." },
-        { word: "LIZARD", clue: "Small four-legged reptile." },
-        { word: "MAGNET", clue: "Object that attracts iron." },
-        { word: "NAPKIN", clue: "Cloth for wiping during meals." },
-        { word: "OXYGEN", clue: "Gas essential for breathing." },
-        { word: "PARROT", clue: "Colorful bird that can mimic speech." },
-        { word: "RABBIT", clue: "Long-eared hopping mammal." },
-        { word: "SALMON", clue: "Pink-fleshed fish." },
-        { word: "TABLET", clue: "Flat slab or portable computer." },
-        { word: "VIOLIN", clue: "Stringed instrument played with a bow." }
+        { word: "WINDOW", clue: "Opening in a wall that lets in light." }
       ],
 
       pentagon: [
@@ -467,46 +292,7 @@
         { word: "DREAM", clue: "Images or ideas during sleep." },
         { word: "NIGHT", clue: "Time when it is dark." },
         { word: "ARROW", clue: "Thin pointed missile shot from a bow." },
-        { word: "CROWN", clue: "Decorative headpiece worn by royalty." },
-        { word: "ANGLE", clue: "Space between two intersecting lines." },
-        { word: "BEACH", clue: "Sandy shore by the ocean." },
-        { word: "CABLE", clue: "Thick rope or wire." },
-        { word: "DANCE", clue: "Move rhythmically to music." },
-        { word: "EMAIL", clue: "Electronic message sent online." },
-        { word: "FEAST", clue: "Large meal with many dishes." },
-        { word: "GRAIN", clue: "Small hard seed of a cereal plant." },
-        { word: "HONEY", clue: "Sweet substance made by bees." },
-        { word: "IMAGE", clue: "Picture or visual representation." },
-        { word: "JOINT", clue: "Place where two things meet." },
-        { word: "KNOCK", clue: "Strike a surface to make a sound." },
-        { word: "LEMON", clue: "Yellow citrus fruit." },
-        { word: "MAGIC", clue: "Supernatural power or illusion." },
-        { word: "NORTH", clue: "Direction toward the top of a map." },
-        { word: "OCEAN", clue: "Very large body of salt water." },
-        { word: "PEACE", clue: "Freedom from war or conflict." },
-        { word: "QUEEN", clue: "Female monarch." },
-        { word: "RANCH", clue: "Large farm for raising animals." },
-        { word: "SOUTH", clue: "Direction opposite of north." },
-        { word: "TOWER", clue: "Tall narrow building." },
-        { word: "UNITY", clue: "State of being united or joined." },
-        { word: "VALUE", clue: "Worth or importance." },
-        { word: "WATCH", clue: "Timepiece worn on wrist." },
-        { word: "YOUTH", clue: "Period of being young." },
-        { word: "BRAVE", clue: "Courageous and fearless." },
-        { word: "STORM", clue: "Violent weather with wind and rain." },
-        { word: "CLIMB", clue: "Go up using hands and feet." },
-        { word: "FLUTE", clue: "Wind instrument played sideways." },
-        { word: "GRAPE", clue: "Small round fruit growing in clusters." },
-        { word: "LEVEL", clue: "Flat or even surface." },
-        { word: "LUCKY", clue: "Having good fortune." },
-        { word: "MELON", clue: "Large sweet fruit with thick skin." },
-        { word: "ORBIT", clue: "Curved path of object around a planet." },
-        { word: "PIANO", clue: "Large keyboard instrument." },
-        { word: "RIDER", clue: "Person who rides a horse or vehicle." },
-        { word: "SHARK", clue: "Large predatory fish." },
-        { word: "SPOON", clue: "Utensil with a bowl-shaped end." },
-        { word: "TRUNK", clue: "Main stem of a tree." },
-        { word: "VOCAL", clue: "Relating to the voice." }
+        { word: "CROWN", clue: "Decorative headpiece worn by royalty." }
       ],
 
       square: [
@@ -539,46 +325,7 @@
         { word: "TOWN", clue: "Place where many people live." },
         { word: "WAVE", clue: "Moving ridge on the surface of water." },
         { word: "WOOD", clue: "Material that comes from trees." },
-        { word: "ROOM", clue: "Part of a building with walls and a door." },
-        { word: "BLUE", clue: "Color of the sky." },
-        { word: "COIN", clue: "Piece of metal money." },
-        { word: "DEER", clue: "Forest animal with antlers." },
-        { word: "EDGE", clue: "Outer boundary or limit." },
-        { word: "FACE", clue: "Front of the head." },
-        { word: "GOLD", clue: "Precious yellow metal." },
-        { word: "HOPE", clue: "Feeling of expectation." },
-        { word: "IRON", clue: "Strong gray metal." },
-        { word: "JOKE", clue: "Something said to cause laughter." },
-        { word: "KING", clue: "Male monarch." },
-        { word: "LION", clue: "Large wild cat with a mane." },
-        { word: "MAIL", clue: "Letters and packages sent by post." },
-        { word: "NOSE", clue: "Organ used for smelling." },
-        { word: "PAIR", clue: "Two identical things." },
-        { word: "ROSE", clue: "Flower with thorns." },
-        { word: "SONG", clue: "Musical composition with words." },
-        { word: "TASK", clue: "Piece of work to be done." },
-        { word: "USER", clue: "Person who uses something." },
-        { word: "VICE", clue: "Bad habit or behavior." },
-        { word: "WOLF", clue: "Wild dog-like predator." },
-        { word: "YARD", clue: "Unit of length or outdoor area." },
-        { word: "ZERO", clue: "The number before one." },
-        { word: "BEAR", clue: "Large furry mammal." },
-        { word: "CAVE", clue: "Natural underground hollow." },
-        { word: "DRUM", clue: "Percussion instrument." },
-        { word: "FAME", clue: "State of being well known." },
-        { word: "GATE", clue: "Movable barrier in a fence." },
-        { word: "HERO", clue: "Person admired for courage." },
-        { word: "IDEA", clue: "Thought or suggestion." },
-        { word: "JURY", clue: "Group deciding a court case." },
-        { word: "KNEE", clue: "Joint in the middle of the leg." },
-        { word: "LIFE", clue: "State of being alive." },
-        { word: "MILE", clue: "Unit of distance." },
-        { word: "OVEN", clue: "Enclosed space for baking." },
-        { word: "POEM", clue: "Literary work in verse." },
-        { word: "QUIZ", clue: "Short test of knowledge." },
-        { word: "ROPE", clue: "Thick cord of twisted strands." },
-        { word: "TENT", clue: "Portable shelter made of fabric." },
-        { word: "VOTE", clue: "Express choice in an election." }
+        { word: "ROOM", clue: "Part of a building with walls and a door." }
       ],
 
       triangle: [
@@ -611,46 +358,7 @@
         { word: "SAW", clue: "Tool with teeth for cutting wood." },
         { word: "ZIP", clue: "Fastener made of two rows of teeth." },
         { word: "EGG", clue: "Hard-shelled food from birds." },
-        { word: "JET", clue: "Fast airplane." },
-        { word: "ART", clue: "Creative work or skill." },
-        { word: "BAG", clue: "Container made of flexible material." },
-        { word: "CUP", clue: "Small container for drinking." },
-        { word: "DIG", clue: "Break up and move earth." },
-        { word: "EYE", clue: "Organ used for seeing." },
-        { word: "FAN", clue: "Device that moves air." },
-        { word: "GYM", clue: "Place for physical exercise." },
-        { word: "HIT", clue: "Strike forcefully." },
-        { word: "JOY", clue: "Feeling of great happiness." },
-        { word: "LAW", clue: "System of rules." },
-        { word: "MIX", clue: "Combine different things." },
-        { word: "NET", clue: "Mesh material for catching." },
-        { word: "OWL", clue: "Nocturnal bird of prey." },
-        { word: "PET", clue: "Domestic animal kept for companionship." },
-        { word: "RUN", clue: "Move quickly on foot." },
-        { word: "SKY", clue: "Space above the earth." },
-        { word: "TEN", clue: "Number after nine." },
-        { word: "VAN", clue: "Large vehicle for carrying goods." },
-        { word: "WAR", clue: "Armed conflict between nations." },
-        { word: "YES", clue: "Affirmative answer." },
-        { word: "ZOO", clue: "Place where wild animals are kept." },
-        { word: "BAT", clue: "Flying mammal or sports equipment." },
-        { word: "COW", clue: "Large farm animal that gives milk." },
-        { word: "DAY", clue: "Period of 24 hours." },
-        { word: "ELF", clue: "Mythical small magical being." },
-        { word: "FLY", clue: "Move through air with wings." },
-        { word: "GUM", clue: "Sticky substance or candy." },
-        { word: "HUG", clue: "Embrace with arms." },
-        { word: "ILL", clue: "Not feeling well or sick." },
-        { word: "JAM", clue: "Sweet fruit preserve." },
-        { word: "KIT", clue: "Set of equipment or tools." },
-        { word: "LOG", clue: "Thick piece of wood from a tree." },
-        { word: "MAT", clue: "Piece of material for floor or table." },
-        { word: "NUT", clue: "Hard-shelled dry fruit." },
-        { word: "ORE", clue: "Rock containing valuable metal." },
-        { word: "POD", clue: "Seed case of certain plants." },
-        { word: "RAT", clue: "Long-tailed rodent." },
-        { word: "SIT", clue: "Rest on a seat." },
-        { word: "TOY", clue: "Object for children to play with." }
+        { word: "JET", clue: "Fast airplane." }
       ]
     };
 
@@ -663,16 +371,12 @@
 
     let shapes = [];
     let usedWords = new Set();
-    let timeElapsed = 0;
+    let timeLeft = ROUND_TIME;
     let timerId = null;
     let score = 0;
-    let dailyMode = false;
-    let soundEnabled = true;
-    let currentInput = null;
-    const keyboard = document.getElementById("custom-keyboard");
 
     function randomChoice(arr) {
-      return arr[Math.floor(seededRandom() * arr.length)];
+      return arr[Math.floor(Math.random() * arr.length)];
     }
 
     function getRadius() {
@@ -719,11 +423,11 @@
       for (let i = 0; i < length; i++) all.push(i);
       const pool = all.filter(i => i !== sharedIndex);
       const maxHide = Math.max(1, Math.floor(length / 2));
-      const hideCount = Math.min(pool.length, Math.floor(seededRandom() * maxHide) + 1);
+      const hideCount = Math.min(pool.length, Math.floor(Math.random() * maxHide) + 1);
       const hidden = new Set();
       const p = [...pool];
       while (hidden.size < hideCount && p.length) {
-        const idx = Math.floor(seededRandom() * p.length);
+        const idx = Math.floor(Math.random() * p.length);
         hidden.add(p.splice(idx, 1)[0]);
       }
       return hidden;
@@ -736,20 +440,18 @@
     function startTimer() {
       const tEl = document.getElementById("time-display");
       if (timerId) clearInterval(timerId);
-      timeElapsed = 0;
-      tEl.textContent = timeElapsed;
+      timeLeft = ROUND_TIME;
+      tEl.textContent = timeLeft;
       timerId = setInterval(() => {
-        timeElapsed++;
-        tEl.textContent = timeElapsed;
+        timeLeft--;
+        if (timeLeft < 0) timeLeft = 0;
+        tEl.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          timerId = null;
+          setMessage("Time is up!");
+        }
       }, 1000);
-    }
-
-    function stopTimer() {
-      if (timerId) {
-        clearInterval(timerId);
-        timerId = null;
-      }
-      return timeElapsed;
     }
 
     function drawShape(shape) {
@@ -803,22 +505,7 @@
           const input = document.createElement("input");
           input.type = "text";
           input.maxLength = 1;
-          input.readOnly = true; // Prevent iOS keyboard
           input.dataset.answer = node.letter;
-
-          // Show custom keyboard on tap
-          input.addEventListener("click", (e) => {
-            e.preventDefault();
-            currentInput = input;
-            keyboard.classList.add("show");
-            // Focus styling
-            document.querySelectorAll(".node input").forEach(inp => {
-              inp.parentElement.style.boxShadow = "";
-            });
-            input.parentElement.style.boxShadow = "0 0 0 3px #4a90e2";
-          });
-
-          // Manual input handling for testing (optional)
           input.addEventListener("input", () => {
             const val = input.value.toUpperCase().slice(0, 1);
             input.value = val;
@@ -831,7 +518,6 @@
             }
             checkShapeSolved(shape);
           });
-
           div.appendChild(input);
           node.inputEl = input;
         }
@@ -856,30 +542,8 @@
 
     function maybeAdvanceOrFinish(solvedShape) {
       if (score >= MAX_WORDS) {
-        const finalTime = stopTimer();
-        const minutes = Math.floor(finalTime / 60);
-        const seconds = finalTime % 60;
-        const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-        keyboard.classList.remove("show");
-
-        // Show fireworks animation first
-        showFireworks();
-
-        // Victory fanfare
-        if (soundEnabled) {
-          setTimeout(() => playSound(523.25, 0.15), 0);    // C5
-          setTimeout(() => playSound(659.25, 0.15), 150);  // E5
-          setTimeout(() => playSound(783.99, 0.3), 300);   // G5
-        }
-
-        // Show completion message after 2 seconds (after fireworks)
-        setTimeout(() => {
-          setMessage(`Congratulations! You solved all ${MAX_WORDS} words in ${timeStr}!`);
-          if (dailyMode && window.webkit && window.webkit.messageHandlers.gameCompleted) {
-            window.webkit.messageHandlers.gameCompleted.postMessage({ score: score, maxScore: MAX_WORDS });
-          }
-        }, 2000);
-
+        alert("Congratulations! You solved " + MAX_WORDS + " words.\nStarting a new game.");
+        newGame();
         return;
       }
 
@@ -917,7 +581,6 @@
       score++;
       document.getElementById("score-display").textContent = score;
       setMessage("Shape " + shape.index + " solved.");
-      playSound(523.25, 0.2); // C5 note for success
       maybeAdvanceOrFinish(shape);
     }
 
@@ -1035,7 +698,7 @@
       }
       const newSharedIndex = indices.length ? randomChoice(indices) : 0;
 
-      const jitter = (seededRandom() - 0.5) * radius * 0.6;
+      const jitter = (Math.random() - 0.5) * radius * 0.6;
       center = { x: S.x + jitter, y: S.y - radius };
 
       markSharedNode(prevShape, topNodeIndex);
@@ -1151,207 +814,13 @@
       addShape(top);
     }
 
-    function toggleSound() {
-      soundEnabled = !soundEnabled;
-      const btn = document.getElementById("btn-sound");
-      if (soundEnabled) {
-        btn.textContent = "🔊 Sound ON";
-      } else {
-        btn.textContent = "🔇 Sound OFF";
-      }
-    }
-
-    function playSound(frequency, duration) {
-      if (!soundEnabled) return;
-
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.frequency.value = frequency;
-        oscillator.type = 'sine';
-
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + duration);
-      } catch (e) {
-        // Audio not supported, silently fail
-      }
-    }
-
-    // Fireworks animation
-    function showFireworks() {
-      const canvas = document.getElementById("fireworks-canvas");
-      if (!canvas) return;
-
-      canvas.style.display = "block";
-      const ctx = canvas.getContext("2d");
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-
-      const particles = [];
-      const colors = ["#FF1461", "#18FF92", "#5A87FF", "#FBF38C", "#FF6B6B", "#4ECDC4"];
-
-      class Particle {
-        constructor(x, y, color) {
-          this.x = x;
-          this.y = y;
-          this.color = color;
-          this.velocity = {
-            x: (Math.random() - 0.5) * 8,
-            y: (Math.random() - 0.5) * 8 - 2
-          };
-          this.alpha = 1;
-          this.decay = Math.random() * 0.015 + 0.015;
-          this.size = Math.random() * 3 + 2;
-        }
-
-        update() {
-          this.velocity.y += 0.2; // gravity
-          this.x += this.velocity.x;
-          this.y += this.velocity.y;
-          this.alpha -= this.decay;
-        }
-
-        draw() {
-          ctx.save();
-          ctx.globalAlpha = this.alpha;
-          ctx.fillStyle = this.color;
-          ctx.beginPath();
-          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
-      }
-
-      function createFirework(x, y) {
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const particleCount = 30 + Math.random() * 20;
-
-        for (let i = 0; i < particleCount; i++) {
-          particles.push(new Particle(x, y, color));
-        }
-      }
-
-      let frameCount = 0;
-      let animationId;
-
-      function animate() {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Create new fireworks at the top
-        if (frameCount % 15 === 0 && frameCount < 120) {
-          const x = Math.random() * canvas.width;
-          const y = canvas.height * 0.2 + Math.random() * canvas.height * 0.1;
-          createFirework(x, y);
-        }
-
-        // Update and draw particles
-        for (let i = particles.length - 1; i >= 0; i--) {
-          particles[i].update();
-          particles[i].draw();
-
-          if (particles[i].alpha <= 0) {
-            particles.splice(i, 1);
-          }
-        }
-
-        frameCount++;
-
-        // Stop after 2 seconds (120 frames at 60fps)
-        if (frameCount < 120) {
-          animationId = requestAnimationFrame(animate);
-        } else {
-          // Fade out remaining particles
-          if (particles.length > 0) {
-            animationId = requestAnimationFrame(animate);
-          } else {
-            canvas.style.display = "none";
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-          }
-        }
-      }
-
-      animate();
-    }
-
-    // Custom keyboard handlers
-    document.querySelectorAll(".key-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        if (!currentInput) return;
-
-        const key = btn.dataset.key;
-        if (key === "CLEAR") {
-          currentInput.value = "";
-          currentInput.parentElement.classList.remove("wrong");
-        } else {
-          currentInput.value = key;
-          const expected = currentInput.dataset.answer;
-          const nodeDiv = currentInput.parentElement;
-          if (key !== expected) {
-            nodeDiv.classList.add("wrong");
-          } else {
-            nodeDiv.classList.remove("wrong");
-          }
-          // Find the shape this input belongs to and check if solved
-          shapes.forEach(shape => {
-            shape.nodes.forEach(node => {
-              if (node.inputEl === currentInput) {
-                checkShapeSolved(shape);
-              }
-            });
-          });
-        }
-      });
-    });
-
-    // Close keyboard when tapping outside
-    document.addEventListener("click", (e) => {
-      if (!e.target.closest(".node input") && !e.target.closest("#custom-keyboard")) {
-        keyboard.classList.remove("show");
-        document.querySelectorAll(".node input").forEach(inp => {
-          inp.parentElement.style.boxShadow = "";
-        });
-        currentInput = null;
-      }
-    });
-
     document.getElementById("btn-new").addEventListener("click", newGame);
     document.getElementById("btn-restart").addEventListener("click", restartGame);
     document.getElementById("btn-reveal").addEventListener("click", revealTop);
     document.getElementById("btn-next").addEventListener("click", nextWordManual);
-    document.getElementById("btn-sound").addEventListener("click", toggleSound);
 
-    // Start immediately in non-daily mode
-    if (!dailyMode) {
+    // Start immediately
     newGame();
-    }
-
-    // Swift integration functions
-    function setSeed(newSeed) {
-      seed = newSeed;
-    }
-
-    function enableDailyMode() {
-      dailyMode = true;
-      document.body.classList.add('daily-mode');
-    }
-
-    function startGame() {
-      newGame();
-    }
-
-    // Expose to Swift
-    window.setSeed = setSeed;
-    window.enableDailyMode = enableDailyMode;
-    window.startGame = startGame;
   </script>
 </body>
 </html>

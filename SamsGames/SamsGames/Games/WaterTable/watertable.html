@@ -223,8 +223,8 @@
   </div>
 
   <div id="description">
-    <span style="font-size:10px;">1. Tap <b>Break</b> to shatter pins. Drag pieces from water onto pins.</span><br>
-    <span style="font-size:10px;">2. Match the <b>hidden water depth</b>. Pins turn <b style="color:green;">green</b> and spray when correct.</span><br>
+    <span style="font-size:10px;">1. Tap <b>Break</b> to shatter pins. Drag pieces from water onto shafts.</span><br>
+    <span style="font-size:10px;">2. Match the <b>hidden water depth</b>. Shafts turn <b style="color:green;">green</b> and spray when correct.</span><br>
     <span style="font-size:9px;color:#444;">+10 per correct piece, combo bonus, –5 per Reveal / decoy / Show Targets.</span>
   </div>
 
@@ -854,7 +854,7 @@ function breakPins(){
   resetTimer();
   startTimer();
   document.getElementById("status").textContent=
-    "Pins shattered! Drag the pieces out of the water onto the correct pins.";
+    "Pins shattered! Drag the pieces out of the water onto the correct shafts.";
 
   let nextId=0;
   for(let i=0;i<pinCount;i++){
@@ -1143,7 +1143,36 @@ function checkWin(){
   }catch(e){}
   updateUnlocksFromStorage();
 }
-function popupNewGame(){ newGame(); }
+
+/* reset current game */
+function resetGame(){
+  gameOver=false;
+  clearFragments();
+  clearReveal();
+  document.getElementById("popupOverlay").style.display="none";
+  resetTimer();
+  comboStreak=0;
+  score=0;
+  updateScoreAndCombo();
+  document.getElementById("status").textContent=
+    `Level ${levelConfigs[currentLevelIndex].id} (${currentMode}) ready. Tap "Break" to start.`;
+
+  // Reset pin states and clear visual elements
+  lengths=new Array(pinCount).fill(0);
+  pinSolved=new Array(pinCount).fill(false);
+  for(let i=0;i<pinCount;i++){
+    updatePin(i);
+    const pinIndex=i;
+    if(activeWaterFlows[pinIndex]){
+      const flow=document.getElementById("waterFlow-"+pinIndex);
+      if(flow) flow.remove();
+      delete activeWaterFlows[pinIndex];
+    }
+  }
+  updateLabels();
+}
+
+function popupNewGame(){ resetGame(); }
 
 /* new game */
 function newGame(){

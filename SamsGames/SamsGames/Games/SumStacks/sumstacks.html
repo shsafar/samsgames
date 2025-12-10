@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SumStacks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #ffffff;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-top: 12px;
+      font-size: 22px;
+    }
+
+    #top-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin: 4px 0 10px;
+      font-size: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    #top-bar .label {
+      font-weight: 600;
+    }
+
+    #controls {
+      margin-bottom: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    #controls button {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #888;
+      cursor: pointer;
+      background: #f2f2f2;
+      color: #222;
+      font-size: 14px;
+      min-width: 90px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #controls button:active {
+      background: #e0e0e0;
+    }
+
+    #game-area {
+      width: 100%;
+      max-width: 380px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 6px;
+      padding-bottom: 180px; /* Space for keyboard */
+      background: #fff;
+      box-shadow: 0 0 6px rgba(0,0,0,0.06);
+      height: 70vh;
+      max-height: 560px;
+      position: relative;
+      overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch; /* Enable iOS momentum scrolling */
+      box-sizing: border-box;
+      margin: 0 auto;
+    }
+
+    #board {
+      position: relative;
+      width: 600px;
+      min-width: 600px;
+      height: 2100px; /* enough vertical space for 1–21 shapes */
+      padding: 0 80px;
+      box-sizing: border-box;
+      margin: 0 auto;
+    }
+
+    #lines-svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .node {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      margin-left: -16px;
+      margin-top: -16px;
+      border-radius: 50%;
+      border: 2px solid #999;
+      background: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 15px;
+      box-sizing: border-box;
+      z-index: 10;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .node.fixed {
+      background: #f0f0f0;
+    }
+
+    .node.shared {
+      background: #ffecb3;
+      border-color: #ffb300;
+      color: #000;
+      box-shadow: 0 0 8px rgba(255,179,0,0.7);
+    }
+
+    .node input {
+      width: 100%;
+      height: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      color: #222;
+    }
+
+    .node.solved {
+      border-color: #1a8b2a;
+      color: #1a8b2a;
+      background: #e0f7e4;
+    }
+
+    .node.wrong {
+      border-color: #d32f2f;
+      background: #ffebee;
+    }
+
+    .shape-label {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      margin-left: -11px;
+      margin-top: -11px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 13px;
+      color: #555;
+      z-index: 5;
+    }
+
+    .shape-label.solved {
+      color: #1a8b2a;
+    }
+
+    .path-solved {
+      stroke: #1a8b2a !important;
+    }
+
+    /* TARGET BOX: just the total number, positioned next to the shape */
+    .clue-box {
+      position: absolute;
+      font-size: 14px;
+      color: #333;
+      z-index: 1;
+      text-align: left;
+      font-weight: 700;
+    }
+
+    #message {
+      margin: 8px 8px 12px;
+      font-size: 14px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    /* Hide Next Shape button */
+    #btn-next {
+      display: none;
+    }
+
+    /* Daily mode hides New Game and Restart buttons */
+    body.daily-mode #btn-new,
+    body.daily-mode #btn-restart {
+      display: none;
+    }
+
+    /* Fireworks Canvas */
+    #fireworks-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+    }
+
+    /* Custom Keyboard */
+    #custom-keyboard {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 100%;
+      width: 100%;
+      background: #d1d5db;
+      padding: 4px 4px 8px 4px;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+    }
+
+    #custom-keyboard.show {
+      display: block;
+    }
+
+    .keyboard-row {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 4px;
+      max-width: 100%;
+      padding: 0 4px;
+    }
+
+    .keyboard-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .key-btn {
+      background: #fff;
+      border: 1px solid #999;
+      border-radius: 6px;
+      padding: 12px 4px;
+      min-width: 44px;
+      max-width: 60px;
+      width: 54px;
+      font-size: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      flex-shrink: 1;
+      box-sizing: border-box;
+    }
+
+    .key-btn:active {
+      background: #e0e0e0;
+    }
+
+    .key-btn.wide {
+      min-width: 60px;
+      max-width: 80px;
+      width: 70px;
+      font-size: 14px;
+      flex-shrink: 1;
+    }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 19px; }
+      #top-bar { font-size: 14px; }
+      .node { width: 30px; height: 30px; margin-left: -15px; margin-top: -15px; }
+      .clue-box { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>SumStacks</h1>
+
+  <div id="top-bar">
+    <span class="label">Time:</span> <span id="time-display">0</span>s
+    <span class="label">Solved:</span> <span id="score-display">0</span>
+  </div>
+
+  <div id="controls">
+    <button id="btn-new">New Game</button>
+    <button id="btn-restart">Restart</button>
+    <button id="btn-reveal">Reveal</button>
+    <button id="btn-next">Next Shape</button>
+  </div>
+
+  <div id="game-area">
+    <div id="board">
+      <svg id="lines-svg"></svg>
+    </div>
+  </div>
+
+  <div id="message"></div>
+
+  <!-- Fireworks Canvas -->
+  <canvas id="fireworks-canvas"></canvas>
+
+  <!-- Custom Keyboard -->
+  <div id="custom-keyboard">
+    <div class="keyboard-row">
+      <div class="key-btn" data-key="1">1</div>
+      <div class="key-btn" data-key="2">2</div>
+      <div class="key-btn" data-key="3">3</div>
+    </div>
+    <div class="keyboard-row">
+      <div class="key-btn" data-key="4">4</div>
+      <div class="key-btn" data-key="5">5</div>
+      <div class="key-btn" data-key="6">6</div>
+    </div>
+    <div class="keyboard-row">
+      <div class="key-btn" data-key="7">7</div>
+      <div class="key-btn" data-key="8">8</div>
+      <div class="key-btn" data-key="9">9</div>
+    </div>
+    <div class="keyboard-row">
+      <div class="key-btn wide" data-key="CLEAR">CLEAR</div>
+    </div>
+  </div>
+
+  <script>
+    const MAX_SHAPES = 21;
+
+    const SHAPE_TYPES = ["hex", "pentagon", "square", "triangle"];
+
+    const board = document.getElementById("board");
+    const svg = document.getElementById("lines-svg");
+    const gameArea = document.getElementById("game-area");
+    const msgEl = document.getElementById("message");
+    const keyboard = document.getElementById("custom-keyboard");
+
+    let shapes = [];
+    let score = 0;
+    let seed = Date.now();
+    let dailyMode = false;
+    let currentInput = null;
+
+    // Seeded random number generator
+    function seededRandom() {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    }
+
+    function randomChoice(arr) {
+      return arr[Math.floor(seededRandom() * arr.length)];
+    }
+
+    function randomDigit() {
+      return Math.floor(seededRandom() * 9) + 1;
+    }
+
+    function getRadius() {
+      return 46;
+    }
+
+    function polygonBottomFirst(count, cx, cy, r) {
+      const pts = [];
+      const startAngle = Math.PI / 2;
+      const step = (2 * Math.PI) / count;
+      for (let i = 0; i < count; i++) {
+        const angle = startAngle + step * i;
+        pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+      }
+      return pts;
+    }
+
+    function getShapeSize(type) {
+      if (type === "triangle") return 3;
+      if (type === "square") return 4;
+      if (type === "pentagon") return 5;
+      return 6;
+    }
+
+    function computeHiddenIndices(length, sharedIndex) {
+      const candidates = [];
+      for (let i = 0; i < length; i++) {
+        if (i !== sharedIndex) candidates.push(i);
+      }
+      if (!candidates.length) return new Set();
+
+      // Determine number of blank nodes based on shape size
+      let numBlanks;
+      if (length === 3) {
+        // Triangle: 1 blank (33%)
+        numBlanks = 1;
+      } else if (length === 4) {
+        // Square: 1-2 blanks (25-50%)
+        numBlanks = Math.floor(seededRandom() * 2) + 1;
+      } else if (length === 5) {
+        // Pentagon: 2-3 blanks (40-60%)
+        numBlanks = Math.floor(seededRandom() * 2) + 2;
+      } else {
+        // Hexagon: 2-3 blanks (33-50%)
+        numBlanks = Math.floor(seededRandom() * 2) + 2;
+      }
+
+      // Make sure we don't exceed available candidates
+      numBlanks = Math.min(numBlanks, candidates.length);
+
+      // Randomly select the blank nodes
+      const hiddenSet = new Set();
+      const shuffled = [...candidates].sort(() => seededRandom() - 0.5);
+      for (let i = 0; i < numBlanks; i++) {
+        hiddenSet.add(shuffled[i]);
+      }
+
+      return hiddenSet;
+    }
+
+    function setMessage(text) {
+      msgEl.textContent = text || "";
+    }
+
+    // Timer functions
+    let timeElapsed = 0;
+    let timerId = null;
+
+    function startTimer() {
+      const tEl = document.getElementById("time-display");
+      if (timerId) clearInterval(timerId);
+      timeElapsed = 0;
+      tEl.textContent = timeElapsed;
+      timerId = setInterval(() => {
+        timeElapsed++;
+        tEl.textContent = timeElapsed;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      return timeElapsed;
+    }
+
+    function drawShape(shape) {
+      const pts = shape.nodes.map(n => [n.x, n.y]);
+      if (pts.length > 1) {
+        let d = "";
+        for (let i = 0; i < pts.length; i++) {
+          const [x, y] = pts[i];
+          d += (i === 0 ? "M" : "L") + x + " " + y + " ";
+        }
+        d += "Z";
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        path.setAttribute("stroke", "#cccccc");
+        path.setAttribute("stroke-width", "2");
+        path.setAttribute("fill", "none");
+        svg.appendChild(path);
+        shape.pathEl = path;
+      }
+
+      const lbl = document.createElement("div");
+      lbl.className = "shape-label";
+      lbl.textContent = shape.index;
+      lbl.style.left = shape.center.x + "px";
+      lbl.style.top = shape.center.y + "px";
+      board.appendChild(lbl);
+      shape.labelEl = lbl;
+
+      const clueBox = document.createElement("div");
+      clueBox.className = "clue-box";
+      clueBox.style.top = (shape.center.y - 8) + "px";
+      clueBox.style.left = (shape.center.x + shape.radius + 14) + "px";
+      clueBox.textContent = shape.targetSum;
+      board.appendChild(clueBox);
+      shape.clueEl = clueBox;
+
+      shape.nodes.forEach(node => {
+        const div = document.createElement("div");
+        div.className = "node";
+        div.style.left = node.x + "px";
+        div.style.top = node.y + "px";
+
+        if (node.shared) div.classList.add("shared");
+
+        if (node.fixed) {
+          div.classList.add("fixed");
+          div.textContent = node.letter;
+        } else {
+          const input = document.createElement("input");
+          input.type = "text";
+          input.maxLength = 1;
+          input.readOnly = true; // Prevent iOS keyboard
+          input.dataset.answer = node.letter;
+
+          // Show custom keyboard on tap
+          input.addEventListener("click", (e) => {
+            e.preventDefault();
+            currentInput = input;
+            keyboard.classList.add("show");
+            // Focus styling
+            document.querySelectorAll(".node input").forEach(inp => {
+              inp.parentElement.style.boxShadow = "";
+            });
+            input.parentElement.style.boxShadow = "0 0 0 3px #4a90e2";
+          });
+
+          div.appendChild(input);
+          node.inputEl = input;
+        }
+
+        board.appendChild(div);
+        node.el = div;
+      });
+
+      setTimeout(() => {
+        const target = shape.center.y - gameArea.clientHeight / 2;
+        gameArea.scrollTop = Math.max(0, target);
+      }, 0);
+    }
+
+    function markSharedNode(shape, nodeIndex) {
+      if (!shape) return;
+      if (nodeIndex < 0 || nodeIndex >= shape.nodes.length) return;
+      const node = shape.nodes[nodeIndex];
+      node.shared = true;
+      if (node.el) node.el.classList.add("shared");
+    }
+
+    function maybeAdvanceOrFinish(solvedShape) {
+      if (score >= MAX_SHAPES) {
+        const finalTime = stopTimer();
+        const minutes = Math.floor(finalTime / 60);
+        const seconds = finalTime % 60;
+        const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+        keyboard.classList.remove("show");
+
+        // Show fireworks animation first
+        showFireworks();
+
+        // Show completion message and notify Swift after 2 seconds (after fireworks)
+        setTimeout(() => {
+          setMessage(`Congratulations! You solved all ${MAX_SHAPES} shapes in ${timeStr}!`);
+          if (dailyMode && window.webkit && window.webkit.messageHandlers.gameCompleted) {
+            window.webkit.messageHandlers.gameCompleted.postMessage({ score: score, maxScore: MAX_SHAPES });
+          }
+        }, 2000);
+
+        return;
+      }
+
+      if (!solvedShape) return;
+
+      const topIndex = Math.max(...shapes.map(s => s.index));
+      if (solvedShape.index === topIndex) {
+        addShape(solvedShape);
+      }
+    }
+
+    function checkShapeSolved(shape) {
+      if (shape.solved) return;
+
+      let sum = 0;
+      let allFilled = true;
+
+      for (const node of shape.nodes) {
+        let v;
+        if (node.fixed) {
+          v = parseInt(node.letter, 10);
+        } else {
+          if (!node.inputEl || !node.inputEl.value) {
+            allFilled = false;
+            break;
+          }
+          v = parseInt(node.inputEl.value, 10);
+          if (isNaN(v) || v < 1 || v > 9) {
+            allFilled = false;
+            break;
+          }
+        }
+        sum += v;
+      }
+
+      if (!allFilled) {
+        return;
+      }
+
+      if (sum !== shape.targetSum) {
+        shape.nodes.forEach(n => {
+          if (!n.fixed && n.el) {
+            n.el.classList.add("wrong");
+          }
+        });
+        return;
+      }
+
+      shape.solved = true;
+      shape.nodes.forEach(n => {
+        if (n.el) {
+          n.el.classList.remove("wrong");
+          n.el.classList.add("solved");
+        }
+      });
+      if (shape.pathEl) shape.pathEl.classList.add("path-solved");
+      if (shape.labelEl) shape.labelEl.classList.add("solved");
+
+      score++;
+      document.getElementById("score-display").textContent = score;
+      setMessage("Shape " + shape.index + " solved. Sum = " + shape.targetSum);
+      maybeAdvanceOrFinish(shape);
+    }
+
+    function addShape(prevShape) {
+      if (shapes.length >= MAX_SHAPES) {
+        return;
+      }
+
+      const index = shapes.length + 1;
+      const boardRect = board.getBoundingClientRect();
+      const width = boardRect.width;
+
+      let shapeType, center, radius;
+
+      if (!prevShape) {
+        shapeType = "hex";
+        radius = getRadius();
+
+        const margin = 40;
+        const idealCenter = width * 0.5;
+        const minCX = margin + radius;
+        const maxCX = width - margin - radius;
+        const cx = Math.max(minCX, Math.min(maxCX, idealCenter));
+
+        center = { x: cx, y: board.clientHeight - radius - 40 };
+
+        const count = getShapeSize(shapeType);
+        const base = polygonBottomFirst(count, center.x, center.y, radius);
+
+        const sharedIndex = 0;
+        const hidden = computeHiddenIndices(count, sharedIndex);
+
+        const digits = [];
+        for (let i = 0; i < count; i++) {
+          digits.push(randomDigit());
+        }
+        const targetSum = digits.reduce((a, b) => a + b, 0);
+
+        const nodes = [];
+        for (let i = 0; i < count; i++) {
+          const polyIndex = (i - sharedIndex + count) % count;
+          const pos = base[polyIndex];
+          const valStr = String(digits[i]);
+          const fixed = !hidden.has(i);
+          nodes.push({
+            x: pos.x,
+            y: pos.y,
+            letter: valStr,
+            fixed,
+            shared: false,
+            el: null,
+            inputEl: null
+          });
+        }
+
+        const shape = {
+          index,
+          type: shapeType,
+          center,
+          radius,
+          nodes,
+          solved: false,
+          pathEl: null,
+          labelEl: null,
+          clueEl: null,
+          targetSum
+        };
+
+        shapes.push(shape);
+        drawShape(shape);
+        return;
+      }
+
+      let topNodeIndex = 0;
+      let minY = Infinity;
+      prevShape.nodes.forEach((n, i) => {
+        if (n.y < minY) {
+          minY = n.y;
+          topNodeIndex = i;
+        }
+      });
+
+      const S = prevShape.nodes[topNodeIndex];
+      const sharedDigit = parseInt(S.letter, 10) || randomDigit();
+
+      shapeType = randomChoice(SHAPE_TYPES);
+      radius = getRadius();
+
+      center = { x: S.x, y: S.y - radius };
+
+      markSharedNode(prevShape, topNodeIndex);
+
+      const count = getShapeSize(shapeType);
+      const base = polygonBottomFirst(count, center.x, center.y, radius);
+
+      const newSharedIndex = Math.floor(seededRandom() * count);
+
+      const digits = [];
+      for (let i = 0; i < count; i++) {
+        if (i === newSharedIndex) {
+          digits.push(sharedDigit);
+        } else {
+          digits.push(randomDigit());
+        }
+      }
+
+      const hidden = computeHiddenIndices(count, newSharedIndex);
+      const targetSum = digits.reduce((a, b) => a + b, 0);
+
+      const nodes = [];
+      for (let i = 0; i < count; i++) {
+        const polyIndex = (i - newSharedIndex + count) % count;
+        const pos = base[polyIndex];
+        const valStr = String(digits[i]);
+        const isShared = (i === newSharedIndex);
+        const fixed = isShared || !hidden.has(i);
+
+        nodes.push({
+          x: pos.x,
+          y: pos.y,
+          letter: valStr,
+          fixed,
+          shared: isShared,
+          el: null,
+          inputEl: null
+        });
+      }
+
+      const shape = {
+        index,
+        type: shapeType,
+        center,
+        radius,
+        nodes,
+        solved: false,
+        pathEl: null,
+        labelEl: null,
+        clueEl: null,
+        targetSum
+      };
+
+      shapes.push(shape);
+      drawShape(shape);
+    }
+
+    function clearBoard() {
+      shapes = [];
+      while (board.firstChild) board.removeChild(board.firstChild);
+      board.appendChild(svg);
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+    }
+
+    let savedSeed = seed; // Store the initial seed
+
+    function newGame() {
+      clearBoard();
+      score = 0;
+      document.getElementById("score-display").textContent = score;
+      setMessage("");
+
+      // In daily mode, restore the saved seed to get same puzzle
+      if (dailyMode) {
+        seed = savedSeed;
+      }
+
+      addShape(null);
+      startTimer();
+      setTimeout(() => {
+        gameArea.scrollTop = gameArea.scrollHeight;
+      }, 0);
+    }
+
+    function restartGame() {
+      // Restore the original seed before restarting
+      if (dailyMode) {
+        seed = savedSeed;
+      }
+      newGame();
+      setMessage("Restarted.");
+    }
+
+    function revealTop() {
+      if (!shapes.length) return;
+      const topIndex = Math.max(...shapes.map(s => s.index));
+      const top = shapes.find(s => s.index === topIndex);
+      if (!top) return;
+      top.nodes.forEach(node => {
+        if (!node.fixed && node.inputEl) {
+          node.inputEl.value = node.letter;
+          if (node.el) node.el.classList.remove("wrong");
+        }
+      });
+      checkShapeSolved(top);
+    }
+
+    function nextShapeManual() {
+      if (shapes.length >= MAX_SHAPES) {
+        setMessage("Maximum of " + MAX_SHAPES + " shapes reached.");
+        return;
+      }
+      if (!shapes.length) {
+        addShape(null);
+        return;
+      }
+      const topIndex = Math.max(...shapes.map(s => s.index));
+      const top = shapes.find(s => s.index === topIndex);
+      if (top && !top.solved) {
+        alert("Solve the current shape before moving to the next one.");
+        return;
+      }
+      addShape(top);
+    }
+
+    // Fireworks animation
+    function showFireworks() {
+      const canvas = document.getElementById("fireworks-canvas");
+      if (!canvas) return;
+
+      canvas.style.display = "block";
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ["#FF1461", "#18FF92", "#5A87FF", "#FBF38C", "#FF6B6B", "#4ECDC4"];
+
+      class Particle {
+        constructor(x, y, color) {
+          this.x = x;
+          this.y = y;
+          this.color = color;
+          this.velocity = {
+            x: (Math.random() - 0.5) * 8,
+            y: (Math.random() - 0.5) * 8 - 2
+          };
+          this.alpha = 1;
+          this.decay = Math.random() * 0.015 + 0.015;
+          this.size = Math.random() * 3 + 2;
+        }
+
+        update() {
+          this.velocity.y += 0.2; // gravity
+          this.x += this.velocity.x;
+          this.y += this.velocity.y;
+          this.alpha -= this.decay;
+        }
+
+        draw() {
+          ctx.save();
+          ctx.globalAlpha = this.alpha;
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function createFirework(x, y) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const particleCount = 30 + Math.random() * 20;
+
+        for (let i = 0; i < particleCount; i++) {
+          particles.push(new Particle(x, y, color));
+        }
+      }
+
+      let frameCount = 0;
+      let animationId;
+
+      function animate() {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Create new fireworks at the top
+        if (frameCount % 15 === 0 && frameCount < 120) {
+          const x = Math.random() * canvas.width;
+          const y = canvas.height * 0.2 + Math.random() * canvas.height * 0.1;
+          createFirework(x, y);
+        }
+
+        // Update and draw particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          particles[i].update();
+          particles[i].draw();
+
+          if (particles[i].alpha <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+
+        frameCount++;
+
+        // Stop after 2 seconds (120 frames at 60fps)
+        if (frameCount < 120) {
+          animationId = requestAnimationFrame(animate);
+        } else {
+          // Fade out remaining particles
+          if (particles.length > 0) {
+            animationId = requestAnimationFrame(animate);
+          } else {
+            canvas.style.display = "none";
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+      }
+
+      animate();
+    }
+
+    // Custom keyboard handlers
+    document.querySelectorAll(".key-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!currentInput) return;
+
+        const key = btn.dataset.key;
+        if (key === "CLEAR") {
+          currentInput.value = "";
+          currentInput.parentElement.classList.remove("wrong");
+        } else {
+          currentInput.value = key;
+          const expected = currentInput.dataset.answer;
+          const nodeDiv = currentInput.parentElement;
+          nodeDiv.classList.remove("wrong");
+          // Find the shape this input belongs to and check if solved
+          shapes.forEach(shape => {
+            shape.nodes.forEach(node => {
+              if (node.inputEl === currentInput) {
+                checkShapeSolved(shape);
+              }
+            });
+          });
+        }
+      });
+    });
+
+    // Close keyboard when tapping outside
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".node input") && !e.target.closest("#custom-keyboard")) {
+        keyboard.classList.remove("show");
+        document.querySelectorAll(".node input").forEach(inp => {
+          inp.parentElement.style.boxShadow = "";
+        });
+        currentInput = null;
+      }
+    });
+
+    document.getElementById("btn-new").addEventListener("click", newGame);
+    document.getElementById("btn-restart").addEventListener("click", restartGame);
+    document.getElementById("btn-reveal").addEventListener("click", revealTop);
+    document.getElementById("btn-next").addEventListener("click", nextShapeManual);
+
+    // Start immediately in non-daily mode
+    if (!dailyMode) {
+      newGame();
+    }
+
+    // Swift integration functions
+    function setSeed(newSeed) {
+      seed = newSeed;
+      savedSeed = newSeed; // Save the seed for restart functionality
+    }
+
+    function enableDailyMode() {
+      dailyMode = true;
+      document.body.classList.add('daily-mode');
+    }
+
+    function startGame() {
+      newGame();
+    }
+
+    // Expose to Swift
+    window.setSeed = setSeed;
+    window.enableDailyMode = enableDailyMode;
+    window.startGame = startGame;
+  </script>
+</body>
+</html>

@@ -219,6 +219,10 @@ struct MainMenuView: View {
             WebWordStacksGameView()
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
+        case .sumStacks:
+            SumStacksGameView()
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
         }
     }
 }

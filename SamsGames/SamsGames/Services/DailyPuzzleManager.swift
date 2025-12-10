@@ -21,6 +21,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
     case waterTable = "WaterTable"
     case atomicNails = "Atomic Nails"
     case wordStacks = "WordStacks"
+    case sumStacks = "SumStacks"
 
     var id: String { self.rawValue }
 
@@ -39,6 +40,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .waterTable: return "watertableicon"
         case .atomicNails: return "atomicnailsicon"
         case .wordStacks: return "wordstackicon"
+        case .sumStacks: return "sumstackicon"
         }
     }
 
@@ -57,6 +59,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .waterTable: return "drop.fill"
         case .atomicNails: return "scope"
         case .wordStacks: return "square.stack.3d.up.fill"
+        case .sumStacks: return "plus.square.on.square"
         }
     }
 
@@ -74,6 +77,7 @@ enum GameType: String, CaseIterable, Codable, Identifiable {
         case .waterTable: return "Rebuild pins to match water depth"
         case .atomicNails: return "Match nails to hidden holes by precision"
         case .wordStacks: return "Build a tower of shape-based words"
+        case .sumStacks: return "Stack numbers to reach target sums"
         }
     }
 }

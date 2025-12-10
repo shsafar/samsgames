@@ -25,14 +25,11 @@ struct MainMenuView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 16) {
                     // Header
                     headerView
 
-                    // Today's Date
-                    todayDateView
-
-                    // Game Cards
+                    // Game Cards (removed separate date view, now on each card)
                     ForEach(GameType.allCases, id: \.id) { gameType in
                         GameCard(
                             gameType: gameType,
@@ -43,6 +40,7 @@ struct MainMenuView: View {
                             },
                             dailyPuzzleManager: dailyPuzzleManager
                         )
+                        .environmentObject(statisticsManager)
                         .onTapGesture {
                             if gameType == .jushBox {
                                 showJushBox = true
@@ -238,211 +236,324 @@ struct GameCard: View {
     let onInfoTapped: () -> Void
     let dailyPuzzleManager: DailyPuzzleManager
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var statisticsManager: StatisticsManager
+    @State private var showArchive = false
+
+    // NYT-style branded colors for each game
+    private var brandColor: Color {
+        switch gameType {
+        case .sumStacks:
+            return Color.orange
+        case .wordStacks:
+            return Color.orange.opacity(0.8)
+        case .xNumbers:
+            return Color.blue
+        case .wordInShapes:
+            return Color.purple
+        case .jushBox:
+            return Color.green
+        case .doubleBubble:
+            return Color.pink
+        case .diamondStack:
+            return Color.indigo
+        case .hashtagWords:
+            return Color.teal
+        case .traceWiz:
+            return Color.cyan
+        case .arrowRace:
+            return Color.red
+        case .diskBreak:
+            return Color.yellow
+        case .waterTable:
+            return Color.blue.opacity(0.7)
+        case .atomicNails:
+            return Color.gray
+        }
+    }
 
     var body: some View {
-        HStack(spacing: 15) {
-            // Game Icon
-            ZStack {
-                if let customIcon = gameType.customIcon {
-                    // Use custom asset image
-                    Image(customIcon)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(8)
-                } else {
-                    // Fallback to SF Symbol
-                    Image(systemName: gameType.icon)
-                        .font(.system(size: 40))
-                        .foregroundColor(isCompleted ? .green : .blue)
-                }
-            }
-            .frame(width: 60, height: 60)
-            .background(isCompleted ? Color.green.opacity(0.1) : Color.blue.opacity(0.1))
-            .cornerRadius(12)
+        Group {
+            if gameType == .sumStacks {
+                // SumStacks with horizontal scroll for week view
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        // Main card content
+                        HStack(alignment: .top, spacing: 12) {
+                            // Left side - Game info
+                            VStack(alignment: .leading, spacing: 6) {
+                                // Game title
+                                Text(gameType.rawValue)
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(colorScheme == .dark ? .white : .black)
 
-            // Game Info
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(gameType.rawValue)
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                                // Attribution text
+                                Text("By Sam H S")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(colorScheme == .dark ? .white.opacity(0.6) : .black.opacity(0.5))
 
-                    Button(action: onInfoTapped) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 16))
-                            .foregroundColor(.blue)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
+                                // Description
+                                Text(gameType.description)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(colorScheme == .dark ? .white.opacity(0.8) : .black.opacity(0.7))
+                                    .lineLimit(2)
 
-                Text(gameType.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                                // Date display (NYT style)
+                                Text(dailyPuzzleManager.getTodayString())
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(colorScheme == .dark ? .white.opacity(0.9) : .black)
+                                    .padding(.top, 2)
 
-                // Show difficulty for X-Numbers
-                if gameType == .xNumbers {
-                    let level = dailyPuzzleManager.getTodayLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+                                // Difficulty level
+                                HStack(spacing: 6) {
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 10, height: 10)
+                                    Text("Easy (L1)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.6))
+                                }
+                            }
 
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(name) (Level \(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                            Spacer()
 
-                // Show difficulty for JushBox
-                if gameType == .jushBox {
-                    let level = dailyPuzzleManager.getTodayJushBoxLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
+                            // Right side - Game icon
+                            ZStack {
+                                if let customIcon = gameType.customIcon {
+                                    Image(customIcon)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 70, height: 70)
+                                } else {
+                                    Image(systemName: gameType.icon)
+                                        .font(.system(size: 45))
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                }
+                            }
+                            .frame(width: 70, height: 70)
 
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(name) (Level \(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                            // Completion indicator if completed
+                            if isCompleted {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.white)
+                                    .padding(6)
+                                    .background(Color.green)
+                                    .clipShape(Circle())
+                                    .offset(x: -8, y: -8)
+                            }
+                        }
+                        .padding(16)
+                        .frame(width: 360)
+                        .background(brandColor.opacity(colorScheme == .dark ? 0.3 : 0.15))
+                        .cornerRadius(16)
 
-                // Show difficulty for Diamond Stack
-                if gameType == .diamondStack {
-                    let level = dailyPuzzleManager.getTodayDiamondStackLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let levelName = level == 1 ? "Pyramid" : (level == 2 ? "Diamond" : "Hourglass")
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(levelName) (L\(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for Hashtag Words
-                if gameType == .hashtagWords {
-                    let level = dailyPuzzleManager.getTodayHashtagWordsLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(name) (Level \(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        // Week scroll view
+                        WeekScrollView(
+                            gameType: gameType,
+                            dailyPuzzleManager: dailyPuzzleManager,
+                            statisticsManager: statisticsManager,
+                            brandColor: brandColor,
+                            showArchive: $showArchive
+                        )
                     }
                 }
-
-                // Show difficulty for TraceWiz
-                if gameType == .traceWiz {
-                    let level = dailyPuzzleManager.getTodayTraceWizLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text(name)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for Arrow Race
-                if gameType == .arrowRace {
-                    let level = dailyPuzzleManager.getTodayArrowRaceLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(name) (Level \(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for DiskBreak
-                if gameType == .diskBreak {
-                    let level = dailyPuzzleManager.getTodayDiskBreakLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(name) (Level \(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for WaterTable
-                if gameType == .waterTable {
-                    let level = dailyPuzzleManager.getTodayWaterTableLevel() + 1 // Convert 0,1,2 to 1,2,3
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(name) (Level \(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for Atomic Nails
-                if gameType == .atomicNails {
-                    let level = dailyPuzzleManager.getTodayAtomicNailsLevel()
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption)
-                        Text("\(name) (Level \(level))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                if currentStreak > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "flame.fill")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                        Text("\(currentStreak) day streak")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
-                }
-            }
-
-            Spacer()
-
-            // Completion Status
-            if isCompleted {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.green)
+                .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
             } else {
-                Image(systemName: "chevron.right")
-                    .font(.body)
-                    .foregroundColor(.gray)
+                // Other games - standard card
+                HStack(alignment: .top, spacing: 12) {
+                    // Left side - Game info
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Game title
+                        Text(gameType.rawValue)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+
+                        // Description
+                        Text(gameType.description)
+                            .font(.system(size: 14))
+                            .foregroundColor(colorScheme == .dark ? .white.opacity(0.8) : .black.opacity(0.7))
+                            .lineLimit(2)
+
+                        // Date display (NYT style)
+                        Text(dailyPuzzleManager.getTodayString())
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(colorScheme == .dark ? .white.opacity(0.9) : .black)
+                            .padding(.top, 2)
+
+                        // Difficulty info
+                        if gameType == .xNumbers {
+                            let level = dailyPuzzleManager.getTodayLevel()
+                            let name = dailyPuzzleManager.getDifficultyName(for: level)
+                            Text(name)
+                                .font(.system(size: 12))
+                                .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.6))
+                        } else if gameType == .jushBox {
+                            let level = dailyPuzzleManager.getTodayJushBoxLevel()
+                            let name = dailyPuzzleManager.getDifficultyName(for: level)
+                            Text(name)
+                                .font(.system(size: 12))
+                                .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.6))
+                        }
+                    }
+
+                    Spacer()
+
+                    // Right side - Game icon
+                    ZStack {
+                        if let customIcon = gameType.customIcon {
+                            Image(customIcon)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 70, height: 70)
+                        } else {
+                            Image(systemName: gameType.icon)
+                                .font(.system(size: 45))
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                        }
+                    }
+                    .frame(width: 70, height: 70)
+
+                    // Completion indicator if completed
+                    if isCompleted {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(Color.green)
+                            .clipShape(Circle())
+                            .offset(x: -8, y: -8)
+                    }
+                }
+                .padding(16)
+                .background(brandColor.opacity(colorScheme == .dark ? 0.3 : 0.15))
+                .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
             }
         }
-        .padding()
-        .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color.white)
+        .sheet(isPresented: $showArchive) {
+            ArchiveView(filterGameType: .sumStacks)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        }
+    }
+}
+
+// MARK: - Week Scroll View Component
+struct WeekScrollView: View {
+    let gameType: GameType
+    let dailyPuzzleManager: DailyPuzzleManager
+    let statisticsManager: StatisticsManager
+    let brandColor: Color
+    @Binding var showArchive: Bool
+    @Environment(\.colorScheme) var colorScheme
+
+    private var last7Days: [Date] {
+        let calendar = Calendar.current
+        let today = Date()
+        return (0..<7).compactMap { daysAgo in
+            calendar.date(byAdding: .day, value: -daysAgo, to: today)
+        }.reversed()
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            // Show last 7 days
+            ForEach(last7Days, id: \.self) { date in
+                WeekDayCard(
+                    date: date,
+                    gameType: gameType,
+                    isCompleted: statisticsManager.isCompleted(for: gameType, on: date),
+                    brandColor: brandColor
+                )
+            }
+
+            // "Go to Archive" button as rounded square
+            Button(action: {
+                showArchive = true
+            }) {
+                VStack(spacing: 4) {
+                    Text("Go to")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                    Text("Archive")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                .frame(width: 80, height: 70)
+                .background(Color(red: 0.3, green: 0.2, blue: 0.5))
+                .cornerRadius(12)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.trailing, 8)
+        .background(brandColor.opacity(colorScheme == .dark ? 0.3 : 0.15))
+        .cornerRadius(16)
+    }
+}
+
+// MARK: - Week Day Card Component
+struct WeekDayCard: View {
+    let date: Date
+    let gameType: GameType
+    let isCompleted: Bool
+    let brandColor: Color
+    @Environment(\.colorScheme) var colorScheme
+
+    private var dayName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date)
+    }
+
+    private var dayNumber: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: date)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Day name on top
+            Text(dayName)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.black.opacity(0.6))
+
+            // Icon or checkmark in center - SQUARE shape with brand color background
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(brandColor.opacity(0.15))
+                    .frame(width: 70, height: 70)
+
+                if isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.green)
+                } else {
+                    if let customIcon = gameType.customIcon {
+                        Image(customIcon)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 45, height: 45)
+                    } else {
+                        Image(systemName: gameType.icon)
+                            .font(.system(size: 36))
+                            .foregroundColor(brandColor)
+                    }
+                }
+            }
+
+            // Day number on bottom
+            Text(dayNumber)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.black.opacity(0.6))
+        }
+        .frame(width: 80)
+        .padding(.vertical, 12)
+        .background(Color.white)
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
 }
 

@@ -17,6 +17,7 @@ struct ArchiveView: View {
     @State private var showPaywall = false
 
     private let availableDates: [Date]
+    var filterGameType: GameType? = nil  // Optional filter for specific game
 
     // Struct to hold both date and game type together
     struct ArchiveItem: Identifiable {
@@ -25,7 +26,8 @@ struct ArchiveView: View {
         let gameType: GameType
     }
 
-    init() {
+    init(filterGameType: GameType? = nil) {
+        self.filterGameType = filterGameType
         self.availableDates = DailyPuzzleManager().getAvailableDates(count: 30)
     }
 
@@ -33,30 +35,43 @@ struct ArchiveView: View {
         NavigationView {
             ZStack {
                 if subscriptionManager.isSubscribedOrTestMode {
-                    // Premium or Test Mode: Show full archive
-                    List {
-                        ForEach(availableDates, id: \.self) { date in
-                            Section(header: Text(formatDate(date))) {
-                                ForEach(GameType.allCases, id: \.id) { gameType in
-                                    ArchiveGameRow(
-                                        gameType: gameType,
-                                        date: date,
-                                        isCompleted: statisticsManager.isCompleted(for: gameType, on: date),
-                                        dailyPuzzleManager: dailyPuzzleManager
-                                    )
-                                    .onTapGesture {
-                                        selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
+                    // Premium or Test Mode: Show archive (NYT-style cards)
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            ForEach(availableDates, id: \.self) { date in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    // Date header
+                                    Text(formatDate(date))
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.primary)
+                                        .padding(.horizontal)
+                                        .padding(.top, 8)
+
+                                    // Game cards for this date - filtered if needed
+                                    ForEach(filteredGameTypes(), id: \.id) { gameType in
+                                        ArchiveGameCard(
+                                            gameType: gameType,
+                                            date: date,
+                                            isCompleted: statisticsManager.isCompleted(for: gameType, on: date),
+                                            dailyPuzzleManager: dailyPuzzleManager
+                                        )
+                                        .onTapGesture {
+                                            selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
+                                        }
+                                        .padding(.horizontal)
                                     }
                                 }
                             }
+                            .padding(.vertical, 8)
                         }
                     }
+                    .background(Color(UIColor.systemGroupedBackground))
                 } else {
                     // Free: Show locked archive with upgrade prompt
                     VStack(spacing: 30) {
                         Spacer()
 
-                        Image(systemName: "lock.fill")
+                        Image(systemName: "key.fill")
                             .font(.system(size: 80))
                             .foregroundColor(.purple.opacity(0.6))
 
@@ -124,6 +139,13 @@ struct ArchiveView: View {
         return formatter.string(from: date)
     }
 
+    private func filteredGameTypes() -> [GameType] {
+        if let filterGameType = filterGameType {
+            return [filterGameType]
+        }
+        return GameType.allCases
+    }
+
     @ViewBuilder
     private func archiveGameView(for gameType: GameType, date: Date) -> some View {
         let seed = dailyPuzzleManager.getSeedForDate(date)
@@ -185,173 +207,132 @@ struct ArchiveView: View {
     }
 }
 
-struct ArchiveGameRow: View {
+struct ArchiveGameCard: View {
     let gameType: GameType
     let date: Date
     let isCompleted: Bool
     let dailyPuzzleManager: DailyPuzzleManager
+    @Environment(\.colorScheme) var colorScheme
+
+    // Helper function to get difficulty color
+    private func difficultyColor(for level: Int) -> Color {
+        switch level {
+        case 1:
+            return Color.green
+        case 2:
+            return Color.yellow
+        case 3:
+            return Color.red
+        default:
+            return Color.gray
+        }
+    }
+
+    // NYT-style branded colors (same as main menu)
+    private var brandColor: Color {
+        switch gameType {
+        case .sumStacks:
+            return Color.orange
+        case .wordStacks:
+            return Color.orange.opacity(0.8)
+        case .xNumbers:
+            return Color.blue
+        case .wordInShapes:
+            return Color.purple
+        case .jushBox:
+            return Color.green
+        case .doubleBubble:
+            return Color.pink
+        case .diamondStack:
+            return Color.indigo
+        case .hashtagWords:
+            return Color.teal
+        case .traceWiz:
+            return Color.cyan
+        case .arrowRace:
+            return Color.red
+        case .diskBreak:
+            return Color.yellow
+        case .waterTable:
+            return Color.blue.opacity(0.7)
+        case .atomicNails:
+            return Color.gray
+        }
+    }
 
     var body: some View {
-        HStack {
-            // Use custom icon if available, otherwise SF Symbol
-            if let customIcon = gameType.customIcon {
-                Image(customIcon)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 32, height: 32)
-            } else {
-                Image(systemName: gameType.icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(isCompleted ? .green : .gray)
-                    .frame(width: 32, height: 32)
+        HStack(alignment: .center, spacing: 16) {
+            // Left side - Game icon (larger)
+            ZStack {
+                if let customIcon = gameType.customIcon {
+                    Image(customIcon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 60, height: 60)
+                } else {
+                    Image(systemName: gameType.icon)
+                        .font(.system(size: 40))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                }
             }
+            .frame(width: 60, height: 60)
 
-            VStack(alignment: .leading, spacing: 2) {
+            // Middle - Game info
+            VStack(alignment: .leading, spacing: 4) {
                 Text(gameType.rawValue)
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.primary)
 
-                // Show difficulty for X-Numbers
-                if gameType == .xNumbers {
-                    let level = dailyPuzzleManager.getLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
+                Text(gameType.description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+
+                // Difficulty info with colored circle
+                if gameType == .xNumbers || gameType == .jushBox {
+                    let seed = dailyPuzzleManager.getSeedForDate(date)
+                    let calendar = Calendar.current
+                    let daysSinceEpoch = calendar.dateComponents([.day], from: Date(timeIntervalSince1970: 0), to: date).day ?? 0
+                    let level = (daysSinceEpoch % 3) + 1
                     let name = dailyPuzzleManager.getDifficultyName(for: level)
-
                     HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(name) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for JushBox
-                if gameType == .jushBox {
-                    let level = dailyPuzzleManager.getJushBoxLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(name) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for Diamond Stack
-                if gameType == .diamondStack {
-                    let level = dailyPuzzleManager.getDiamondStackLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let levelName = level == 1 ? "Pyramid" : (level == 2 ? "Diamond" : "Hourglass")
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(levelName) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for Hashtag Words
-                if gameType == .hashtagWords {
-                    let level = dailyPuzzleManager.getHashtagWordsLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(name) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for TraceWiz
-                if gameType == .traceWiz {
-                    let level = dailyPuzzleManager.getTraceWizLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
                         Text(name)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
                     }
-                }
-
-                // Show difficulty for Arrow Race
-                if gameType == .arrowRace {
-                    let level = dailyPuzzleManager.getArrowRaceLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
+                } else if gameType == .sumStacks {
                     HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(name) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for DiskBreak
-                if gameType == .diskBreak {
-                    let level = dailyPuzzleManager.getDiskBreakLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(name) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for WaterTable
-                if gameType == .waterTable {
-                    let level = dailyPuzzleManager.getWaterTableLevelForDate(date) + 1 // Convert 0,1,2 to 1,2,3
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(name) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                // Show difficulty for Atomic Nails
-                if gameType == .atomicNails {
-                    let level = dailyPuzzleManager.getAtomicNailsLevelForDate(date)
-                    let emoji = dailyPuzzleManager.getDifficultyEmoji(for: level)
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-
-                    HStack(spacing: 4) {
-                        Text(emoji)
-                            .font(.caption2)
-                        Text("\(name) (L\(level))")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                        Text("Easy (L1)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
                     }
                 }
             }
 
             Spacer()
 
+            // Right side - Completion status
             if isCompleted {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+                    .padding(8)
+                    .background(Color.green)
+                    .clipShape(Circle())
             }
         }
+        .padding(16)
+        .background(brandColor.opacity(colorScheme == .dark ? 0.2 : 0.12))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(brandColor.opacity(0.3), lineWidth: 1)
+        )
     }
 }

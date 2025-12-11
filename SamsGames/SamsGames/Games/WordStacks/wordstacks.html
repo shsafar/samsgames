@@ -280,6 +280,30 @@
       display: none;
     }
 
+    /* Hide duplicate UI elements by default (Swift app uses standardized UI) */
+    h1,
+    #top-bar,
+    #btn-new,
+    #btn-restart,
+    #btn-reveal,
+    #btn-sound {
+      display: none;
+    }
+
+    /* Show these elements only in standalone web mode (no daily-mode class) */
+    body:not(.daily-mode) h1,
+    body:not(.daily-mode) #top-bar,
+    body:not(.daily-mode) #btn-new,
+    body:not(.daily-mode) #btn-restart,
+    body:not(.daily-mode) #btn-reveal,
+    body:not(.daily-mode) #btn-sound {
+      display: block;
+    }
+
+    body:not(.daily-mode) #controls {
+      display: flex;
+    }
+
     @media (max-width: 480px) {
       h1 { font-size: 19px; }
       #top-bar { font-size: 14px; }
@@ -288,7 +312,7 @@
     }
   </style>
 </head>
-<body>
+<body class="daily-mode">
   <h1>WordStacks</h1>
 
   <div id="top-bar">
@@ -357,6 +381,7 @@
 
     // Seeded random number generator for daily puzzles
     let seed = Date.now();
+    let savedSeed = seed; // Store the initial seed for restart functionality
     function seededRandom() {
       seed = (seed * 9301 + 49297) % 233280;
       return seed / 233280;
@@ -666,7 +691,7 @@
     let timeElapsed = 0;
     let timerId = null;
     let score = 0;
-    let dailyMode = false;
+    let dailyMode = document.body.classList.contains('daily-mode'); // Check if body has daily-mode class
     let soundEnabled = true;
     let currentInput = null;
     const keyboard = document.getElementById("custom-keyboard");
@@ -738,9 +763,11 @@
       if (timerId) clearInterval(timerId);
       timeElapsed = 0;
       tEl.textContent = timeElapsed;
+      updateGameStats();
       timerId = setInterval(() => {
         timeElapsed++;
         tEl.textContent = timeElapsed;
+        updateGameStats();
       }, 1000);
     }
 
@@ -1107,6 +1134,12 @@
       score = 0;
       document.getElementById("score-display").textContent = score;
       setMessage("");
+
+      // In daily mode, restore the saved seed to get same puzzle
+      if (dailyMode) {
+        seed = savedSeed;
+      }
+
       addShape(null);
       startTimer();
       setTimeout(() => {
@@ -1115,6 +1148,10 @@
     }
 
     function restartGame() {
+      // Restore the original seed before restarting
+      if (dailyMode) {
+        seed = savedSeed;
+      }
       newGame();
       setMessage("Restarted.");
     }
@@ -1337,6 +1374,7 @@
     // Swift integration functions
     function setSeed(newSeed) {
       seed = newSeed;
+      savedSeed = newSeed; // Save the seed for restart functionality
     }
 
     function enableDailyMode() {
@@ -1348,10 +1386,43 @@
       newGame();
     }
 
+    // Helper functions for Swift integration
+    function resetGame() {
+      restartGame();
+    }
+
+    function revealHint() {
+      revealTop();
+    }
+
+    // Sound control for Swift
+    function setSoundEnabled(enabled) {
+      soundEnabled = enabled;
+    }
+
+    // Send game stats to Swift
+    function updateGameStats() {
+      if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.gameStats) {
+        return;  // Not in Swift webview
+      }
+
+      const solvedCount = shapes.filter(s => s.solved).length;
+      const minutes = Math.floor(timeElapsed / 60);
+      const seconds = timeElapsed % 60;
+      const timeStr = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+
+      window.webkit.messageHandlers.gameStats.postMessage({
+        time: timeStr,
+        solved: solvedCount
+      });
+    }
+
     // Expose to Swift
     window.setSeed = setSeed;
     window.enableDailyMode = enableDailyMode;
     window.startGame = startGame;
+    window.resetGame = resetGame;
+    window.revealHint = revealHint;
   </script>
 </body>
 </html>

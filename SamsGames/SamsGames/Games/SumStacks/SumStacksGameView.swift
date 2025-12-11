@@ -79,7 +79,7 @@ struct SumStacksGameView: View {
                 // Animated icon overlay with pulsing effect
                 if showIconAnimation {
                     ZStack {
-                        Color.black.opacity(0.8)
+                        Color.white
                             .ignoresSafeArea()
 
                         Image("sumstackicon")
@@ -175,6 +175,7 @@ struct SumStacksWebView: View {
                     revealSolution()
                 },
                 soundEnabled: $soundEnabled,
+                resetLabel: "START/RESET",
                 showReveal: true  // Enable reveal button
             )
 
@@ -217,6 +218,9 @@ struct SumStacksWebView: View {
                 gameTime: $gameTime,
                 scoreCount: $scoreCount
             )
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            webView?.evaluateJavaScript("setSoundEnabled(\(newValue));")
         }
     }
 

@@ -295,16 +295,78 @@ struct ArchiveGameCard: View {
 
                 // Difficulty info with colored circle for ALL games
                 HStack(spacing: 4) {
-                    if gameType == .xNumbers || gameType == .jushBox {
-                        let seed = dailyPuzzleManager.getSeedForDate(date)
-                        let calendar = Calendar.current
-                        let daysSinceEpoch = calendar.dateComponents([.day], from: Date(timeIntervalSince1970: 0), to: date).day ?? 0
-                        let level = (daysSinceEpoch % 3) + 1
+                    if gameType == .xNumbers {
+                        let level = dailyPuzzleManager.getLevelForDate(date)
                         Circle()
                             .fill(difficultyColor(for: level))
                             .frame(width: 8, height: 8)
                         let name = dailyPuzzleManager.getDifficultyName(for: level)
                         Text(name)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .jushBox {
+                        let level = dailyPuzzleManager.getJushBoxLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        let name = dailyPuzzleManager.getDifficultyName(for: level)
+                        Text(name)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .diamondStack {
+                        let level = dailyPuzzleManager.getDiamondStackLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        Text("Level \(level)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .hashtagWords {
+                        let level = dailyPuzzleManager.getHashtagWordsLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        Text("Level \(level)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .traceWiz {
+                        let level = dailyPuzzleManager.getTraceWizLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        Text("Level \(level)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .arrowRace {
+                        let level = dailyPuzzleManager.getArrowRaceLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        Text("Level \(level)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .diskBreak {
+                        let level = dailyPuzzleManager.getDiskBreakLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        Text("Level \(level)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .atomicNails {
+                        let level = dailyPuzzleManager.getAtomicNailsLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        Text("Level \(level)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.8))
+                    } else if gameType == .waterTable {
+                        let level = dailyPuzzleManager.getWaterTableLevelForDate(date)
+                        Circle()
+                            .fill(difficultyColor(for: level))
+                            .frame(width: 8, height: 8)
+                        Text("Level \(level)")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary.opacity(0.8))
                     } else {

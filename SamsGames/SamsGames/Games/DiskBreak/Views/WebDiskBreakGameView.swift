@@ -142,33 +142,7 @@ struct WebDiskBreakGameView: View {
     }
 
     private var gameView: some View {
-        VStack(spacing: 0) {
-            // Top bar with back button
-            HStack {
-                Button(action: { showExitWarning = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Back")
-                            .font(.system(size: 17))
-                    }
-                    .foregroundColor(.blue)
-                }
-
-                Spacer()
-
-                Button(action: { showInstructions = true }) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.system(size: 20))
-                        .foregroundColor(.blue)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
-            .background(Color(UIColor.systemBackground))
-
-            // WebView for the game
+        NavigationView {
             WebDiskBreakGameViewRepresentable(
                 seed: seed,
                 level: level,
@@ -176,9 +150,30 @@ struct WebDiskBreakGameView: View {
                     handleGameCompletion()
                 }
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showExitWarning = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(.system(size: 17))
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showInstructions = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
         }
-        .background(Color(UIColor.systemGroupedBackground))
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 
     private func startSplashTimer() {

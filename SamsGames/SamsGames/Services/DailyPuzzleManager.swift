@@ -303,8 +303,8 @@ class DailyPuzzleManager: ObservableObject {
     }
 
     /// Get Atomic Nails level for date (1, 2, 3)
-    /// Monday/Wed/Fri: L1 (Easy - 5 pins, no timer)
-    /// Tue/Thu: L2 (Medium - 10 pins, 120s timer)
+    /// Monday/Wed/Thu/Fri: L1 (Easy - 5 pins, no timer)
+    /// Tue: L2 (Medium - 10 pins, 120s timer)
     /// Sat/Sun: L3 (Hard - 14 pins, 90s timer)
     func getAtomicNailsLevelForDate(_ date: Date) -> Int {
         let weekday = calendar.component(.weekday, from: date)
@@ -314,7 +314,7 @@ class DailyPuzzleManager: ObservableObject {
         case 2: return 1  // Monday: L1 (5 pins)
         case 3: return 2  // Tuesday: L2 (10 pins)
         case 4: return 1  // Wednesday: L1 (5 pins)
-        case 5: return 2  // Thursday: L2 (10 pins)
+        case 5: return 1  // Thursday: L1 (5 pins)
         case 6: return 1  // Friday: L1 (5 pins)
         case 7: return 3  // Saturday: L3 (14 pins)
         default: return 1

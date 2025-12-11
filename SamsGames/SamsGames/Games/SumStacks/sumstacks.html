@@ -363,7 +363,7 @@
     let shapes = [];
     let score = 0;
     let seed = Date.now();
-    let dailyMode = false;
+    let dailyMode = document.body.classList.contains('daily-mode'); // Check if body has daily-mode class
     let currentInput = null;
 
     // Seeded random number generator
@@ -835,6 +835,11 @@
 
     function revealSolution() {
       revealTop();
+    }
+
+    // Sound control for Swift
+    function setSoundEnabled(enabled) {
+      soundEnabled = enabled;
     }
 
     // Send game stats to Swift

@@ -16,8 +16,6 @@ struct WebAtomicNailsGameView: View {
 
     @State private var showCompletionAlert = false
     @State private var showInstructions = false
-    @State private var showSplash = true
-    @State private var isPulsing = false
     @State private var showExitWarning = false
 
     // Archive mode support
@@ -33,46 +31,90 @@ struct WebAtomicNailsGameView: View {
         return dailyPuzzleManager.isCompletedToday(.atomicNails)
     }
 
-    // Calculate seed and level
-    private let seed: Int
-    private let level: Int
-
-    init(archiveMode: Bool = false, archiveDate: Date? = nil, archiveSeed: Int? = nil) {
-        self.archiveMode = archiveMode
-        self.archiveDate = archiveDate
-        self.archiveSeed = archiveSeed
-
-        let manager = DailyPuzzleManager()
-        if let archiveSeed = archiveSeed, let archiveDate = archiveDate {
-            self.seed = archiveSeed
-            self.level = manager.getAtomicNailsLevelForDate(archiveDate)
-        } else {
-            self.seed = manager.getSeedForToday()
-            self.level = manager.getTodayAtomicNailsLevel()
-        }
-    }
+    @State private var showIconAnimation = true
+    @State private var iconScale: CGFloat = 1.0
 
     var body: some View {
         Group {
             if isAlreadyCompleted {
                 // Show completion screen if already completed today
                 AtomicNailsCompletedView()
-            } else if showSplash {
-                splashScreen
             } else {
-                gameView
+                ZStack {
+                    NavigationView {
+                        AtomicNailsWebView(
+                            archiveMode: archiveMode,
+                            archiveDate: archiveDate,
+                            archiveSeed: archiveSeed,
+                            onComplete: {
+                                handleCompletion()
+                            }
+                        )
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button(action: { showExitWarning = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "chevron.left")
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text("Back")
+                                            .font(.system(size: 17))
+                                    }
+                                    .foregroundColor(.blue)
+                                }
+                            }
+
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button(action: { showInstructions = true }) {
+                                    Image(systemName: "questionmark.circle")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+
+                    // Animated icon overlay with pulsing effect
+                    if showIconAnimation {
+                        ZStack {
+                            Color.white
+                                .ignoresSafeArea()
+
+                            Image("atomicnailsicon")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 150, height: 150)
+                                .scaleEffect(iconScale)
+                        }
+                        .transition(.opacity)
+                    }
+                }
             }
         }
         .onAppear {
+            // Check if new day when view appears
             dailyPuzzleManager.checkForNewDay()
+
             if !isAlreadyCompleted {
-                startSplashTimer()
+                // Animate icon flashing 3 times over 3 seconds
+                withAnimation(.easeInOut(duration: 0.5).repeatCount(6, autoreverses: true)) {
+                    iconScale = 1.3
+                }
+
+                // Hide icon after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    withAnimation {
+                        showIconAnimation = false
+                    }
+                }
+            } else {
+                showIconAnimation = false
             }
         }
-        .navigationBarHidden(true)
         .alert("Puzzle Completed!", isPresented: $showCompletionAlert) {
             Button("OK") {
-                // Alert dismissed, completion screen will show automatically
+                dismiss()
             }
         } message: {
             Text("Great job! You completed today's Atomic Nails puzzle!")
@@ -90,284 +132,259 @@ struct WebAtomicNailsGameView: View {
         }
     }
 
-    // MARK: - Subviews
-
-    private var splashScreen: some View {
-        ZStack {
-            // Atomic gradient background
-            LinearGradient(
-                colors: [
-                    Color(red: 0.95, green: 0.85, blue: 1.0),
-                    Color(red: 0.85, green: 0.7, blue: 0.95)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            VStack {
-                Spacer()
-
-                // Try to load the custom icon, show SF Symbol if not found
-                if let customIcon = GameType.atomicNails.customIcon,
-                   let uiImage = UIImage(named: customIcon) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 280, maxHeight: 280)
-                        .padding(.horizontal, 20)
-                        .scaleEffect(isPulsing ? 1.05 : 1.0)
-                        .animation(
-                            .easeInOut(duration: 1.2)
-                            .repeatForever(autoreverses: true),
-                            value: isPulsing
-                        )
-                } else {
-                    // Fallback to SF Symbol
-                    Image(systemName: "scope")
-                        .font(.system(size: 120))
-                        .foregroundColor(.purple)
-                        .scaleEffect(isPulsing ? 1.05 : 1.0)
-                        .animation(
-                            .easeInOut(duration: 1.2)
-                            .repeatForever(autoreverses: true),
-                            value: isPulsing
-                        )
-                }
-
-                Text("Atomic Nails")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.purple)
-                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 2)
-                    .padding(.top, 20)
-
-                Spacer()
-            }
-        }
-        .onAppear {
-            isPulsing = true
-        }
-    }
-
-    private var gameView: some View {
-        VStack(spacing: 0) {
-            // Top bar with back button
-            HStack {
-                Button(action: { showExitWarning = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Back")
-                            .font(.system(size: 17))
-                    }
-                    .foregroundColor(.blue)
-                }
-
-                Spacer()
-
-                Button(action: { showInstructions = true }) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.system(size: 20))
-                        .foregroundColor(.blue)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
-            .background(Color(UIColor.systemBackground))
-
-            // WebView for the game
-            WebAtomicNailsGameViewRepresentable(
-                seed: seed,
-                level: level,
-                onGameComplete: {
-                    handleGameCompletion()
-                }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .background(Color(UIColor.systemGroupedBackground))
-    }
-
-    private func startSplashTimer() {
-        // Show splash for 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            withAnimation {
-                showSplash = false
-            }
-        }
-    }
-
-    private func handleGameCompletion() {
+    private func handleCompletion() {
         if archiveMode {
-            // Record completion for the specific archive date
+            // Archive mode - record completion for the specific archive date
             if let date = archiveDate {
                 statisticsManager.recordCompletion(.atomicNails, date: date)
             }
         } else {
-            // Mark as completed in daily puzzle manager (today's puzzle)
+            // Regular mode - mark today as completed
             dailyPuzzleManager.markCompleted(.atomicNails)
-
-            // Record completion in statistics for today
             statisticsManager.recordCompletion(.atomicNails)
         }
 
-        // Show completion alert after 2 seconds so user can see the result
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            showCompletionAlert = true
+        // Show completion alert
+        showCompletionAlert = true
+    }
+}
+
+// MARK: - WebView Wrapper
+
+struct AtomicNailsWebView: View {
+    let archiveMode: Bool
+    let archiveDate: Date?
+    let archiveSeed: Int?
+    let onComplete: () -> Void
+
+    @State private var soundEnabled = true
+    @State private var webView: WKWebView?
+    @State private var showQuickTips = false
+    @State private var gameTime: String = "0:00"
+    @State private var scoreCount: Int = 0
+    @State private var penaltyCount: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Standardized button bar
+            StandardGameButtonBar(
+                onReset: {
+                    resetGame()
+                },
+                onRevealHint: {
+                    revealHint()
+                },
+                soundEnabled: $soundEnabled,
+                resetLabel: "START/RESET",
+                revealLabel: "REVEAL HOLES",
+                showReveal: true  // Enable reveal button
+            )
+
+            // Game title with special instructions icon
+            HStack(spacing: 8) {
+                Text("Atomic Nails")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+
+                // Special instructions (i) icon - blue for Atomic Nails (has special tips)
+                Button(action: {
+                    showQuickTips = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)  // Blue = has special instructions
+                }
+            }
+            .padding(.vertical, 12)
+
+            // Standardized game info bar
+            StandardGameInfoBar(
+                time: gameTime,
+                score: (scoreCount, "Score"),  // Active: Time and Score
+                moves: nil,     // Inactive (gray)
+                streak: nil,    // Inactive (gray)
+                hints: nil,     // Inactive (gray)
+                penalty: (penaltyCount, "Miss")  // Active: Miss goes here
+            )
+
+            // WebView game
+            AtomicNailsWebViewRepresentable(
+                archiveMode: archiveMode,
+                archiveDate: archiveDate,
+                archiveSeed: archiveSeed,
+                onComplete: onComplete,
+                webView: $webView,
+                gameTime: $gameTime,
+                scoreCount: $scoreCount,
+                penaltyCount: $penaltyCount
+            )
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            webView?.evaluateJavaScript("setSoundEnabled(\(newValue));")
+        }
+        .sheet(isPresented: $showQuickTips) {
+            AtomicNailsQuickTipsView()
+        }
+    }
+
+    private func resetGame() {
+        webView?.evaluateJavaScript("resetGame();") { _, error in
+            if let error = error {
+                print("❌ Reset error: \(error)")
+            }
+        }
+    }
+
+    private func revealHint() {
+        webView?.evaluateJavaScript("revealHint();") { _, error in
+            if let error = error {
+                print("❌ Reveal error: \(error)")
+            }
         }
     }
 }
 
-// UIViewRepresentable wrapper for WKWebView
-struct WebAtomicNailsGameViewRepresentable: UIViewRepresentable {
-    let seed: Int
-    let level: Int
-    let onGameComplete: () -> Void
+// MARK: - WebView UIViewRepresentable
+
+struct AtomicNailsWebViewRepresentable: UIViewRepresentable {
+    let archiveMode: Bool
+    let archiveDate: Date?
+    let archiveSeed: Int?
+    let onComplete: () -> Void
+    @Binding var webView: WKWebView?
+    @Binding var gameTime: String
+    @Binding var scoreCount: Int
+    @Binding var penaltyCount: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(self, onGameComplete: onGameComplete)
+        Coordinator(
+            onComplete: onComplete,
+            webViewBinding: $webView,
+            gameTime: $gameTime,
+            scoreCount: $scoreCount,
+            penaltyCount: $penaltyCount
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
+        let config = WKWebViewConfiguration()
+        config.preferences.javaScriptEnabled = true
 
-        // Use modern API for JavaScript (iOS 14+)
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        let contentController = WKUserContentController()
+        contentController.add(context.coordinator, name: "gameComplete")
+        contentController.add(context.coordinator, name: "gameStats")
+        config.userContentController = contentController
 
-        // Add message handler for game completion
-        configuration.userContentController.add(context.coordinator, name: "gameComplete")
-
-        // Enable console logging
-        let consoleScript = WKUserScript(
-            source: """
-            (function() {
-                var originalLog = console.log;
-                var originalError = console.error;
-
-                console.log = function() {
-                    var args = Array.prototype.slice.call(arguments);
-                    var message = args.map(function(arg) {
-                        if (typeof arg === 'object') {
-                            try { return JSON.stringify(arg); }
-                            catch(e) { return String(arg); }
-                        }
-                        return String(arg);
-                    }).join(' ');
-                    window.webkit.messageHandlers.logging.postMessage("LOG: " + message);
-                };
-
-                console.error = function() {
-                    var args = Array.prototype.slice.call(arguments);
-                    var message = args.map(function(arg) { return String(arg); }).join(' ');
-                    window.webkit.messageHandlers.logging.postMessage("ERROR: " + message);
-                };
-            })();
-            """,
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: false
-        )
-        configuration.userContentController.addUserScript(consoleScript)
-        configuration.userContentController.add(context.coordinator, name: "logging")
-
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.backgroundColor = .systemBackground
-        webView.isOpaque = false
-
-        // Completely disable all scrolling
+        let webView = WKWebView(frame: .zero, configuration: config)
         webView.scrollView.isScrollEnabled = false
-        webView.scrollView.bounces = false
-        webView.scrollView.alwaysBounceVertical = false
-        webView.scrollView.alwaysBounceHorizontal = false
-        webView.scrollView.showsVerticalScrollIndicator = false
-        webView.scrollView.showsHorizontalScrollIndicator = false
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.isOpaque = false
+        webView.backgroundColor = .white
 
-        // Disable zooming
-        webView.scrollView.minimumZoomScale = 1.0
-        webView.scrollView.maximumZoomScale = 1.0
-        webView.scrollView.bouncesZoom = false
-
-        // Set navigation delegate
-        webView.navigationDelegate = context.coordinator
-
-        // Load local atomicnails.html
-        if let htmlPath = Bundle.main.path(forResource: "atomicnails", ofType: "html") {
-            let url = URL(fileURLWithPath: htmlPath)
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
-            print("Loading Atomic Nails game from: \(htmlPath)")
-        } else {
-            print("Error: atomicnails.html not found in bundle")
-        }
+        // Store webView reference via coordinator
+        context.coordinator.webViewBinding.wrappedValue = webView
 
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // No updates needed
-    }
+        // Only load once - prevent reload loop
+        if context.coordinator.hasLoaded {
+            return
+        }
+        context.coordinator.hasLoaded = true
 
-    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
-        var parent: WebAtomicNailsGameViewRepresentable
-        var onGameComplete: () -> Void
-
-        init(_ parent: WebAtomicNailsGameViewRepresentable, onGameComplete: @escaping () -> Void) {
-            self.parent = parent
-            self.onGameComplete = onGameComplete
+        guard let htmlPath = Bundle.main.path(forResource: "atomicnails", ofType: "html") else {
+            print("❌ Could not find atomicnails.html")
+            return
         }
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("WebView finished loading")
-            print("Seed: \(parent.seed)")
-            print("Level: \(parent.level)")
+        let htmlURL = URL(fileURLWithPath: htmlPath)
+        let request = URLRequest(url: htmlURL)
+        webView.load(request)
 
-            // Set seed and level, enable daily mode, then start the game
-            let script = """
-            console.log('Swift calling JavaScript...');
-            if (window.setSeed && window.setLevel && window.enableDailyMode && window.startGame) {
-                window.setSeed(\(parent.seed));
-                console.log('Seed set to: \(parent.seed)');
-
-                window.setLevel(\(parent.level));
-                console.log('Level set to: \(parent.level)');
-
-                window.enableDailyMode();
-                console.log('Daily mode enabled');
-
-                window.startGame();
-                console.log('Atomic Nails started at level \(parent.level)');
+        // Set up daily puzzle mode after page loads
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // Use provided archive seed, or calculate from date
+            let seed: Int64
+            if let archiveSeed = archiveSeed {
+                seed = Int64(archiveSeed)
             } else {
-                console.error('setSeed, setLevel, enableDailyMode, or startGame not available');
+                let date = archiveDate ?? Date()
+                seed = Int64(date.timeIntervalSince1970 / 86400)
             }
-            """
 
-            webView.evaluateJavaScript(script) { result, error in
-                if let error = error {
-                    print("Error setting seed and level: \(error)")
+            // Get level from DailyPuzzleManager
+            let manager = DailyPuzzleManager()
+            let level: Int
+            if let archiveDate = archiveDate {
+                level = manager.getAtomicNailsLevelForDate(archiveDate)
+            } else {
+                level = manager.getTodayAtomicNailsLevel()
+            }
+
+            // Check if functions exist and call them in sequence
+            webView.evaluateJavaScript("typeof setSeed !== 'undefined' && typeof setLevel !== 'undefined' && typeof startGame !== 'undefined'") { result, error in
+                if let ready = result as? Bool, ready {
+                    // Set seed first
+                    webView.evaluateJavaScript("setSeed(\(seed));") { _, _ in
+                        // Set level
+                        webView.evaluateJavaScript("setLevel(\(level));") { _, _ in
+                            // Then start game
+                            webView.evaluateJavaScript("startGame();") { _, error in
+                                if let error = error {
+                                    print("❌ Error starting game: \(error)")
+                                }
+                            }
+                        }
+                    }
                 } else {
-                    print("Atomic Nails initialized successfully")
+                    print("❌ JavaScript functions not ready")
                 }
             }
         }
+    }
 
-        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("WebView failed to load: \(error.localizedDescription)")
-        }
+    class Coordinator: NSObject, WKScriptMessageHandler {
+        let onComplete: () -> Void
+        let webViewBinding: Binding<WKWebView?>
+        let gameTime: Binding<String>
+        let scoreCount: Binding<Int>
+        let penaltyCount: Binding<Int>
+        var hasLoaded: Bool = false
 
-        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("WebView provisional navigation failed: \(error.localizedDescription)")
+        init(onComplete: @escaping () -> Void,
+             webViewBinding: Binding<WKWebView?>,
+             gameTime: Binding<String>,
+             scoreCount: Binding<Int>,
+             penaltyCount: Binding<Int>) {
+            self.onComplete = onComplete
+            self.webViewBinding = webViewBinding
+            self.gameTime = gameTime
+            self.scoreCount = scoreCount
+            self.penaltyCount = penaltyCount
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            if message.name == "logging" {
-                print("JS: \(message.body)")
-            } else if message.name == "gameComplete" {
+            if message.name == "gameComplete" {
                 if let dict = message.body as? [String: Any],
                    let won = dict["won"] as? Bool,
                    won {
-                    print("Game completed successfully!")
                     DispatchQueue.main.async {
-                        self.onGameComplete()
+                        self.onComplete()
+                    }
+                }
+            } else if message.name == "gameStats" {
+                if let stats = message.body as? [String: Any] {
+                    DispatchQueue.main.async {
+                        if let time = stats["time"] as? String {
+                            self.gameTime.wrappedValue = time
+                        }
+                        if let score = stats["score"] as? Int {
+                            self.scoreCount.wrappedValue = score
+                        }
+                        if let miss = stats["miss"] as? Int {
+                            self.penaltyCount.wrappedValue = miss
+                        }
                     }
                 }
             }
@@ -482,6 +499,47 @@ struct AtomicNailsCompletedView: View {
         let seconds = components.second ?? 0
 
         timeUntilNext = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+}
+
+// MARK: - Quick Tips View
+
+struct AtomicNailsQuickTipsView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("How to Play")
+                        .font(.title2.bold())
+                        .padding(.bottom, 8)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Study the holes around the circle, then press Start.")
+                            .font(.body)
+
+                        Text("The holes will disappear and you need to place the nails in the correct positions from memory.")
+                            .font(.body)
+
+                        Text("Watch out for decoy nails - they don't belong in any hole!")
+                            .font(.body)
+
+                        Text("Complete all levels before time runs out.")
+                            .font(.body)
+                    }
+                }
+                .padding()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

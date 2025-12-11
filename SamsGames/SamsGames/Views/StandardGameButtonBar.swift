@@ -12,6 +12,7 @@ struct StandardGameButtonBar: View {
     let onRevealHint: (() -> Void)?
     @Binding var soundEnabled: Bool
 
+    var resetLabel: String = "RESET"
     var revealLabel: String = "REVEAL/HINT"
     var showReveal: Bool = true
 
@@ -21,7 +22,7 @@ struct StandardGameButtonBar: View {
         HStack(spacing: 8) {
             // RESET Button (Orange)
             GameButton(
-                label: "RESET",
+                label: resetLabel,
                 backgroundColor: Color.orange.opacity(0.85),
                 isEnabled: true,
                 action: onReset

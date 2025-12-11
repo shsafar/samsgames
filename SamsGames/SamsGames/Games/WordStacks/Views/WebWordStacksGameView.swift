@@ -14,25 +14,13 @@ struct WebWordStacksGameView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showCompletionAlert = false
-    @State private var gameScore: Int = 0
     @State private var showInstructions = false
-    @State private var showSplash = true
-    @State private var splashScale: CGFloat = 0.5
-    @State private var splashOpacity: Double = 0.0
     @State private var showExitWarning = false
 
     // Archive mode support
     var archiveMode: Bool = false
     var archiveDate: Date? = nil
     var archiveSeed: Int? = nil
-
-    // Computed seed
-    private var seed: Int {
-        if let archiveSeed = archiveSeed {
-            return archiveSeed
-        }
-        return dailyPuzzleManager.getSeedForToday()
-    }
 
     // Check if already completed (for both regular and archive mode)
     private var isAlreadyCompleted: Bool {
@@ -44,100 +32,93 @@ struct WebWordStacksGameView: View {
         return dailyPuzzleManager.isCompletedToday(.wordStacks)
     }
 
+    @State private var showIconAnimation = true
+    @State private var iconScale: CGFloat = 1.0
+
     var body: some View {
-        ZStack {
-            Color(UIColor.systemGroupedBackground)
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // Top bar with back button and help button
-                HStack {
-                    Button(action: { showExitWarning = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.title3)
-                            Text("Back")
-                                .font(.body)
-                        }
-                        .foregroundColor(.orange)
-                    }
-
-                    Spacer()
-
-                    Button(action: { showInstructions = true }) {
-                        Image(systemName: "questionmark.circle")
-                            .font(.system(size: 20))
-                            .foregroundColor(.orange)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(Color(UIColor.systemBackground))
-
-                // Show either completed screen or game
-                if isAlreadyCompleted {
-                    WordStacksCompletedView()
-                } else {
-                    // WebView for the game
-                    WebWordStacksGameViewRepresentable(
-                        seed: seed,
-                        onGameCompleted: handleGameCompletion
-                    )
-                    .id(seed)
-                }
-            }
-
-            // Splash screen overlay (only if not already completed)
-            if showSplash && !isAlreadyCompleted {
+        Group {
+            if isAlreadyCompleted {
+                // Show completion screen if already completed today
+                WordStacksCompletedView()
+            } else {
                 ZStack {
-                    // Orange-green gradient background
-                    LinearGradient(
-                        colors: [
-                            Color(red: 1.0, green: 0.7, blue: 0.3),
-                            Color(red: 0.2, green: 0.7, blue: 0.2)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
+                    NavigationView {
+                        WordStacksWebView(
+                            archiveMode: archiveMode,
+                            archiveDate: archiveDate,
+                            archiveSeed: archiveSeed,
+                            onComplete: {
+                                handleCompletion()
+                            }
+                        )
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button(action: { showExitWarning = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "chevron.left")
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text("Back")
+                                            .font(.system(size: 17))
+                                    }
+                                    .foregroundColor(.blue)
+                                }
+                            }
 
-                    VStack {
-                        // Try to load custom icon
-                        if let customIcon = GameType.wordStacks.customIcon,
-                           let uiImage = UIImage(named: customIcon) {
-                            Image(uiImage: uiImage)
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button(action: { showInstructions = true }) {
+                                    Image(systemName: "questionmark.circle")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+
+                    // Animated icon overlay with pulsing effect
+                    if showIconAnimation {
+                        ZStack {
+                            Color.white
+                                .ignoresSafeArea()
+
+                            Image("wordstacksicon")
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 200, height: 200)
-                                .scaleEffect(splashScale)
-                                .opacity(splashOpacity)
-                        } else {
-                            // Fallback to SF Symbol
-                            Image(systemName: "square.stack.3d.up.fill")
-                                .font(.system(size: 120))
-                                .foregroundColor(.white)
-                                .scaleEffect(splashScale)
-                                .opacity(splashOpacity)
+                                .frame(width: 150, height: 150)
+                                .scaleEffect(iconScale)
                         }
-
-                        Text("WordStacks")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.top, 20)
+                        .transition(.opacity)
                     }
                 }
             }
         }
-        .navigationBarHidden(true)
+        .onAppear {
+            // Check if new day when view appears
+            dailyPuzzleManager.checkForNewDay()
+
+            if !isAlreadyCompleted {
+                // Animate icon flashing 3 times over 3 seconds
+                withAnimation(.easeInOut(duration: 0.5).repeatCount(6, autoreverses: true)) {
+                    iconScale = 1.3
+                }
+
+                // Hide icon after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    withAnimation {
+                        showIconAnimation = false
+                    }
+                }
+            } else {
+                showIconAnimation = false
+            }
+        }
         .alert("Puzzle Completed!", isPresented: $showCompletionAlert) {
             Button("OK") {
                 dismiss()
             }
         } message: {
-            Text("Great job! You completed today's WordStacks puzzle!\n\nWords Solved: \(gameScore)")
-        }
-        .sheet(isPresented: $showInstructions) {
-            GameInstructionsView(gameType: .wordStacks)
+            Text("Great job! You completed today's WordStacks puzzle!")
         }
         .alert("Exit Game?", isPresented: $showExitWarning) {
             Button("Cancel", role: .cancel) { }
@@ -147,25 +128,12 @@ struct WebWordStacksGameView: View {
         } message: {
             Text("Are you sure? You may lose your progress if you exit.")
         }
-        .onAppear {
-            dailyPuzzleManager.checkForNewDay()
-
-            if !isAlreadyCompleted {
-                withAnimation(.easeOut(duration: 0.6)) {
-                    splashScale = 1.0
-                    splashOpacity = 1.0
-                }
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation(.easeIn(duration: 0.4)) {
-                        showSplash = false
-                    }
-                }
-            }
+        .sheet(isPresented: $showInstructions) {
+            GameInstructionsView(gameType: .wordStacks)
         }
     }
 
-    private func handleGameCompletion(score: Int) {
+    private func handleCompletion() {
         if archiveMode {
             // Archive mode - record completion for the specific archive date
             if let date = archiveDate {
@@ -177,8 +145,98 @@ struct WebWordStacksGameView: View {
             statisticsManager.recordCompletion(.wordStacks)
         }
 
-        gameScore = score
+        // Show completion alert
         showCompletionAlert = true
+    }
+}
+
+// MARK: - WebView Wrapper
+
+struct WordStacksWebView: View {
+    let archiveMode: Bool
+    let archiveDate: Date?
+    let archiveSeed: Int?
+    let onComplete: () -> Void
+
+    @State private var soundEnabled = true
+    @State private var webView: WKWebView?
+    @State private var showQuickTips = false
+    @State private var gameTime: String = "0:00"
+    @State private var scoreCount: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Standardized button bar
+            StandardGameButtonBar(
+                onReset: {
+                    resetGame()
+                },
+                onRevealHint: {
+                    revealHint()
+                },
+                soundEnabled: $soundEnabled,
+                resetLabel: "START/RESET",
+                showReveal: true  // Enable reveal button
+            )
+
+            // Game title with special instructions icon
+            HStack(spacing: 8) {
+                Text("WordStacks")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+
+                // Special instructions (i) icon - gray for WordStacks (no special tips)
+                Button(action: {
+                    // No special tips for WordStacks, so this does nothing
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.gray)  // Gray = no special instructions
+                }
+                .disabled(true)  // Disabled since no special tips
+            }
+            .padding(.vertical, 12)
+
+            // Standardized game info bar
+            StandardGameInfoBar(
+                time: gameTime,
+                score: (scoreCount, "Score"),  // Active: Time and Score
+                moves: nil,     // Inactive (gray)
+                streak: nil,    // Inactive (gray)
+                hints: nil,     // Inactive (gray)
+                penalty: nil    // Inactive (gray)
+            )
+
+            // WebView game
+            WordStacksWebViewRepresentable(
+                archiveMode: archiveMode,
+                archiveDate: archiveDate,
+                archiveSeed: archiveSeed,
+                onComplete: onComplete,
+                webView: $webView,
+                gameTime: $gameTime,
+                scoreCount: $scoreCount
+            )
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            webView?.evaluateJavaScript("setSoundEnabled(\(newValue));")
+        }
+    }
+
+    private func resetGame() {
+        webView?.evaluateJavaScript("resetGame();") { _, error in
+            if let error = error {
+                print("❌ Reset error: \(error)")
+            }
+        }
+    }
+
+    private func revealHint() {
+        webView?.evaluateJavaScript("revealHint();") { _, error in
+            if let error = error {
+                print("❌ Reveal error: \(error)")
+            }
+        }
     }
 }
 
@@ -280,75 +338,126 @@ struct WordStacksCompletedView: View {
     }
 }
 
-// MARK: - UIViewRepresentable
-struct WebWordStacksGameViewRepresentable: UIViewRepresentable {
-    let seed: Int
-    let onGameCompleted: (Int) -> Void
+// MARK: - WebView UIViewRepresentable
+
+struct WordStacksWebViewRepresentable: UIViewRepresentable {
+    let archiveMode: Bool
+    let archiveDate: Date?
+    let archiveSeed: Int?
+    let onComplete: () -> Void
+    @Binding var webView: WKWebView?
+    @Binding var gameTime: String
+    @Binding var scoreCount: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(seed: seed, onGameCompleted: onGameCompleted)
+        Coordinator(
+            onComplete: onComplete,
+            webViewBinding: $webView,
+            gameTime: $gameTime,
+            scoreCount: $scoreCount
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
-        let dataStore = WKWebsiteDataStore.default()
-        let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
-        dataStore.removeData(ofTypes: dataTypes, modifiedSince: Date(timeIntervalSince1970: 0)) { }
+        let config = WKWebViewConfiguration()
+        config.preferences.javaScriptEnabled = true
 
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = dataStore
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        let contentController = WKUserContentController()
+        contentController.add(context.coordinator, name: "gameCompleted")
+        contentController.add(context.coordinator, name: "gameStats")
+        config.userContentController = contentController
 
-        configuration.userContentController.add(context.coordinator, name: "gameCompleted")
-
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.backgroundColor = .systemBackground
-        webView.isOpaque = false
+        let webView = WKWebView(frame: .zero, configuration: config)
         webView.scrollView.isScrollEnabled = true
-        webView.scrollView.bounces = true
+        webView.isOpaque = false
+        webView.backgroundColor = .white
 
-        if let htmlPath = Bundle.main.path(forResource: "wordstacks", ofType: "html") {
-            let url = URL(fileURLWithPath: htmlPath)
-            webView.navigationDelegate = context.coordinator
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
-        } else {
-            print("❌ Error: wordstacks.html not found in bundle")
-        }
+        // Store webView reference via coordinator
+        context.coordinator.webViewBinding.wrappedValue = webView
 
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // No updates needed
+        // Only load once - prevent reload loop
+        if context.coordinator.hasLoaded {
+            return
+        }
+        context.coordinator.hasLoaded = true
+
+        guard let htmlPath = Bundle.main.path(forResource: "wordstacks", ofType: "html") else {
+            print("❌ Could not find wordstacks.html")
+            return
+        }
+
+        let htmlURL = URL(fileURLWithPath: htmlPath)
+        let request = URLRequest(url: htmlURL)
+        webView.load(request)
+
+        // Set up daily puzzle mode after page loads
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // Use provided archive seed, or calculate from date
+            let seed: Int64
+            if let archiveSeed = archiveSeed {
+                seed = Int64(archiveSeed)
+            } else {
+                let date = archiveDate ?? Date()
+                seed = Int64(date.timeIntervalSince1970 / 86400)
+            }
+
+            // Check if functions exist and call them in sequence
+            webView.evaluateJavaScript("typeof setSeed !== 'undefined' && typeof startGame !== 'undefined'") { result, error in
+                if let ready = result as? Bool, ready {
+                    // Set seed first
+                    webView.evaluateJavaScript("setSeed(\(seed));") { _, _ in
+                        // Then start game
+                        webView.evaluateJavaScript("startGame();") { _, error in
+                            if let error = error {
+                                print("❌ Error starting game: \(error)")
+                            }
+                        }
+                    }
+                } else {
+                    print("❌ JavaScript functions not ready")
+                }
+            }
+        }
     }
 
-    class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
-        var seed: Int
-        let onGameCompleted: (Int) -> Void
+    class Coordinator: NSObject, WKScriptMessageHandler {
+        let onComplete: () -> Void
+        let webViewBinding: Binding<WKWebView?>
+        let gameTime: Binding<String>
+        let scoreCount: Binding<Int>
+        var hasLoaded: Bool = false
 
-        init(seed: Int, onGameCompleted: @escaping (Int) -> Void) {
-            self.seed = seed
-            self.onGameCompleted = onGameCompleted
+        init(onComplete: @escaping () -> Void,
+             webViewBinding: Binding<WKWebView?>,
+             gameTime: Binding<String>,
+             scoreCount: Binding<Int>) {
+            self.onComplete = onComplete
+            self.webViewBinding = webViewBinding
+            self.gameTime = gameTime
+            self.scoreCount = scoreCount
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            if message.name == "gameCompleted",
-               let body = message.body as? [String: Any],
-               let score = body["score"] as? Int {
-
-                print("✅ WordStacks completed! Score: \(score)")
-                onGameCompleted(score)
+            if message.name == "gameCompleted" {
+                DispatchQueue.main.async {
+                    self.onComplete()
+                }
+            } else if message.name == "gameStats" {
+                if let stats = message.body as? [String: Any] {
+                    DispatchQueue.main.async {
+                        if let time = stats["time"] as? String {
+                            self.gameTime.wrappedValue = time
+                        }
+                        if let solved = stats["solved"] as? Int {
+                            self.scoreCount.wrappedValue = solved
+                        }
+                    }
+                }
             }
-        }
-
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            let script = """
-            if (window.setSeed && window.enableDailyMode && window.startGame) {
-                window.setSeed(\(seed));
-                window.enableDailyMode();
-                window.startGame();
-            }
-            """
-            webView.evaluateJavaScript(script, completionHandler: nil)
         }
     }
 }

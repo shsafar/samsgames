@@ -150,43 +150,38 @@ struct WebWaterTableGameView: View {
     }
 
     private var gameView: some View {
-        VStack(spacing: 0) {
-            // Top bar with back button
-            HStack {
-                Button(action: { showExitWarning = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Back")
-                            .font(.system(size: 17))
-                    }
-                    .foregroundColor(.blue)
-                }
-
-                Spacer()
-
-                Button(action: { showInstructions = true }) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.system(size: 20))
-                        .foregroundColor(.blue)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
-            .background(Color(UIColor.systemBackground))
-
-            // WebView for the game
-            WebWaterTableGameViewRepresentable(
+        NavigationView {
+            WaterTableWebView(
                 seed: seed,
                 level: level,
-                onGameComplete: {
+                onComplete: {
                     handleGameCompletion()
                 }
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showExitWarning = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(.system(size: 17))
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showInstructions = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
         }
-        .background(Color(UIColor.systemGroupedBackground))
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 
     private func startSplashTimer() {
@@ -219,14 +214,122 @@ struct WebWaterTableGameView: View {
     }
 }
 
-// UIViewRepresentable wrapper for WKWebView
+// MARK: - WebView Wrapper
+
+struct WaterTableWebView: View {
+    let seed: Int
+    let level: Int
+    let onComplete: () -> Void
+
+    @State private var soundEnabled = true
+    @State private var webView: WKWebView?
+    @State private var showQuickTips = false
+    @State private var gameTime: String = "0.0s"
+    @State private var piecesCount: Int = 0
+    @State private var scoreCount: Int = 0
+    @State private var comboCount: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Standardized button bar
+            StandardGameButtonBar(
+                onReset: {
+                    breakPins()
+                },
+                onRevealHint: {
+                    revealSolution()
+                },
+                soundEnabled: $soundEnabled,
+                resetLabel: "START/RESET",
+                showReveal: true
+            )
+
+            // Game title with special instructions icon
+            HStack(spacing: 8) {
+                Text("WaterTable")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+
+                // Special instructions (i) icon - blue for WaterTable (has special tips)
+                Button(action: {
+                    showQuickTips = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding(.vertical, 12)
+
+            // Standardized game info bar
+            StandardGameInfoBar(
+                time: gameTime,
+                score: (piecesCount, "Pieces"),
+                moves: scoreCount,  // Using moves field for score display
+                streak: comboCount,  // Combo
+                hints: nil,     // Inactive (gray)
+                penalty: nil    // Inactive (gray)
+            )
+
+            // WebView game
+            WebWaterTableGameViewRepresentable(
+                seed: seed,
+                level: level,
+                onGameComplete: onComplete,
+                webView: $webView,
+                gameTime: $gameTime,
+                piecesCount: $piecesCount,
+                scoreCount: $scoreCount,
+                comboCount: $comboCount
+            )
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            webView?.evaluateJavaScript("setSoundEnabled(\(newValue));")
+        }
+        .sheet(isPresented: $showQuickTips) {
+            WaterTableQuickTipsView()
+        }
+    }
+
+    private func breakPins() {
+        webView?.evaluateJavaScript("if (typeof breakPins === 'function') { breakPins(); }") { _, error in
+            if let error = error {
+                print("❌ Break error: \(error)")
+            }
+        }
+    }
+
+    private func revealSolution() {
+        webView?.evaluateJavaScript("if (typeof revealSolution === 'function') { revealSolution(); }") { _, error in
+            if let error = error {
+                print("❌ Reveal error: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - WebView UIViewRepresentable
+
 struct WebWaterTableGameViewRepresentable: UIViewRepresentable {
     let seed: Int
     let level: Int
     let onGameComplete: () -> Void
+    @Binding var webView: WKWebView?
+    @Binding var gameTime: String
+    @Binding var piecesCount: Int
+    @Binding var scoreCount: Int
+    @Binding var comboCount: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(self, onGameComplete: onGameComplete)
+        Coordinator(
+            self,
+            onGameComplete: onGameComplete,
+            webViewBinding: $webView,
+            gameTime: $gameTime,
+            piecesCount: $piecesCount,
+            scoreCount: $scoreCount,
+            comboCount: $comboCount
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -235,8 +338,9 @@ struct WebWaterTableGameViewRepresentable: UIViewRepresentable {
         // Use modern API for JavaScript (iOS 14+)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
 
-        // Add message handler for game completion
+        // Add message handlers for game completion and stats
         configuration.userContentController.add(context.coordinator, name: "gameComplete")
+        configuration.userContentController.add(context.coordinator, name: "gameStats")
 
         // Enable console logging
         let consoleScript = WKUserScript(
@@ -291,6 +395,9 @@ struct WebWaterTableGameViewRepresentable: UIViewRepresentable {
         // Set navigation delegate
         webView.navigationDelegate = context.coordinator
 
+        // Store webView reference via coordinator
+        context.coordinator.webViewBinding.wrappedValue = webView
+
         // Load local watertable.html
         if let htmlPath = Bundle.main.path(forResource: "watertable", ofType: "html") {
             let url = URL(fileURLWithPath: htmlPath)
@@ -310,10 +417,26 @@ struct WebWaterTableGameViewRepresentable: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var parent: WebWaterTableGameViewRepresentable
         var onGameComplete: () -> Void
+        let webViewBinding: Binding<WKWebView?>
+        let gameTime: Binding<String>
+        let piecesCount: Binding<Int>
+        let scoreCount: Binding<Int>
+        let comboCount: Binding<Int>
 
-        init(_ parent: WebWaterTableGameViewRepresentable, onGameComplete: @escaping () -> Void) {
+        init(_ parent: WebWaterTableGameViewRepresentable,
+             onGameComplete: @escaping () -> Void,
+             webViewBinding: Binding<WKWebView?>,
+             gameTime: Binding<String>,
+             piecesCount: Binding<Int>,
+             scoreCount: Binding<Int>,
+             comboCount: Binding<Int>) {
             self.parent = parent
             self.onGameComplete = onGameComplete
+            self.webViewBinding = webViewBinding
+            self.gameTime = gameTime
+            self.piecesCount = piecesCount
+            self.scoreCount = scoreCount
+            self.comboCount = comboCount
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -368,6 +491,23 @@ struct WebWaterTableGameViewRepresentable: UIViewRepresentable {
                     print("Game completed successfully!")
                     DispatchQueue.main.async {
                         self.onGameComplete()
+                    }
+                }
+            } else if message.name == "gameStats" {
+                if let stats = message.body as? [String: Any] {
+                    DispatchQueue.main.async {
+                        if let time = stats["time"] as? String {
+                            self.gameTime.wrappedValue = time
+                        }
+                        if let pieces = stats["pieces"] as? Int {
+                            self.piecesCount.wrappedValue = pieces
+                        }
+                        if let score = stats["score"] as? Int {
+                            self.scoreCount.wrappedValue = score
+                        }
+                        if let combo = stats["combo"] as? Int {
+                            self.comboCount.wrappedValue = combo
+                        }
                     }
                 }
             }
@@ -482,6 +622,45 @@ struct WaterTableCompletedView: View {
         let seconds = components.second ?? 0
 
         timeUntilNext = String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+}
+
+// MARK: - Quick Tips View
+
+struct WaterTableQuickTipsView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("How to Play")
+                        .font(.title2.bold())
+                        .padding(.bottom, 8)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("1. Tap **Break** to shatter pins. Drag pieces from water onto shafts.")
+                            .font(.body)
+
+                        Text("2. Match the **hidden water depth**. Shafts turn **green** and spray when correct.")
+                            .font(.body)
+
+                        Text("+10 per correct piece, combo bonus, –5 per Reveal / decoy / Show Targets.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

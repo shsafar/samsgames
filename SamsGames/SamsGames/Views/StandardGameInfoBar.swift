@@ -14,7 +14,7 @@ struct StandardGameInfoBar: View {
     let moves: Int?
     let streak: Int?
     let hints: Int?
-    let penalty: Int?
+    let penalty: (value: Int, label: String)?  // Customizable label: "Penalty", "Miss", etc.
 
     @Environment(\.colorScheme) var colorScheme
 
@@ -35,7 +35,8 @@ struct StandardGameInfoBar: View {
             MetricDisplay(
                 label: "\(score?.label ?? "Score"):",
                 value: "\(score?.value ?? 0)",
-                isActive: score != nil
+                isActive: score != nil,
+                valueColor: (score?.value ?? 0) < 0 ? .red : nil
             )
 
             Divider()
@@ -75,10 +76,10 @@ struct StandardGameInfoBar: View {
                 .frame(height: 20)
                 .padding(.horizontal, 8)
 
-            // PENALTY
+            // PENALTY (customizable label)
             MetricDisplay(
-                label: "Penalty:",
-                value: penalty != nil ? "\(penalty!)" : "--",
+                label: "\(penalty?.label ?? "Penalty"):",
+                value: "\(penalty?.value ?? 0)",
                 isActive: penalty != nil
             )
         }
@@ -94,6 +95,7 @@ struct MetricDisplay: View {
     let label: String
     let value: String
     let isActive: Bool
+    var valueColor: Color? = nil  // Optional custom color for value
 
     var body: some View {
         VStack(spacing: 2) {
@@ -103,7 +105,7 @@ struct MetricDisplay: View {
 
             Text(value)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(isActive ? .primary : .gray.opacity(0.4))
+                .foregroundColor(valueColor ?? (isActive ? .primary : .gray.opacity(0.4)))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -129,7 +131,7 @@ struct MetricDisplay: View {
             moves: 25,
             streak: 5,
             hints: 3,
-            penalty: 2
+            penalty: (2, "Penalty")
         )
 
         // WordStacks example (Time + Words + Streak active)

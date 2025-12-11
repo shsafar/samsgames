@@ -119,11 +119,9 @@
       display: none !important;
     }
 
-    /* In daily mode, keep the status row visible */
+    /* In daily mode, hide the status text */
     body.daily-mode #status {
-      font-size: 16px !important;
-      font-weight: 600 !important;
-      padding: 8px !important;
+      display: none !important;
     }
 
     /* Make canvas larger on mobile */
@@ -202,9 +200,19 @@
       transform: scale(0.96) !important;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
     }
+    /* Hide duplicate UI elements by default (Swift app uses standardized UI) */
+    body.daily-mode #controls,
+    body.daily-mode #levelSelect {
+      display: none !important;
+    }
+
+    /* Show these elements only in standalone web mode (no daily-mode class) */
+    body:not(.daily-mode) #controls {
+      display: flex !important;
+    }
   </style>
 </head>
-<body>
+<body class="daily-mode">
 <div id="container">
   <div id="controls">
     <label for="levelSelect">Level:</label>
@@ -235,8 +243,10 @@
 <script>
   // ===== SEEDED RANDOM NUMBER GENERATOR =====
   let rngSeed = Date.now();
+  let savedSeed = null; // Store seed for daily mode resets
   function setSeed(s) {
     rngSeed = s;
+    savedSeed = s; // Save seed for resets
     console.log("✅ AtomicNails seed set:", s);
   }
   function seededRand() {
@@ -282,7 +292,7 @@
 
   let currentLevelId = 1;
   let currentConfig = LEVELS[1];
-  let isDailyMode = false; // Track if we're in daily mode
+  let isDailyMode = document.body.classList.contains('daily-mode'); // Check if body has daily-mode class
 
   let slots = [];     // [{angle, innerPoint, outerPoint, length, placed}]
   let trayNails = []; // [{slotIndex|null, isDecoy, length, placed, headX, headY, homeHeadX, homeHeadY, trayAngle, dirSign}]
@@ -292,6 +302,7 @@
 
   let startTime = null;
   let remainingMs = 0;
+  let elapsedMs = 0;
   let correctCount = 0;
   let wrongCount = 0;
   let decoyFlashFrames = 0;
@@ -530,6 +541,12 @@
 
   function resetCurrentGame() {
     // Reset the current game state without creating a new random game
+    // Restore seed in daily mode to ensure same puzzle
+    if (isDailyMode && savedSeed !== null) {
+      rngSeed = savedSeed;
+      console.log("🔄 Restored seed for reset:", savedSeed);
+    }
+
     trayNails.forEach(nail => {
       nail.placed = false;
       nail.headX = nail.homeHeadX;
@@ -554,6 +571,7 @@
     correctPlaceFlashFrames = 0;
     startTime = null;
     remainingMs = currentConfig.timeLimitSec * 1000;
+    elapsedMs = 0;
     draw();
   }
 
@@ -600,6 +618,7 @@
     winAnimationFrames = 0;
     winAnimationPhase = 0;
     remainingMs = currentConfig.timeLimitSec * 1000;
+    elapsedMs = 0;
     startTime = null;
 
     if (revealTimeoutId !== null) {
@@ -761,19 +780,22 @@
   function startAnimationLoop() {
     if (animId !== null) clearInterval(animId);
     animId = setInterval(() => {
-      if (currentConfig.timeLimitSec > 0 &&
-          gameState === "PLAYING" &&
-          startTime !== null) {
+      if (gameState === "PLAYING" && startTime !== null) {
         const now = performance.now();
-        remainingMs = currentConfig.timeLimitSec * 1000 - (now - startTime);
-        if (remainingMs <= 0) {
-          remainingMs = 0;
-          if (gameState === "PLAYING") {
-            gameState = "TIMEUP";
-            playTone(150, 0.4);
-            showPopup("Time's Up", `You ran out of time on ${currentConfig.label}.`);
-            statusEl.textContent = "Time is up! Level failed.";
+        if (currentConfig.timeLimitSec > 0) {
+          remainingMs = currentConfig.timeLimitSec * 1000 - (now - startTime);
+          if (remainingMs <= 0) {
+            remainingMs = 0;
+            if (gameState === "PLAYING") {
+              gameState = "TIMEUP";
+              playTone(150, 0.4);
+              showPopup("Time's Up", `You ran out of time on ${currentConfig.label}.`);
+              statusEl.textContent = "Time is up! Level failed.";
+            }
           }
+        } else {
+          // No time limit - track elapsed time
+          elapsedMs = now - startTime;
         }
       }
       if (decoyFlashFrames > 0) decoyFlashFrames--;
@@ -795,6 +817,7 @@
         });
       }
       draw();
+      updateGameStats();
     }, 50);
   }
 
@@ -835,18 +858,18 @@
     const timeText = currentConfig.timeLimitSec > 0
       ? formatTime(remainingMs)
       : "--:--";
-    ctx.fillText("Time: " + timeText, 20, 20);
-
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#444";
-    ctx.fillText("Score: " + score, canvas.width / 2, 20);
-
-    ctx.textAlign = "right";
-    ctx.fillStyle = "#c62828";
-    ctx.fillText("Miss: " + wrongCount, canvas.width - 20, 20);
-
-    // Only show title if not in daily mode
+    // Only show stats and title if not in daily mode (Swift app uses standardized UI)
     if (!isDailyMode) {
+      ctx.fillText("Time: " + timeText, 20, 20);
+
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#444";
+      ctx.fillText("Score: " + score, canvas.width / 2, 20);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#c62828";
+      ctx.fillText("Miss: " + wrongCount, canvas.width - 20, 20);
+
       ctx.textAlign = "center";
       ctx.fillStyle = "#444";
       ctx.font = "16px system-ui";
@@ -1315,6 +1338,44 @@
     initGame(currentLevelId);
     console.log("✅ AtomicNails game started");
   };
+
+  // Helper functions for Swift integration
+  window.resetGame = function() {
+    // If game is in SETUP state, click START, otherwise click RESET
+    if (gameState === "SETUP") {
+      startBtn.click();
+    } else {
+      resetBtn.click();
+    }
+  };
+
+  window.revealHint = function() {
+    revealBtn.click();
+  };
+
+  window.setSoundEnabled = function(enabled) {
+    soundOn = enabled;
+    soundBtn.textContent = soundOn ? "Sound: On" : "Sound: Off";
+  };
+
+  // Send game stats to Swift
+  function updateGameStats() {
+    if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.gameStats) {
+      return;  // Not in Swift webview
+    }
+
+    const timeText = currentConfig.timeLimitSec > 0
+      ? formatTime(remainingMs)
+      : formatTime(elapsedMs);
+
+    const score = correctCount * 10 - wrongCount * 5;
+
+    window.webkit.messageHandlers.gameStats.postMessage({
+      time: timeText,
+      score: score,
+      miss: wrongCount
+    });
+  }
 
   // -------- START --------
   // Don't auto-start - Swift will call startGame() after setting seed/level

@@ -190,12 +190,17 @@
   /* ===== DAILY MODE (hide controls for iOS integration) ===== */
   body.daily-mode .mode-row,
   body.daily-mode .level-row,
-  body.daily-mode #newGameBtn {
-    display: none;
+  body.daily-mode #newGameBtn,
+  body.daily-mode #description,
+  body.daily-mode .buttons-row,
+  body.daily-mode #infoRow,
+  body.daily-mode #status,
+  body.daily-mode h1 {
+    display: none !important;
   }
 </style>
 </head>
-<body>
+<body class="daily-mode">
 <div class="game-wrapper">
   <h1>WaterTable Depth Puzzle</h1>
 
@@ -360,8 +365,10 @@ const boardSvg = document.getElementById("board");
 
 // ===== SEEDED RANDOM NUMBER GENERATOR =====
 let rngSeed = Date.now();
+let savedSeed = null; // Store seed for daily mode resets
 function setSeed(s){
   rngSeed = s;
+  savedSeed = s; // Save seed for resets
   console.log("✅ WaterTable seed set:", s);
 }
 function seededRand(){
@@ -841,6 +848,14 @@ function breakPins(){
   // Initialize audio context on first user interaction
   ensureAudioCtx();
 
+  // Restore seed in daily mode to ensure same puzzle fragments
+  if (document.body.classList.contains('daily-mode') && savedSeed !== null) {
+    rngSeed = savedSeed;
+    // Advance RNG past the floor generation to get to the same state
+    randomFloor(); // This advances the RNG without using the result
+    console.log("🔄 Restored seed and advanced RNG for break");
+  }
+
   clearFragments();
   clearReveal();
   document.getElementById("popupOverlay").style.display="none";
@@ -1176,6 +1191,12 @@ function popupNewGame(){ resetGame(); }
 
 /* new game */
 function newGame(){
+  // Restore seed in daily mode to ensure same puzzle on reset
+  if (document.body.classList.contains('daily-mode') && savedSeed !== null) {
+    rngSeed = savedSeed;
+    console.log("🔄 Restored seed for reset:", savedSeed);
+  }
+
   gameOver=false;
   clearFragments();
   clearReveal();
@@ -1270,6 +1291,7 @@ function animLoop(){
     rect.setAttribute("y",y);
   });
   updateFloorPolygon();
+  updateGameStats();
   requestAnimationFrame(animLoop);
 }
 
@@ -1283,10 +1305,43 @@ window.onload=()=>{
 };
 
 // ===== SWIFT CALLABLE: Initialize game after seed/level are set =====
+window.setSeed = setSeed;
+window.setLevel = setLevel;
+window.enableDailyMode = function() {
+  document.body.classList.add('daily-mode');
+  currentMode = "daily";
+  console.log("✅ WaterTable: Daily mode enabled");
+};
 window.initGame = function(){
   newGame();
   console.log("✅ WaterTable: Game initialized");
 };
+
+// ===== SWIFT INTEGRATION HELPERS =====
+window.setSoundEnabled = function(enabled) {
+  soundEnabled = enabled;
+  console.log("🔊 WaterTable: Sound", enabled ? "ON" : "OFF");
+};
+
+// Send game stats to Swift
+function updateGameStats() {
+  if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.gameStats) {
+    return;  // Not in Swift webview
+  }
+
+  const piecesLeft = fragments.filter(f => f.assignedPin === null).length;
+  const timeText = elapsedSeconds.toFixed(1) + "s";
+
+  window.webkit.messageHandlers.gameStats.postMessage({
+    time: timeText,
+    pieces: piecesLeft,
+    score: score,
+    combo: comboStreak
+  });
+}
+
+// Call updateGameStats regularly in the animation loop
+// (Will be added to animLoop below)
 </script>
 </body>
 </html>

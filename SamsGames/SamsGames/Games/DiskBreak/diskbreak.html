@@ -108,15 +108,18 @@
       height: auto;
     }
 
-    /* Hide only level selector and New Disk button in daily mode */
-    body.daily-mode #top-bar,
-    body.daily-mode #newBtn {
-      display: none;
+    /* In daily mode: increase canvas size by removing height constraint */
+    body.daily-mode canvas {
+      max-height: calc(100vh - 350px);  /* More space for game canvas */
     }
 
-    /* In daily mode, center the controls */
-    body.daily-mode #controls {
-      justify-content: center;
+    /* Hide internal controls, stats, and instructions in daily mode (using standardized Swift controls) */
+    body.daily-mode #top-bar,
+    body.daily-mode #controls,
+    body.daily-mode #score-timer,
+    body.daily-mode #status,
+    body.daily-mode #controlsHint {
+      display: none;
     }
   </style>
 </head>
@@ -218,9 +221,25 @@
       }
     }
 
-    // Make functions available to Swift
-    window.setSeed = setSeed;
-    window.selectLevel = selectLevel;
+    // ---------- Send game stats to Swift ----------
+    function sendGameStats() {
+      if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.gameStats) {
+        return;
+      }
+
+      // Format timer as M:SS
+      let timeStr = "--";
+      if (level !== 1 && remainingTime > 0) {
+        const m = Math.floor(remainingTime / 60);
+        const s = remainingTime % 60;
+        timeStr = `${m}:${s.toString().padStart(2, "0")}`;
+      }
+
+      window.webkit.messageHandlers.gameStats.postMessage({
+        time: timeStr,
+        score: score
+      });
+    }
 
     // ---------- Utility ----------
     function randomGradient(cx, cy, r) {
@@ -241,16 +260,18 @@
 
     function updateScore() {
       scoreEl.textContent = "Score: " + score;
+      sendGameStats();  // Send stats to Swift
     }
 
     function updateTimerDisplay() {
       if (level === 1) {
         timerEl.textContent = "Timer: --";
-        return;
+      } else {
+        const m = Math.floor(remainingTime / 60);
+        const s = remainingTime % 60;
+        timerEl.textContent = `Timer: ${m}:${s.toString().padStart(2, "0")}`;
       }
-      const m = Math.floor(remainingTime / 60);
-      const s = remainingTime % 60;
-      timerEl.textContent = `Timer: ${m}:${s.toString().padStart(2, "0")}`;
+      sendGameStats();  // Send stats to Swift
     }
 
     function startTimer(seconds) {
@@ -681,6 +702,18 @@
       draw();
     }
 
+    // ---------- External Control Functions (for Swift) ----------
+    let soundEnabled = true;
+
+    function setSoundEnabled(enabled) {
+      soundEnabled = enabled;
+      console.log("Sound enabled:", enabled);
+    }
+
+    function revealHint() {
+      showHint();
+    }
+
     // ---------- Drawing ----------
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1065,6 +1098,13 @@
     if (!dailyMode) {
       newDisk();
     }
+
+    // Make functions available to Swift (must be at end after all functions are defined)
+    window.setSeed = setSeed;
+    window.selectLevel = selectLevel;
+    window.breakDisk = breakDisk;  // For external "BREAK DISK" button
+    window.revealHint = revealHint;  // For external "HINT" button
+    window.setSoundEnabled = setSoundEnabled;  // For external sound toggle
   </script>
 </body>
 </html>

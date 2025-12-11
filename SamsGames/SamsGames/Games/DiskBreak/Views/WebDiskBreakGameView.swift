@@ -143,10 +143,10 @@ struct WebDiskBreakGameView: View {
 
     private var gameView: some View {
         NavigationView {
-            WebDiskBreakGameViewRepresentable(
+            DiskBreakWebView(
                 seed: seed,
                 level: level,
-                onGameComplete: {
+                onComplete: {
                     handleGameCompletion()
                 }
             )
@@ -202,14 +202,112 @@ struct WebDiskBreakGameView: View {
     }
 }
 
+// MARK: - WebView Wrapper
+
+struct DiskBreakWebView: View {
+    let seed: Int
+    let level: Int
+    let onComplete: () -> Void
+
+    @State private var soundEnabled = true
+    @State private var webView: WKWebView?
+    @State private var gameTime: String = "0:00"
+    @State private var scoreCount: Int = 0
+    @State private var showQuickTips = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Standardized button bar
+            StandardGameButtonBar(
+                onReset: {
+                    breakDisk()
+                },
+                onRevealHint: {
+                    revealHint()
+                },
+                soundEnabled: $soundEnabled,
+                resetLabel: "START/RESET",
+                showReveal: true
+            )
+
+            // Game title with info icon (blue - has tips)
+            HStack(spacing: 8) {
+                Text("DiskBreak")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+
+                Button(action: {
+                    showQuickTips = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)  // Blue = has instructions
+                }
+            }
+            .padding(.vertical, 12)
+
+            // Standardized game info bar
+            StandardGameInfoBar(
+                time: gameTime,
+                score: (scoreCount, "Score"),  // Active: Time and Score
+                moves: nil,     // Inactive (gray)
+                streak: nil,    // Inactive (gray)
+                hints: nil,     // Inactive (gray)
+                penalty: nil    // Inactive (gray)
+            )
+
+            // WebView game
+            WebDiskBreakGameViewRepresentable(
+                seed: seed,
+                level: level,
+                onGameComplete: onComplete,
+                webView: $webView,
+                gameTime: $gameTime,
+                scoreCount: $scoreCount
+            )
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            webView?.evaluateJavaScript("setSoundEnabled(\(newValue));")
+        }
+        .sheet(isPresented: $showQuickTips) {
+            DiskBreakQuickTipsView()
+        }
+    }
+
+    private func breakDisk() {
+        webView?.evaluateJavaScript("breakDisk();") { _, error in
+            if let error = error {
+                print("❌ Break Disk error: \(error)")
+            }
+        }
+    }
+
+    private func revealHint() {
+        webView?.evaluateJavaScript("revealHint();") { _, error in
+            if let error = error {
+                print("❌ Hint error: \(error)")
+            }
+        }
+    }
+}
+
 // UIViewRepresentable wrapper for WKWebView
 struct WebDiskBreakGameViewRepresentable: UIViewRepresentable {
     let seed: Int
     let level: Int
     let onGameComplete: () -> Void
+    @Binding var webView: WKWebView?
+    @Binding var gameTime: String
+    @Binding var scoreCount: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(self, onGameComplete: onGameComplete)
+        Coordinator(
+            self,
+            onGameComplete: onGameComplete,
+            webViewBinding: $webView,
+            gameTime: $gameTime,
+            scoreCount: $scoreCount
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -218,8 +316,9 @@ struct WebDiskBreakGameViewRepresentable: UIViewRepresentable {
         // Use modern API for JavaScript (iOS 14+)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
 
-        // Add message handler for game completion
+        // Add message handlers for game completion and stats
         configuration.userContentController.add(context.coordinator, name: "gameComplete")
+        configuration.userContentController.add(context.coordinator, name: "gameStats")
 
         // Enable console logging
         let consoleScript = WKUserScript(
@@ -274,6 +373,9 @@ struct WebDiskBreakGameViewRepresentable: UIViewRepresentable {
         // Set navigation delegate
         webView.navigationDelegate = context.coordinator
 
+        // Store webView reference via coordinator
+        context.coordinator.webViewBinding.wrappedValue = webView
+
         // Load local diskbreak.html
         if let htmlPath = Bundle.main.path(forResource: "diskbreak", ofType: "html") {
             let url = URL(fileURLWithPath: htmlPath)
@@ -293,10 +395,20 @@ struct WebDiskBreakGameViewRepresentable: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var parent: WebDiskBreakGameViewRepresentable
         var onGameComplete: () -> Void
+        let webViewBinding: Binding<WKWebView?>
+        let gameTime: Binding<String>
+        let scoreCount: Binding<Int>
 
-        init(_ parent: WebDiskBreakGameViewRepresentable, onGameComplete: @escaping () -> Void) {
+        init(_ parent: WebDiskBreakGameViewRepresentable,
+             onGameComplete: @escaping () -> Void,
+             webViewBinding: Binding<WKWebView?>,
+             gameTime: Binding<String>,
+             scoreCount: Binding<Int>) {
             self.parent = parent
             self.onGameComplete = onGameComplete
+            self.webViewBinding = webViewBinding
+            self.gameTime = gameTime
+            self.scoreCount = scoreCount
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -347,6 +459,65 @@ struct WebDiskBreakGameViewRepresentable: UIViewRepresentable {
                     print("Game completed successfully!")
                     DispatchQueue.main.async {
                         self.onGameComplete()
+                    }
+                }
+            } else if message.name == "gameStats" {
+                if let stats = message.body as? [String: Any] {
+                    DispatchQueue.main.async {
+                        if let time = stats["time"] as? String {
+                            self.gameTime.wrappedValue = time
+                        }
+                        if let score = stats["score"] as? Int {
+                            self.scoreCount.wrappedValue = score
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Quick Tips View
+
+struct DiskBreakQuickTipsView: View {
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("How to Play")
+                        .font(.system(size: 20, weight: .bold))
+
+                    Text("Level 1: Basic Break - No time limit")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Level 2: One disk, more shards, 90 seconds")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Level 3: Two disks, most shards, 90 seconds")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Instructions")
+                        .font(.system(size: 18, weight: .bold))
+
+                    Text("1. Press 'START/RESET' to break the disk")
+                    Text("2. Drag & snap the shards back into place")
+                    Text("3. Complete the puzzle before time runs out")
+                    Text("4. Use 'HINT' if you're stuck (costs points)")
+                }
+
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("DiskBreak Tips")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
                     }
                 }
             }

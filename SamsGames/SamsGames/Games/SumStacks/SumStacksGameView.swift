@@ -25,10 +25,7 @@ struct SumStacksGameView: View {
     // Check if already completed (for both regular and archive mode)
     private var isAlreadyCompleted: Bool {
         if archiveMode {
-            // In archive mode, check if this specific date was completed
-            if let date = archiveDate {
-                return statisticsManager.isCompleted(for: .sumStacks, on: date)
-            }
+            // In archive mode, NEVER show completed screen - always allow replay
             return false
         }
         // Regular mode - check if today is completed
@@ -155,14 +152,109 @@ struct SumStacksGameView: View {
 
 // MARK: - WebView Wrapper
 
-struct SumStacksWebView: UIViewRepresentable {
+struct SumStacksWebView: View {
     let archiveMode: Bool
     let archiveDate: Date?
     let archiveSeed: Int?
     let onComplete: () -> Void
 
+    @State private var soundEnabled = true
+    @State private var webView: WKWebView?
+    @State private var showQuickTips = false
+    @State private var gameTime: String = "0:00"
+    @State private var scoreCount: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Standardized button bar
+            StandardGameButtonBar(
+                onReset: {
+                    resetGame()
+                },
+                onRevealHint: {
+                    revealSolution()
+                },
+                soundEnabled: $soundEnabled,
+                showReveal: true  // Enable reveal button
+            )
+
+            // Game title with special instructions icon
+            HStack(spacing: 8) {
+                Text("SumStacks")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+
+                // Special instructions (i) icon - gray for SumStacks (no special tips)
+                Button(action: {
+                    // No special tips for SumStacks, so this does nothing
+                    // showQuickTips = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.gray)  // Gray = no special instructions
+                }
+                .disabled(true)  // Disabled since no special tips
+            }
+            .padding(.vertical, 12)
+
+            // Standardized game info bar
+            StandardGameInfoBar(
+                time: gameTime,
+                score: (scoreCount, "Score"),  // Active: Time and Score
+                moves: nil,     // Inactive (gray)
+                streak: nil,    // Inactive (gray)
+                hints: nil,     // Inactive (gray)
+                penalty: nil    // Inactive (gray)
+            )
+
+            // WebView game
+            SumStacksWebViewRepresentable(
+                archiveMode: archiveMode,
+                archiveDate: archiveDate,
+                archiveSeed: archiveSeed,
+                onComplete: onComplete,
+                webView: $webView,
+                gameTime: $gameTime,
+                scoreCount: $scoreCount
+            )
+        }
+    }
+
+    private func resetGame() {
+        webView?.evaluateJavaScript("resetGame();") { _, error in
+            if let error = error {
+                print("❌ Reset error: \(error)")
+            }
+        }
+    }
+
+    private func revealSolution() {
+        webView?.evaluateJavaScript("revealSolution();") { _, error in
+            if let error = error {
+                print("❌ Reveal error: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - WebView UIViewRepresentable
+
+struct SumStacksWebViewRepresentable: UIViewRepresentable {
+    let archiveMode: Bool
+    let archiveDate: Date?
+    let archiveSeed: Int?
+    let onComplete: () -> Void
+    @Binding var webView: WKWebView?
+    @Binding var gameTime: String
+    @Binding var scoreCount: Int
+
     func makeCoordinator() -> Coordinator {
-        Coordinator(onComplete: onComplete)
+        Coordinator(
+            onComplete: onComplete,
+            webViewBinding: $webView,
+            gameTime: $gameTime,
+            scoreCount: $scoreCount
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -171,6 +263,7 @@ struct SumStacksWebView: UIViewRepresentable {
 
         let contentController = WKUserContentController()
         contentController.add(context.coordinator, name: "gameCompleted")
+        contentController.add(context.coordinator, name: "gameStats")
         config.userContentController = contentController
 
         let webView = WKWebView(frame: .zero, configuration: config)
@@ -178,10 +271,19 @@ struct SumStacksWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = .white
 
+        // Store webView reference via coordinator
+        context.coordinator.webViewBinding.wrappedValue = webView
+
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        // Only load once - prevent reload loop
+        if context.coordinator.hasLoaded {
+            return
+        }
+        context.coordinator.hasLoaded = true
+
         guard let htmlPath = Bundle.main.path(forResource: "sumstacks", ofType: "html") else {
             print("❌ Could not find sumstacks.html")
             return
@@ -203,17 +305,14 @@ struct SumStacksWebView: UIViewRepresentable {
             }
 
             // Check if functions exist and call them in sequence
-            webView.evaluateJavaScript("typeof enableDailyMode !== 'undefined' && typeof setSeed !== 'undefined' && typeof startGame !== 'undefined'") { result, error in
+            webView.evaluateJavaScript("typeof setSeed !== 'undefined' && typeof startGame !== 'undefined'") { result, error in
                 if let ready = result as? Bool, ready {
-                    // Enable daily mode first
-                    webView.evaluateJavaScript("enableDailyMode();") { _, _ in
-                        // Then set seed
-                        webView.evaluateJavaScript("setSeed(\(seed));") { _, _ in
-                            // Finally start game
-                            webView.evaluateJavaScript("startGame();") { _, error in
-                                if let error = error {
-                                    print("❌ Error starting game: \(error)")
-                                }
+                    // Set seed first
+                    webView.evaluateJavaScript("setSeed(\(seed));") { _, _ in
+                        // Then start game
+                        webView.evaluateJavaScript("startGame();") { _, error in
+                            if let error = error {
+                                print("❌ Error starting game: \(error)")
                             }
                         }
                     }
@@ -226,15 +325,36 @@ struct SumStacksWebView: UIViewRepresentable {
 
     class Coordinator: NSObject, WKScriptMessageHandler {
         let onComplete: () -> Void
+        let webViewBinding: Binding<WKWebView?>
+        let gameTime: Binding<String>
+        let scoreCount: Binding<Int>
+        var hasLoaded: Bool = false
 
-        init(onComplete: @escaping () -> Void) {
+        init(onComplete: @escaping () -> Void,
+             webViewBinding: Binding<WKWebView?>,
+             gameTime: Binding<String>,
+             scoreCount: Binding<Int>) {
             self.onComplete = onComplete
+            self.webViewBinding = webViewBinding
+            self.gameTime = gameTime
+            self.scoreCount = scoreCount
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "gameCompleted" {
                 DispatchQueue.main.async {
                     self.onComplete()
+                }
+            } else if message.name == "gameStats" {
+                if let stats = message.body as? [String: Any] {
+                    DispatchQueue.main.async {
+                        if let time = stats["time"] as? String {
+                            self.gameTime.wrappedValue = time
+                        }
+                        if let solved = stats["solved"] as? Int {
+                            self.scoreCount.wrappedValue = solved
+                        }
+                    }
                 }
             }
         }

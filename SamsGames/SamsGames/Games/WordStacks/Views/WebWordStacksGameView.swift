@@ -37,10 +37,7 @@ struct WebWordStacksGameView: View {
     // Check if already completed (for both regular and archive mode)
     private var isAlreadyCompleted: Bool {
         if archiveMode {
-            // In archive mode, check if this specific date was completed
-            if let date = archiveDate {
-                return statisticsManager.isCompleted(for: .wordStacks, on: date)
-            }
+            // In archive mode, NEVER show completed screen - always allow replay
             return false
         }
         // Regular mode - check if today is completed

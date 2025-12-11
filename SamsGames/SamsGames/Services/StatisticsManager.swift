@@ -80,6 +80,38 @@ class StatisticsManager: ObservableObject {
         return statistics[gameType]?.completionHistory[dateString] ?? false
     }
 
+    /// Get global streak (at least 1 game completed per day)
+    func getGlobalStreak() -> Int {
+        var currentStreak = 0
+        var date = Date()
+
+        // Go backwards from today, checking if at least one game was completed each day
+        while true {
+            let dateString = formatDate(date)
+            var completedAnyGame = false
+
+            // Check if any game was completed on this date
+            for gameType in GameType.allCases {
+                if statistics[gameType]?.completionHistory[dateString] == true {
+                    completedAnyGame = true
+                    break
+                }
+            }
+
+            if completedAnyGame {
+                currentStreak += 1
+                // Move to previous day
+                guard let previousDay = calendar.date(byAdding: .day, value: -1, to: date) else { break }
+                date = previousDay
+            } else {
+                // Streak broken
+                break
+            }
+        }
+
+        return currentStreak
+    }
+
     // MARK: - Streak Calculation
 
     private func updateStreak(for gameType: GameType, stats: inout GameStatistics, date: Date) {

@@ -56,7 +56,12 @@ struct ArchiveView: View {
                                             dailyPuzzleManager: dailyPuzzleManager
                                         )
                                         .onTapGesture {
-                                            selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
+                                            // Check subscription before allowing archive access
+                                            if subscriptionManager.isSubscribedOrTestMode {
+                                                selectedArchiveItem = ArchiveItem(date: date, gameType: gameType)
+                                            } else {
+                                                showPaywall = true
+                                            }
                                         }
                                         .padding(.horizontal)
                                     }
@@ -234,7 +239,7 @@ struct ArchiveGameCard: View {
         case .sumStacks:
             return Color.orange
         case .wordStacks:
-            return Color.orange.opacity(0.8)
+            return Color.mint
         case .xNumbers:
             return Color.blue
         case .wordInShapes:
@@ -288,27 +293,26 @@ struct ArchiveGameCard: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
-                // Difficulty info with colored circle
-                if gameType == .xNumbers || gameType == .jushBox {
-                    let seed = dailyPuzzleManager.getSeedForDate(date)
-                    let calendar = Calendar.current
-                    let daysSinceEpoch = calendar.dateComponents([.day], from: Date(timeIntervalSince1970: 0), to: date).day ?? 0
-                    let level = (daysSinceEpoch % 3) + 1
-                    let name = dailyPuzzleManager.getDifficultyName(for: level)
-                    HStack(spacing: 4) {
+                // Difficulty info with colored circle for ALL games
+                HStack(spacing: 4) {
+                    if gameType == .xNumbers || gameType == .jushBox {
+                        let seed = dailyPuzzleManager.getSeedForDate(date)
+                        let calendar = Calendar.current
+                        let daysSinceEpoch = calendar.dateComponents([.day], from: Date(timeIntervalSince1970: 0), to: date).day ?? 0
+                        let level = (daysSinceEpoch % 3) + 1
                         Circle()
                             .fill(difficultyColor(for: level))
                             .frame(width: 8, height: 8)
+                        let name = dailyPuzzleManager.getDifficultyName(for: level)
                         Text(name)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary.opacity(0.8))
-                    }
-                } else if gameType == .sumStacks {
-                    HStack(spacing: 4) {
+                    } else {
+                        // All other games - single level
                         Circle()
                             .fill(Color.green)
                             .frame(width: 8, height: 8)
-                        Text("Easy (L1)")
+                        Text("One Level")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary.opacity(0.8))
                     }
@@ -328,7 +332,7 @@ struct ArchiveGameCard: View {
             }
         }
         .padding(16)
-        .background(brandColor.opacity(colorScheme == .dark ? 0.2 : 0.12))
+        .background(brandColor.opacity(colorScheme == .dark ? 0.4 : 0.25))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)

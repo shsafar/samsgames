@@ -197,10 +197,26 @@
       display: none;
     }
 
-    /* Daily mode hides New Game and Restart buttons */
-    body.daily-mode #btn-new,
-    body.daily-mode #btn-restart {
+    /* Hide duplicate UI elements by default (Swift app uses standardized UI) */
+    h1,
+    #top-bar,
+    #btn-new,
+    #btn-restart,
+    #btn-reveal {
       display: none;
+    }
+
+    /* Show these elements only in standalone web mode (no daily-mode class) */
+    body:not(.daily-mode) h1,
+    body:not(.daily-mode) #top-bar,
+    body:not(.daily-mode) #btn-new,
+    body:not(.daily-mode) #btn-restart,
+    body:not(.daily-mode) #btn-reveal {
+      display: block;
+    }
+
+    body:not(.daily-mode) #controls {
+      display: flex;
     }
 
     /* Fireworks Canvas */
@@ -285,7 +301,7 @@
     }
   </style>
 </head>
-<body>
+<body class="daily-mode">
   <h1>SumStacks</h1>
 
   <div id="top-bar">
@@ -435,9 +451,11 @@
       if (timerId) clearInterval(timerId);
       timeElapsed = 0;
       tEl.textContent = timeElapsed;
+      updateGameStats();
       timerId = setInterval(() => {
         timeElapsed++;
         tEl.textContent = timeElapsed;
+        updateGameStats();
       }, 1000);
     }
 
@@ -808,6 +826,32 @@
         }
       });
       checkShapeSolved(top);
+    }
+
+    // Helper functions for Swift standardized button bar
+    function resetGame() {
+      restartGame();
+    }
+
+    function revealSolution() {
+      revealTop();
+    }
+
+    // Send game stats to Swift
+    function updateGameStats() {
+      if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.gameStats) {
+        return;  // Not in Swift webview
+      }
+
+      const solvedCount = shapes.filter(s => s.solved).length;
+      const minutes = Math.floor(timeElapsed / 60);
+      const seconds = timeElapsed % 60;
+      const timeStr = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+
+      window.webkit.messageHandlers.gameStats.postMessage({
+        time: timeStr,
+        solved: solvedCount
+      });
     }
 
     function nextShapeManual() {

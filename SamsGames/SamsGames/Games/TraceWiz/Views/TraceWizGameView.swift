@@ -12,6 +12,8 @@ struct TraceWizGameView: View {
     @State private var showSplash = true
     @State private var isPulsing = false
     @State private var showExitWarning = false
+    @State private var soundEnabled = true
+    @State private var showGameInfo = false
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -88,6 +90,11 @@ struct TraceWizGameView: View {
         } message: {
             Text("Are you sure? You may lose your progress if you exit.")
         }
+        .alert("How to Play", isPresented: $showGameInfo) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Draw with your finger to follow the black line. Don't cross it!")
+        }
     }
 
     // MARK: - Splash Screen
@@ -145,13 +152,72 @@ struct TraceWizGameView: View {
 
     private var gameContent: some View {
         GeometryReader { geometry in
-            ZStack {
-                Color(UIColor.systemBackground)
-                    .ignoresSafeArea()
-                    .gesture(DragGesture()) // Block sheet dismiss gesture
+            VStack(spacing: 0) {
+                // Top bar with back button and help button
+                HStack {
+                    Button(action: { showExitWarning = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.title3)
+                            Text("Back")
+                                .font(.body)
+                        }
+                        .foregroundColor(.blue)
+                    }
 
-                VStack(spacing: 8) {
-                    // Game Canvas - Takes most of the space
+                    Spacer()
+
+                    Button(action: { showInstructions = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color(UIColor.systemBackground))
+
+                // Standard button bar
+                StandardGameButtonBar(
+                    onReset: {
+                        gameState.resetGame()
+                        gameState.startGame()
+                    },
+                    onRevealHint: nil,
+                    soundEnabled: $soundEnabled,
+                    resetLabel: "START/RESET",
+                    showReveal: false
+                )
+
+                // Game title with info icon
+                HStack(spacing: 8) {
+                    Text("TraceWiz")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.primary)
+
+                    Button(action: { showGameInfo = true }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
+                    }
+                }
+                .padding(.vertical, 12)
+
+                // Standard game info bar
+                StandardGameInfoBar(
+                    time: gameState.phase == .running ? String(format: "%.1fs", gameState.roundTime) : "0.0s",
+                    score: nil,
+                    moves: nil,
+                    streak: nil,
+                    hints: nil,
+                    penalty: nil
+                )
+
+                // Game Canvas - Takes remaining space
+                ZStack {
+                    Color(UIColor.systemBackground)
+                        .gesture(DragGesture()) // Block sheet dismiss gesture
+
                     ZStack {
                         GameCanvasView(
                             gameState: gameState,
@@ -204,7 +270,7 @@ struct TraceWizGameView: View {
                             }
                         }
 
-                        // HUD Overlay
+                        // HUD Overlay (phase indicator only - time and help moved to top)
                         VStack {
                             HStack {
                                 Text(gameState.phase.rawValue)
@@ -216,24 +282,7 @@ struct TraceWizGameView: View {
                                     .foregroundColor(.white)
                                     .cornerRadius(6)
 
-                                if gameState.phase == .running {
-                                    Text(String(format: "%.1fs", gameState.roundTime))
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.blue.opacity(0.9))
-                                        .foregroundColor(.white)
-                                        .cornerRadius(6)
-                                }
-
                                 Spacer()
-
-                                Button(action: { showInstructions = true }) {
-                                    Image(systemName: "questionmark.circle")
-                                        .font(.title3)
-                                        .foregroundColor(.blue)
-                                }
                             }
                             .padding(8)
 
@@ -280,107 +329,6 @@ struct TraceWizGameView: View {
                     .padding(.horizontal, 8)
                     .padding(.top, 8)
 
-                    // Bottom Control Panel
-                    VStack(spacing: 8) {
-                        // Title and Difficulty Row
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("TraceWiz")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                if archiveMode, let date = archiveDate {
-                                    Text(formatArchiveDate(date))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                } else {
-                                    Text("Daily Puzzle")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-
-                            Spacer()
-
-                            // Difficulty Display
-                            VStack(alignment: .trailing, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text(difficultyEmoji(for: difficulty))
-                                        .font(.caption)
-                                    Text(difficulty.name)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .fontWeight(.semibold)
-                                }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(6)
-
-                                Text(difficultyDescription(for: difficulty))
-                                    .font(.system(size: 9))
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .lineLimit(2)
-                                    .frame(maxWidth: 140)
-                            }
-                        }
-
-                        // Control Buttons Row
-                        HStack(spacing: 12) {
-                            Button(action: { gameState.startGame() }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "play.fill")
-                                        .font(.caption)
-                                    Text("Start")
-                                        .font(.caption)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                            }
-                            .disabled(gameState.phase != .idle)
-
-                            Button(action: { gameState.resetGame() }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.counterclockwise")
-                                        .font(.caption)
-                                    Text("Reset")
-                                        .font(.caption)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(Color.gray)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                            }
-
-                            Button(action: { showExitWarning = true }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "xmark")
-                                        .font(.caption)
-                                    Text("Exit")
-                                        .font(.caption)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(Color.red)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                            }
-                        }
-
-                        // Quick Instructions
-                        Text("Draw with your finger • Follow the black line • Don't cross it!")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(12)
                 }
             }
         }

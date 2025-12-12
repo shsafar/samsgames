@@ -129,43 +129,38 @@ struct WebDiamondStackGameView: View {
     }
 
     private var gameView: some View {
-        VStack(spacing: 0) {
-            // Top bar with back button
-            HStack {
-                Button(action: { showExitWarning = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Back")
-                            .font(.system(size: 17))
-                    }
-                    .foregroundColor(.blue)
-                }
-
-                Spacer()
-
-                Button(action: { showInstructions = true }) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.system(size: 20))
-                        .foregroundColor(.blue)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
-            .background(Color(UIColor.systemBackground))
-
-            // WebView for the game
-            WebDiamondStackGameViewRepresentable(
+        NavigationView {
+            DiamondStackWebView(
                 seed: seed,
                 level: level,
-                onGameComplete: {
+                onComplete: {
                     handleGameCompletion()
                 }
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showExitWarning = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(.system(size: 17))
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showInstructions = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
         }
-        .background(Color(UIColor.systemGroupedBackground))
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 
     private func startSplashTimer() {
@@ -194,14 +189,122 @@ struct WebDiamondStackGameView: View {
     }
 }
 
-// UIViewRepresentable wrapper for WKWebView
+// MARK: - WebView Wrapper
+
+struct DiamondStackWebView: View {
+    let seed: Int
+    let level: Int
+    let onComplete: () -> Void
+
+    @State private var soundEnabled = true
+    @State private var webView: WKWebView?
+    @State private var gameTime: String = "0s"
+    @State private var scoreCount: Int = 100
+    @State private var hintsRemaining: Int = 3
+    @State private var penaltyCount: Int = 0
+    @State private var showQuickTips = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Standardized button bar
+            StandardGameButtonBar(
+                onReset: {
+                    resetGame()
+                },
+                onRevealHint: {
+                    revealHint()
+                },
+                soundEnabled: $soundEnabled,
+                resetLabel: "START/RESET",
+                revealLabel: "REVEAL",
+                showReveal: true
+            )
+
+            // Game title with info icon
+            HStack(spacing: 8) {
+                Text("Diamond Stack")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+
+                // Info icon
+                Button(action: {
+                    showQuickTips = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding(.vertical, 12)
+
+            // Standardized game info bar
+            StandardGameInfoBar(
+                time: gameTime,
+                score: (value: scoreCount, label: "Score"),
+                moves: nil,
+                streak: nil,
+                hints: hintsRemaining,
+                penalty: (value: penaltyCount, label: "Penalty")
+            )
+
+            // WebView game
+            WebDiamondStackGameViewRepresentable(
+                seed: seed,
+                level: level,
+                onGameComplete: onComplete,
+                webView: $webView,
+                gameTime: $gameTime,
+                scoreCount: $scoreCount,
+                hintsRemaining: $hintsRemaining,
+                penaltyCount: $penaltyCount
+            )
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            webView?.evaluateJavaScript("setSoundEnabled(\(newValue));")
+        }
+        .sheet(isPresented: $showQuickTips) {
+            DiamondStackQuickTipsView()
+        }
+    }
+
+    private func resetGame() {
+        webView?.evaluateJavaScript("smartReset();") { _, error in
+            if let error = error {
+                print("❌ Reset error: \(error)")
+            }
+        }
+    }
+
+    private func revealHint() {
+        webView?.evaluateJavaScript("revealOne();") { _, error in
+            if let error = error {
+                print("❌ Reveal error: \(error)")
+            }
+        }
+    }
+}
+
+// MARK: - UIViewRepresentable wrapper for WKWebView
 struct WebDiamondStackGameViewRepresentable: UIViewRepresentable {
     let seed: Int
     let level: Int
     let onGameComplete: () -> Void
+    @Binding var webView: WKWebView?
+    @Binding var gameTime: String
+    @Binding var scoreCount: Int
+    @Binding var hintsRemaining: Int
+    @Binding var penaltyCount: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(self, onGameComplete: onGameComplete)
+        Coordinator(
+            self,
+            onGameComplete: onGameComplete,
+            webViewBinding: $webView,
+            gameTime: $gameTime,
+            scoreCount: $scoreCount,
+            hintsRemaining: $hintsRemaining,
+            penaltyCount: $penaltyCount
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -212,6 +315,9 @@ struct WebDiamondStackGameViewRepresentable: UIViewRepresentable {
 
         // Add message handler for game completion
         configuration.userContentController.add(context.coordinator, name: "gameComplete")
+
+        // Add message handler for game stats
+        configuration.userContentController.add(context.coordinator, name: "gameStats")
 
         // Enable console logging
         let consoleScript = WKUserScript(
@@ -249,6 +355,9 @@ struct WebDiamondStackGameViewRepresentable: UIViewRepresentable {
         webView.backgroundColor = .systemBackground
         webView.isOpaque = false
 
+        // Store webView reference
+        context.coordinator.webViewBinding.wrappedValue = webView
+
         // Completely disable all scrolling
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.bounces = false
@@ -285,10 +394,28 @@ struct WebDiamondStackGameViewRepresentable: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var parent: WebDiamondStackGameViewRepresentable
         var onGameComplete: () -> Void
+        let webViewBinding: Binding<WKWebView?>
+        let gameTime: Binding<String>
+        let scoreCount: Binding<Int>
+        let hintsRemaining: Binding<Int>
+        let penaltyCount: Binding<Int>
 
-        init(_ parent: WebDiamondStackGameViewRepresentable, onGameComplete: @escaping () -> Void) {
+        init(
+            _ parent: WebDiamondStackGameViewRepresentable,
+            onGameComplete: @escaping () -> Void,
+            webViewBinding: Binding<WKWebView?>,
+            gameTime: Binding<String>,
+            scoreCount: Binding<Int>,
+            hintsRemaining: Binding<Int>,
+            penaltyCount: Binding<Int>
+        ) {
             self.parent = parent
             self.onGameComplete = onGameComplete
+            self.webViewBinding = webViewBinding
+            self.gameTime = gameTime
+            self.scoreCount = scoreCount
+            self.hintsRemaining = hintsRemaining
+            self.penaltyCount = penaltyCount
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -344,6 +471,71 @@ struct WebDiamondStackGameViewRepresentable: UIViewRepresentable {
                     print("Game completed successfully!")
                     DispatchQueue.main.async {
                         self.onGameComplete()
+                    }
+                }
+            } else if message.name == "gameStats" {
+                if let stats = message.body as? [String: Any] {
+                    DispatchQueue.main.async {
+                        if let time = stats["time"] as? String {
+                            self.gameTime.wrappedValue = time
+                        }
+                        if let score = stats["score"] as? Int {
+                            self.scoreCount.wrappedValue = score
+                        }
+                        if let reveals = stats["reveals"] as? Int {
+                            self.hintsRemaining.wrappedValue = reveals
+                        }
+                        if let penalty = stats["penalty"] as? Int {
+                            self.penaltyCount.wrappedValue = penalty
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Quick Tips View
+struct DiamondStackQuickTipsView: View {
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("How to Play")
+                        .font(.system(size: 20, weight: .bold))
+
+                    Text("Fill in the empty circles with numbers 1-9 so that:")
+                        .padding(.top, 4)
+
+                    Text("• Each number on the bottom matches the sum of the two numbers above it")
+                    Text("• Use the number pad at the bottom to enter values")
+                    Text("• The puzzle is complete when all circles are filled correctly")
+                }
+                .padding()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Hints")
+                        .font(.system(size: 20, weight: .bold))
+
+                    Text("You are allowed a maximum of 3 hints per game.")
+                        .padding(.top, 4)
+
+                    Text("• Tap a circle to select it")
+                    Text("• Press REVEAL to show the correct number for that circle")
+                    Text("• Each hint costs 5 points")
+                }
+                .padding()
+
+                Spacer()
+            }
+            .navigationTitle("Diamond Stack")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
                     }
                 }
             }

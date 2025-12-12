@@ -48,19 +48,6 @@ struct MainMenuView: View {
                                 selectedGame = gameType
                             }
                         }
-
-                        // Show scroll indicator after Double Bubble
-                        if gameType == .doubleBubble {
-                            VStack(spacing: 6) {
-                                Image(systemName: "chevron.compact.down")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary.opacity(0.5))
-                                Text("Scroll for more")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary.opacity(0.7))
-                            }
-                            .padding(.vertical, 8)
-                        }
                     }
 
                     Spacer(minLength: 50)
@@ -69,7 +56,7 @@ struct MainMenuView: View {
                 .frame(maxWidth: 600) // Limit width on iPad
                 .frame(maxWidth: .infinity) // Center it
             }
-            .background(Color(UIColor.systemGroupedBackground))
+            .background(Color.white)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -459,7 +446,7 @@ struct GameCard: View {
                             }
                         }
                         .padding(16)
-                        .frame(width: 340)
+                        .frame(width: 280)
                         .background(brandColor.opacity(colorScheme == .dark ? 0.4 : 0.25))
                         .cornerRadius(16)
 

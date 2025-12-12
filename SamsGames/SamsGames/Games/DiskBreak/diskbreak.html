@@ -108,20 +108,20 @@
       height: auto;
     }
 
-    /* In daily mode: maximize canvas size to match original proportions */
-    body.daily-mode canvas {
-      max-height: calc(100vh - 230px);  /* Maximum space for game canvas */
-      max-width: 100%;  /* Fill full width while maintaining aspect ratio */
-      width: 100%;  /* Expand to full container width */
-    }
-
-    /* Hide internal controls, stats, and instructions in daily mode (using standardized Swift controls) */
+    /* Hide internal controls when using Swift standardized controls */
     body.daily-mode #top-bar,
     body.daily-mode #controls,
     body.daily-mode #score-timer,
     body.daily-mode #status,
     body.daily-mode #controlsHint {
       display: none;
+    }
+
+    /* Expand canvas in daily mode using transform scale */
+    body.daily-mode canvas {
+      transform: scale(1.61);  /* Enlarge by 61% (15% increase from 1.4) */
+      transform-origin: center;
+      margin: 50px 0;  /* Add space for the scaled canvas */
     }
   </style>
 </head>
@@ -519,6 +519,7 @@
 
     // ---------- New Disk ----------
     function newDisk() {
+      console.log('newDisk() called - dailyMode:', dailyMode, 'fixedSeed:', fixedSeed, 'fixedLevel:', fixedLevel);
       // Reset seed if in daily mode
       if (dailyMode && fixedSeed !== null) {
         rngSeed = fixedSeed;
@@ -541,7 +542,7 @@
 
       const baseCx = canvas.width / 2;
       const baseCy = 320;
-      const baseR = 240;  // Increased from 200 to 240 (20% larger)
+      const baseR = 200;
 
       if (level === 1 || level === 2) {
         const chordsCount = level === 1 ? 5 : 7;
@@ -556,8 +557,8 @@
         buildRandomChords(disks[0], chordsCount);
       } else if (level === 3) {
         const chordsCount = 7;
-        const r3 = 150;  // Increased from 120 to 150 (25% larger)
-        const offset = 180;  // Increased spacing from 160 to 180
+        const r3 = 120;
+        const offset = 160;
 
         disks = [
           { cx: baseCx - offset, cy: baseCy, radius: r3, gradient: null, chords: [] },
@@ -1104,9 +1105,22 @@
     // Make functions available to Swift (must be at end after all functions are defined)
     window.setSeed = setSeed;
     window.selectLevel = selectLevel;
-    window.breakDisk = breakDisk;  // For external "BREAK DISK" button
-    window.revealHint = revealHint;  // For external "HINT" button
-    window.setSoundEnabled = setSoundEnabled;  // For external sound toggle
+    window.breakDisk = breakDisk;
+    window.newDisk = newDisk;
+    window.revealHint = revealHint;
+    window.setSoundEnabled = setSoundEnabled;
+
+    // Smart reset function: START if assembled, RESET if broken/playing
+    window.resetGame = function() {
+      console.log('resetGame() called - gameState:', gameState);
+      if (gameState === "assembled") {
+        // Game hasn't started yet, so START it by breaking the disk
+        breakDisk();
+      } else {
+        // Game is in progress or complete, so RESET it
+        newDisk();
+      }
+    };
   </script>
 </body>
 </html>

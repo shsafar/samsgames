@@ -69,7 +69,8 @@ struct StandardGameInfoBar: View {
             MetricDisplay(
                 label: "Hints:",
                 value: hints != nil ? "\(hints!)" : "--",
-                isActive: hints != nil
+                isActive: hints != nil,
+                valueColor: (hints ?? 1) == 0 ? .red : nil
             )
 
             Divider()

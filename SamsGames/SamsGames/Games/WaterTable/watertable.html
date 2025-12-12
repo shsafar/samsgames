@@ -1323,6 +1323,18 @@ window.setSoundEnabled = function(enabled) {
   console.log("🔊 WaterTable: Sound", enabled ? "ON" : "OFF");
 };
 
+// Smart reset function: START if pins not broken, RESET if playing
+window.resetGame = function() {
+  console.log('resetGame() called - fragments.length:', fragments.length);
+  if (fragments.length === 0) {
+    // Game hasn't started yet (pins not broken), so START it
+    breakPins();
+  } else {
+    // Game is in progress, so RESET it
+    newGame();
+  }
+};
+
 // Send game stats to Swift
 function updateGameStats() {
   if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.gameStats) {

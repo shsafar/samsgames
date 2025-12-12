@@ -26,6 +26,7 @@
       padding: 8px;
       background: rgba(255,255,255,0.7);
       border-radius: 12px;
+      display: none;  /* Hidden - using Swift controls instead */
     }
 
     .hud span.label {
@@ -97,6 +98,13 @@
       box-shadow: 0 0 0 3px rgba(0,150,255,0.45);
     }
 
+    /* Incorrect number entered */
+    .node.incorrect {
+      background: #ffe0e0;
+      border-color: #e74c3c;
+      color: #a00;
+    }
+
     /* Partial correct (some triangles correct, not all) */
     .node.partial {
       background: #ffe8c4;
@@ -127,6 +135,7 @@
 
     .controls {
       margin-top: 6px;
+      display: none;  /* Hidden - using Swift controls instead */
     }
 
     button {
@@ -628,6 +637,7 @@
     revealsEl.textContent = revealsLeft;
     msgEl.textContent = '';
     msgEl.className = '';
+    sendGameStats();  // Sync with Swift
 
     revealBtn.classList.remove('disabled');
     keypad.style.display = 'none';
@@ -641,7 +651,7 @@
         const sol = nodeDefs[id].solution;
         node.dataset.solution = sol;
         node.textContent = '';
-        node.classList.remove('locked','disabled','active','correct','partial');
+        node.classList.remove('locked','disabled','active','correct','partial','incorrect');
       }
     });
 
@@ -682,6 +692,7 @@
     timerId = setInterval(() => {
       elapsedTime++;
       timeEl.textContent = elapsedTime;
+      sendGameStats();  // Sync with Swift
       if (elapsedTime >= TIME_LIMIT) {
         clearInterval(timerId);
         gameActive = false;
@@ -715,15 +726,28 @@
     return sum === tri.sum;
   }
 
-  // Orange when some triangles satisfied, green when all satisfied
+  // Red when incorrect, orange when some triangles satisfied, green when all satisfied
   function updateAllNodeCorrectStates() {
     nodes.forEach(node => {
-      node.classList.remove('correct','partial');
+      node.classList.remove('correct','partial','incorrect');
 
       if (node.classList.contains('locked')) return;
       const nodeId = node.id;
+      if (!node.textContent) return;
+
+      // First check if the entered value matches the solution
+      const enteredValue = parseInt(node.textContent, 10);
+      const solution = parseInt(node.dataset.solution, 10);
+
+      if (enteredValue !== solution) {
+        // Wrong number entered - show red
+        node.classList.add('incorrect');
+        return;
+      }
+
+      // Correct number entered - now check triangle validation
       const involved = allTriangles.filter(tri => tri.nodes.includes(nodeId));
-      if (!node.textContent || involved.length === 0) return;
+      if (involved.length === 0) return;
 
       const completed = involved.filter(tri =>
         tri.nodes.every(id => nodeMap[id] && nodeMap[id].textContent !== '')
@@ -805,6 +829,7 @@
 
     revealsEl.textContent = revealsLeft;
     scoreEl.textContent = score;
+    sendGameStats();  // Sync with Swift
 
     if (revealsLeft === 0) {
       revealBtn.classList.add('disabled');
@@ -835,6 +860,44 @@
     unlockBoard();
     startTimer();
   }
+
+  // Send game stats to Swift
+  function sendGameStats() {
+    if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.gameStats) {
+      return;
+    }
+
+    const penalty = (3 - revealsLeft) * 5;  // Each reveal costs 5 points
+
+    window.webkit.messageHandlers.gameStats.postMessage({
+      time: elapsedTime + "s",
+      score: score,
+      reveals: revealsLeft,
+      penalty: penalty
+    });
+  }
+
+  // External reveal function for Swift button
+  window.revealOne = function() {
+    revealNumber();
+  };
+
+  // Smart reset function: START if not started, RESET if playing
+  window.smartReset = function() {
+    console.log('smartReset() called - gameActive:', gameActive);
+    if (!gameActive) {
+      // Game hasn't started yet, so START it
+      console.log('Starting game...');
+      unlockBoard();
+      startTimer();
+    } else {
+      // Game is active, so RESET it
+      console.log('Resetting game...');
+      resetGame();
+      unlockBoard();
+      startTimer();
+    }
+  };
 
   // Expose functions globally for Swift to call
   window.setSeed = setSeed;

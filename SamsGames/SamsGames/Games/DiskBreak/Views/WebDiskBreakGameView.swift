@@ -220,7 +220,7 @@ struct DiskBreakWebView: View {
             // Standardized button bar
             StandardGameButtonBar(
                 onReset: {
-                    breakDisk()
+                    resetGame()
                 },
                 onRevealHint: {
                     revealHint()
@@ -249,11 +249,11 @@ struct DiskBreakWebView: View {
             // Standardized game info bar
             StandardGameInfoBar(
                 time: gameTime,
-                score: (scoreCount, "Score"),  // Active: Time and Score
-                moves: nil,     // Inactive (gray)
-                streak: nil,    // Inactive (gray)
-                hints: nil,     // Inactive (gray)
-                penalty: nil    // Inactive (gray)
+                score: (value: scoreCount, label: "Score"),
+                moves: nil,
+                streak: nil,
+                hints: nil,
+                penalty: nil
             )
 
             // WebView game
@@ -265,6 +265,7 @@ struct DiskBreakWebView: View {
                 gameTime: $gameTime,
                 scoreCount: $scoreCount
             )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onChange(of: soundEnabled) { _, newValue in
             webView?.evaluateJavaScript("setSoundEnabled(\(newValue));")
@@ -278,6 +279,17 @@ struct DiskBreakWebView: View {
         webView?.evaluateJavaScript("breakDisk();") { _, error in
             if let error = error {
                 print("❌ Break Disk error: \(error)")
+            }
+        }
+    }
+
+    private func resetGame() {
+        print("🔄 Reset button pressed - calling resetGame()")
+        webView?.evaluateJavaScript("resetGame();") { result, error in
+            if let error = error {
+                print("❌ Reset Game error: \(error)")
+            } else {
+                print("✅ Reset Game succeeded")
             }
         }
     }
@@ -319,6 +331,14 @@ struct WebDiskBreakGameViewRepresentable: UIViewRepresentable {
         // Add message handlers for game completion and stats
         configuration.userContentController.add(context.coordinator, name: "gameComplete")
         configuration.userContentController.add(context.coordinator, name: "gameStats")
+
+        // Add daily-mode class to body
+        let dailyModeScript = WKUserScript(
+            source: "document.body.classList.add('daily-mode');",
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        configuration.userContentController.addUserScript(dailyModeScript)
 
         // Enable console logging
         let consoleScript = WKUserScript(

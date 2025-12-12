@@ -234,7 +234,7 @@ struct WaterTableWebView: View {
             // Standardized button bar
             StandardGameButtonBar(
                 onReset: {
-                    breakPins()
+                    resetGame()
                 },
                 onRevealHint: {
                     revealSolution()
@@ -295,6 +295,17 @@ struct WaterTableWebView: View {
         webView?.evaluateJavaScript("if (typeof breakPins === 'function') { breakPins(); }") { _, error in
             if let error = error {
                 print("❌ Break error: \(error)")
+            }
+        }
+    }
+
+    private func resetGame() {
+        print("🔄 Reset button pressed - calling resetGame()")
+        webView?.evaluateJavaScript("resetGame();") { _, error in
+            if let error = error {
+                print("❌ Reset Game error: \(error)")
+            } else {
+                print("✅ Reset Game succeeded")
             }
         }
     }

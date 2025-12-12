@@ -111,7 +111,8 @@
     /* In daily mode: maximize canvas size to match original proportions */
     body.daily-mode canvas {
       max-height: calc(100vh - 230px);  /* Maximum space for game canvas */
-      max-width: 95%;  /* Fill width while maintaining aspect ratio */
+      max-width: 100%;  /* Fill full width while maintaining aspect ratio */
+      width: 100%;  /* Expand to full container width */
     }
 
     /* Hide internal controls, stats, and instructions in daily mode (using standardized Swift controls) */

@@ -76,12 +76,12 @@ struct WebDoubleBubbleGameView: View {
                 if isAlreadyCompleted {
                     AlreadyCompletedView()
                 } else {
-                    // WebView for the game
-                    WebDoubleBubbleGameViewRepresentable(
+                    // Game with standard controls
+                    DoubleBubbleGameContent(
                         seed: seed,
+                        archiveMode: archiveMode,
                         onGameCompleted: archiveMode ? { _ in } : handleGameCompletion
                     )
-                    .id(seed) // Force recreation when seed changes (new day)
                 }
             }
 
@@ -265,13 +265,86 @@ struct AlreadyCompletedView: View {
     }
 }
 
+// MARK: - Double Bubble Game Content with Standard Controls
+
+struct DoubleBubbleGameContent: View {
+    let seed: Int
+    let archiveMode: Bool
+    let onGameCompleted: (Int) -> Void
+
+    @State private var soundEnabled = true
+    @State private var webView: WKWebView?
+    @State private var showGameInfo = false
+    @State private var gameTime: String = "0:00"
+    @State private var scoreCount: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Standard button bar
+            StandardGameButtonBar(
+                onReset: {
+                    webView?.evaluateJavaScript("restartGame(); startGame();")
+                },
+                onRevealHint: nil,
+                soundEnabled: $soundEnabled,
+                resetLabel: "START/RESET",
+                showReveal: false
+            )
+
+            // Game title with info icon
+            HStack(spacing: 8) {
+                Text("Double Bubble")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.primary)
+
+                Button(action: { showGameInfo = true }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding(.vertical, 12)
+
+            // Standard game info bar
+            StandardGameInfoBar(
+                time: gameTime,
+                score: (scoreCount, "Score"),
+                moves: nil,
+                streak: nil,
+                hints: nil,
+                penalty: nil
+            )
+
+            // WebView game
+            WebDoubleBubbleGameViewRepresentable(
+                seed: seed,
+                onGameCompleted: onGameCompleted,
+                webView: $webView,
+                gameTime: $gameTime,
+                scoreCount: $scoreCount
+            )
+        }
+        .onChange(of: soundEnabled) { _, newValue in
+            webView?.evaluateJavaScript("if (typeof setSoundEnabled === 'function') { setSoundEnabled(\(newValue)); }")
+        }
+        .alert("How to Play", isPresented: $showGameInfo) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Tap two bubbles to create fragments. Fragments auto-merge into words.")
+        }
+    }
+}
+
 // UIViewRepresentable wrapper for WKWebView with JavaScript bridge
 struct WebDoubleBubbleGameViewRepresentable: UIViewRepresentable {
     let seed: Int
     let onGameCompleted: (Int) -> Void
+    @Binding var webView: WKWebView?
+    @Binding var gameTime: String
+    @Binding var scoreCount: Int
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(seed: seed, onGameCompleted: onGameCompleted)
+        Coordinator(seed: seed, onGameCompleted: onGameCompleted, gameTime: $gameTime, scoreCount: $scoreCount)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -294,29 +367,35 @@ struct WebDoubleBubbleGameViewRepresentable: UIViewRepresentable {
         )
         configuration.userContentController.addUserScript(waitingScript)
 
-        // Add message handler for game completion
+        // Add message handlers
         configuration.userContentController.add(context.coordinator, name: "gameCompleted")
+        configuration.userContentController.add(context.coordinator, name: "gameStats")
 
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.backgroundColor = .systemBackground
-        webView.isOpaque = false
-        webView.scrollView.isScrollEnabled = true
-        webView.scrollView.bounces = true
+        let newWebView = WKWebView(frame: .zero, configuration: configuration)
+        newWebView.backgroundColor = .systemBackground
+        newWebView.isOpaque = false
+        newWebView.scrollView.isScrollEnabled = true
+        newWebView.scrollView.bounces = true
+
+        // Store in binding
+        DispatchQueue.main.async {
+            self.webView = newWebView
+        }
 
         // Load the HTML file from bundle
         if let htmlPath = Bundle.main.path(forResource: "doublebubble", ofType: "html") {
             let url = URL(fileURLWithPath: htmlPath)
 
             // Set navigation delegate to inject seed after page loads
-            webView.navigationDelegate = context.coordinator
+            newWebView.navigationDelegate = context.coordinator
 
             // Load the HTML
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+            newWebView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
         } else {
             print("❌ Error: doublebubble.html not found in bundle")
         }
 
-        return webView
+        return newWebView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
@@ -327,10 +406,14 @@ struct WebDoubleBubbleGameViewRepresentable: UIViewRepresentable {
     class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var seed: Int
         let onGameCompleted: (Int) -> Void
+        @Binding var gameTime: String
+        @Binding var scoreCount: Int
 
-        init(seed: Int, onGameCompleted: @escaping (Int) -> Void) {
+        init(seed: Int, onGameCompleted: @escaping (Int) -> Void, gameTime: Binding<String>, scoreCount: Binding<Int>) {
             self.seed = seed
             self.onGameCompleted = onGameCompleted
+            self._gameTime = gameTime
+            self._scoreCount = scoreCount
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -340,6 +423,18 @@ struct WebDoubleBubbleGameViewRepresentable: UIViewRepresentable {
 
                 print("✅ Game completed! Score: \\(score)")
                 onGameCompleted(score)
+            } else if message.name == "gameStats",
+                      let stats = message.body as? [String: Any] {
+                DispatchQueue.main.async {
+                    // Update time
+                    if let time = stats["time"] as? String {
+                        self.gameTime = time
+                    }
+                    // Update score
+                    if let score = stats["score"] as? Int {
+                        self.scoreCount = score
+                    }
+                }
             }
         }
 

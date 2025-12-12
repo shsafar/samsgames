@@ -415,8 +415,8 @@
 
   <div class="top-bar">
     <div class="title-bar">
-      <h1>Double Bubble Words Game</h1>
-      <div class="subline">Tap two bubbles to create fragments. Fragments auto-merge into words.</div>
+      <h1 style="display: none;">Double Bubble Words Game</h1>
+      <div class="subline" style="display: none;">Tap two bubbles to create fragments. Fragments auto-merge into words.</div>
     </div>
 
     <div class="controls">
@@ -445,9 +445,9 @@
           <option value="animals">Animals</option>
         </select>
       </div>
-      <button id="btn-start">Start</button>
-      <button id="btn-pause">Pause</button>
-      <button id="btn-restart">Restart</button>
+      <button id="btn-start" style="display: none;">Start</button>
+      <button id="btn-pause" style="display: none;">Pause</button>
+      <button id="btn-restart" style="display: none;">Restart</button>
     </div>
   </div>
 
@@ -470,7 +470,7 @@
         Letters Picked:
         <span id="pick-letters">—</span>
       </div>
-      <div class="timer">Time: <span id="time-left">∞</span></div>
+      <div class="timer" style="display: none;">Time: <span id="time-left">∞</span></div>
     </div>
   </div>
 
@@ -772,8 +772,11 @@
     }
   }
 
+  // Sound enabled flag (set from Swift)
+  var soundEnabled = true;
+
   function playBeep(freq, duration, type = "sine", volume = 0.2) {
-    if (!audioCtx) return;
+    if (!audioCtx || !soundEnabled) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = type;
@@ -789,10 +792,12 @@
   }
 
   function playPopSound() {
+    if (!soundEnabled) return;
     playBeep(600, 0.07, "square", 0.15);
   }
 
   function playWordSound() {
+    if (!soundEnabled) return;
     playBeep(800, 0.09, "triangle", 0.2);
     setTimeout(() => playBeep(1200, 0.09, "triangle", 0.2), 110);
   }
@@ -1435,6 +1440,41 @@
   } else {
     console.log("⏳ Waiting for daily seed from Swift...");
   }
+
+  // ============================================================
+  // Swift Integration Functions
+  // ============================================================
+
+  // Sound control (called from Swift SOUND button)
+  window.setSoundEnabled = function(enabled) {
+    soundEnabled = enabled;
+    console.log("🔊 Sound " + (enabled ? "enabled" : "disabled"));
+  };
+
+  // Send stats to Swift periodically
+  function sendStatsToSwift() {
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gameStats) {
+      const mode = modeSelect.value;
+      let timeValue = "0:00";
+
+      // Only show time if in Timed mode
+      if (mode === 'timed' && typeof timeLeft === 'number' && isFinite(timeLeft)) {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timeValue = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+      }
+
+      window.webkit.messageHandlers.gameStats.postMessage({
+        time: timeValue,
+        score: score
+      });
+    }
+  }
+
+  // Poll stats every second
+  setInterval(sendStatsToSwift, 1000);
+
+  console.log("✅ Swift integration functions loaded");
 </script>
 </body>
 </html>

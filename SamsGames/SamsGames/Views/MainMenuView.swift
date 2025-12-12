@@ -487,9 +487,10 @@ struct WeekScrollView: View {
     private var last7Days: [Date] {
         let calendar = Calendar.current
         let today = Date()
-        return (0..<7).compactMap { daysAgo in
+        // Start from yesterday (1 day ago) and go back to 7 days ago
+        return (1...7).compactMap { daysAgo in
             calendar.date(byAdding: .day, value: -daysAgo, to: today)
-        }.reversed()
+        }
     }
 
     var body: some View {

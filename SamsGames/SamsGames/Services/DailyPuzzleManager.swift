@@ -359,11 +359,11 @@ class DailyPuzzleManager: ObservableObject {
         saveCompletedToday()
     }
 
-    /// Get available dates (last 30 days for archive, including today)
+    /// Get available dates for archive (starts from yesterday, goes back in time)
     func getAvailableDates(count: Int = 30) -> [Date] {
         var dates: [Date] = []
-        // Start from today (i=0) to include current day in archive
-        for i in 0..<count {
+        // Start from yesterday (i=1) to avoid duplicate of today
+        for i in 1...count {
             if let date = calendar.date(byAdding: .day, value: -i, to: currentDate) {
                 dates.append(date)
             }

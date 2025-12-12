@@ -185,9 +185,19 @@ struct TraceWizGameView: View {
                             gameState.generateNewPath()
                         }
                         .onChange(of: gameState.gameCompleted) { oldValue, completed in
-                            if completed && !archiveMode && gameState.gameWon {
-                                dailyPuzzleManager.markCompleted(.traceWiz)
-                                statisticsManager.recordCompletion(.traceWiz)
+                            if completed && gameState.gameWon {
+                                // Mark as completed in daily puzzle manager (only for today's puzzle)
+                                if !archiveMode {
+                                    dailyPuzzleManager.markCompleted(.traceWiz)
+                                }
+
+                                // Record completion in statistics (for both today and archive)
+                                if let archiveDate = archiveDate {
+                                    statisticsManager.recordCompletion(.traceWiz, date: archiveDate)
+                                } else {
+                                    statisticsManager.recordCompletion(.traceWiz)
+                                }
+
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                                     showCompletionAlert = true
                                 }

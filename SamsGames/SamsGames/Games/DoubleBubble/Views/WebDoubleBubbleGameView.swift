@@ -150,11 +150,17 @@ struct WebDoubleBubbleGameView: View {
     }
 
     private func handleGameCompletion(score: Int) {
-        // Mark as completed in daily puzzle manager
-        dailyPuzzleManager.markCompleted(.doubleBubble)
+        // Mark as completed in daily puzzle manager (only for today's puzzle)
+        if !archiveMode {
+            dailyPuzzleManager.markCompleted(.doubleBubble)
+        }
 
-        // Record completion in statistics
-        statisticsManager.recordCompletion(.doubleBubble)
+        // Record completion in statistics (for both today and archive)
+        if let archiveDate = archiveDate {
+            statisticsManager.recordCompletion(.doubleBubble, date: archiveDate)
+        } else {
+            statisticsManager.recordCompletion(.doubleBubble)
+        }
 
         // Store score for alert
         gameScore = score

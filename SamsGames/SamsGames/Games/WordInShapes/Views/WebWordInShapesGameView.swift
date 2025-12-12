@@ -110,11 +110,17 @@ struct WebWordInShapesGameView: View {
     }
 
     private func handleGameCompletion(score: Int, time: String) {
-        // Mark as completed in daily puzzle manager
-        dailyPuzzleManager.markCompleted(.wordInShapes)
+        // Mark as completed in daily puzzle manager (only for today's puzzle)
+        if !archiveMode {
+            dailyPuzzleManager.markCompleted(.wordInShapes)
+        }
 
-        // Record completion in statistics
-        statisticsManager.recordCompletion(.wordInShapes)
+        // Record completion in statistics (for both today and archive)
+        if let archiveDate = archiveDate {
+            statisticsManager.recordCompletion(.wordInShapes, date: archiveDate)
+        } else {
+            statisticsManager.recordCompletion(.wordInShapes)
+        }
 
         // Store score and time for alert
         gameScore = score

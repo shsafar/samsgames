@@ -166,7 +166,7 @@ struct WebArrowRaceGameView: View {
             WebArrowRaceGameViewRepresentable(
                 seed: seed,
                 level: level,
-                onGameCompleted: archiveMode ? { _ in } : handleGameCompletion
+                onGameCompleted: handleGameCompletion
             )
             .id("\(seed)-\(level)") // Force recreation when seed or level changes
         }
@@ -184,10 +184,23 @@ struct WebArrowRaceGameView: View {
     }
 
     private func handleGameCompletion(won: Bool) {
-        if won && !archiveMode {
-            dailyPuzzleManager.markCompleted(.arrowRace)
-            statisticsManager.recordCompletion(.arrowRace)
-            showCompletionAlert = true
+        if won {
+            // Mark as completed in daily puzzle manager (only for today's puzzle)
+            if !archiveMode {
+                dailyPuzzleManager.markCompleted(.arrowRace)
+            }
+
+            // Record completion in statistics (for both today and archive)
+            if let archiveDate = archiveDate {
+                statisticsManager.recordCompletion(.arrowRace, date: archiveDate)
+            } else {
+                statisticsManager.recordCompletion(.arrowRace)
+            }
+
+            // Only show alert for today's game, not archive
+            if !archiveMode {
+                showCompletionAlert = true
+            }
         }
     }
 }

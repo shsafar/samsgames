@@ -199,12 +199,15 @@ struct WebJushBoxGameView: View {
     }
 
     private func handleGameCompletion() {
-        // Only mark as completed if not in archive mode
+        // Mark as completed in daily puzzle manager (only for today's puzzle)
         if !archiveMode {
-            // Mark as completed in daily puzzle manager
             dailyPuzzleManager.markCompleted(.jushBox)
+        }
 
-            // Record completion in statistics
+        // Record completion in statistics (for both today and archive)
+        if let archiveDate = archiveDate {
+            statisticsManager.recordCompletion(.jushBox, date: archiveDate)
+        } else {
             statisticsManager.recordCompletion(.jushBox)
         }
 

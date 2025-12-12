@@ -173,12 +173,15 @@ struct WebDiamondStackGameView: View {
     }
 
     private func handleGameCompletion() {
-        // Only mark as completed if not in archive mode
+        // Mark as completed in daily puzzle manager (only for today's puzzle)
         if !archiveMode {
-            // Mark as completed in daily puzzle manager
             dailyPuzzleManager.markCompleted(.diamondStack)
+        }
 
-            // Record completion in statistics
+        // Record completion in statistics (for both today and archive)
+        if let archiveDate = archiveDate {
+            statisticsManager.recordCompletion(.diamondStack, date: archiveDate)
+        } else {
             statisticsManager.recordCompletion(.diamondStack)
         }
 

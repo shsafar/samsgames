@@ -10,6 +10,8 @@ import SwiftUI
 struct GameView: View {
     @ObservedObject var viewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var soundEnabled = true  // For standardized UI
+    @State private var showInstructions = false  // For info button
 
     var body: some View {
         ZStack {
@@ -18,7 +20,50 @@ struct GameView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 10) {
-                // Top bar with time and back button
+                // STANDARDIZED UI - Button Bar
+                StandardGameButtonBar(
+                    onReset: {
+                        // TODO: Wire up in next step
+                        print("Reset tapped")
+                    },
+                    onRevealHint: {
+                        // TODO: Wire up in next step
+                        print("Reveal/Hint tapped")
+                    },
+                    soundEnabled: $soundEnabled,
+                    resetLabel: "NEW GAME",
+                    revealLabel: "SHOW HINTS"
+                )
+
+                // STANDARDIZED UI - Game Title
+                HStack {
+                    Spacer()
+                    Text("Words In Shapes")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.primary)
+                    Button(action: {
+                        showInstructions = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.purple)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+                .background(Color(UIColor.systemBackground))
+
+                // STANDARDIZED UI - Info Bar
+                StandardGameInfoBar(
+                    time: viewModel.formattedTime,
+                    score: nil,
+                    moves: nil,
+                    streak: nil,
+                    hints: nil,
+                    penalty: nil
+                )
+
+                // EXISTING TOP BAR (Keep for now)
                 HStack {
                     Button(action: { dismiss() }) {
                         Image(systemName: "chevron.left")
@@ -115,6 +160,9 @@ struct GameView: View {
             }
         }
         .navigationBarHidden(true)
+        .sheet(isPresented: $showInstructions) {
+            WordInShapesInstructionsView()
+        }
     }
 }
 

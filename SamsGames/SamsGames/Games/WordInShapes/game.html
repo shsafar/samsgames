@@ -55,6 +55,10 @@
   .modal-header h2{ margin:0; font-size:20px; }
   .modal-close{ background:transparent; border:none; font-size:24px; line-height:1; cursor:pointer; padding:4px 8px; }
   .modal-body{ padding:16px 18px; line-height:1.5; }
+  /* Hide HTML controls - handled by Swift UI */
+  #hud { display: none !important; }
+  .controls { display: none !important; }
+  h1 { display: none !important; }
 </style>
 </head>
 <body>
@@ -216,6 +220,7 @@
 
   // Expose for Swift
   window.setSeed = setSeed;
+  window.newGame = newGame;
   window.dailyMode = false;
   window.startDailyGame = function() {
     window.dailyMode = true;
@@ -228,7 +233,7 @@
   const idx     = (x,y)=>y*N+x;
   const randLetter = ()=>"ABCDEFGHIJKLMNOPQRSTUVWXYZ"[randInt(0,25)];
 
-  let state, timerId, startTime=0, lastFindTime=0;
+  let state, timerId, startTime=0, lastFindTime=0, hintsUsedCount=0;
 
   function emptyGrid(){ return Array.from({length:N},()=>Array(N).fill(null)); }
   function canPlace(pts){ return pts.every(p=>p.x>=0&&p.x<N&&p.y>=0&&p.y<N && !state.grid[p.y][p.x]); }
@@ -523,6 +528,14 @@
       state.score+=Math.round(base*(1+(state.streak-1)*0.25));
       scoreEl.textContent=state.score; streakEl.textContent=state.streak;
 
+      // Send score and streak updates to Swift
+      if(window.webkit?.messageHandlers?.scoreUpdate) {
+        window.webkit.messageHandlers.scoreUpdate.postMessage(state.score);
+      }
+      if(window.webkit?.messageHandlers?.streakUpdate) {
+        window.webkit.messageHandlers.streakUpdate.postMessage(state.streak);
+      }
+
       if(state.words.every(w=>w.found)){
         clearInterval(timerId); if(SOUND_ON) snd.win();
         const finalTime = Math.floor((Date.now()-startTime)/1000);
@@ -558,7 +571,13 @@
     timerId=setInterval(()=>{
       const t=Math.floor((Date.now()-startTime)/1000);
       const m=Math.floor(t/60), s=t%60;
-      timeEl.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+      const timeString = `${m}:${s.toString().padStart(2,'0')}`;
+      timeEl.textContent=timeString;
+
+      // Send time update to Swift
+      if(window.webkit?.messageHandlers?.timeUpdate) {
+        window.webkit.messageHandlers.timeUpdate.postMessage(timeString);
+      }
     },200);
   }
 
@@ -572,9 +591,27 @@
     }
 
     state={ grid:emptyGrid(), words:[], chosen:[], cells:[], score:0, streak:0, penalty:0 };
+    hintsUsedCount = 0;
     scoreEl.textContent=0; streakEl.textContent=0; penaltyEl.textContent=0; timeEl.textContent='0:00';
     SHOW_HINTS=false; hints.innerHTML=''; overlay.innerHTML='';
     document.getElementById('hintBtn').textContent='Show Hints';
+
+    // Send initial score/time/streak/penalty/hints to Swift
+    if(window.webkit?.messageHandlers?.scoreUpdate) {
+      window.webkit.messageHandlers.scoreUpdate.postMessage(0);
+    }
+    if(window.webkit?.messageHandlers?.timeUpdate) {
+      window.webkit.messageHandlers.timeUpdate.postMessage('0:00');
+    }
+    if(window.webkit?.messageHandlers?.streakUpdate) {
+      window.webkit.messageHandlers.streakUpdate.postMessage(0);
+    }
+    if(window.webkit?.messageHandlers?.penaltyUpdate) {
+      window.webkit.messageHandlers.penaltyUpdate.postMessage(0);
+    }
+    if(window.webkit?.messageHandlers?.hintsUpdate) {
+      window.webkit.messageHandlers.hintsUpdate.postMessage(0);
+    }
     // Clear hint timeout when starting new game
     if(hintTimeout) { clearTimeout(hintTimeout); hintTimeout = null; }
     generate(); renderBoard(); renderWordList(); updateGuess(); startTimer();
@@ -739,8 +776,11 @@
 
   let hintTimeout = null;
   document.getElementById('hintBtn').addEventListener('click', ()=>{
-    // Clear any existing timeout
-    if(hintTimeout) clearTimeout(hintTimeout);
+    // If hints are already showing, show toast and don't do anything
+    if(SHOW_HINTS) {
+      toast('Hints are already displayed!');
+      return;
+    }
 
     // Only allow showing hints, not hiding manually
     if(!SHOW_HINTS) {
@@ -748,8 +788,20 @@
       document.getElementById('hintBtn').textContent = 'Hide Hints';
       state.score -= 5;
       state.penalty += 5;
+      hintsUsedCount++;
       scoreEl.textContent = state.score;
       penaltyEl.textContent = state.penalty;
+
+      // Send score, penalty, and hints updates to Swift
+      if(window.webkit?.messageHandlers?.scoreUpdate) {
+        window.webkit.messageHandlers.scoreUpdate.postMessage(state.score);
+      }
+      if(window.webkit?.messageHandlers?.penaltyUpdate) {
+        window.webkit.messageHandlers.penaltyUpdate.postMessage(state.penalty);
+      }
+      if(window.webkit?.messageHandlers?.hintsUpdate) {
+        window.webkit.messageHandlers.hintsUpdate.postMessage(hintsUsedCount);
+      }
       if(SOUND_ON) snd.hint();
       drawHints();
 

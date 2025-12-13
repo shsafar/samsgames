@@ -15,10 +15,16 @@ struct WebWordInShapesGameView: View {
     @Environment(\.colorScheme) var colorScheme
 
     @State private var showCompletionAlert = false
-    @State private var gameTime: String = ""
+    @State private var gameTime: String = "0:00"
     @State private var gameScore: Int = 0
+    @State private var gameStreak: Int = 0
+    @State private var gamePenalty: Int = 0
+    @State private var hintsUsed: Int = 0
     @State private var showInstructions = false
     @State private var showExitWarning = false
+    @State private var soundEnabled = true  // For standardized UI
+    @State private var showInfoPopup = false  // For info button
+    @State private var webView: WKWebView?  // Reference to call JavaScript
 
     // Archive mode support
     var archiveMode: Bool = false
@@ -51,7 +57,7 @@ struct WebWordInShapesGameView: View {
                 WordInShapesCompletedView()
             } else {
                 VStack(spacing: 0) {
-                    // Top bar with back button and help button
+                    // TOP BAR - Back and ? buttons (above standardized menu)
                     HStack {
                         Button(action: { showExitWarning = true }) {
                             HStack(spacing: 4) {
@@ -75,10 +81,115 @@ struct WebWordInShapesGameView: View {
                     .padding(.vertical, 8)
                     .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color(UIColor.systemBackground))
 
+                    // STANDARDIZED UI - Button Bar
+                    StandardGameButtonBar(
+                        onReset: {
+                            // Call newGame() in HTML game
+                            print("🔵 START/RESET button pressed")
+                            guard let webView = webView else {
+                                print("❌ webView is nil!")
+                                return
+                            }
+                            print("✅ webView exists")
+                            let script = """
+                            if (typeof window.newGame === 'function') {
+                                console.log('✅ Calling window.newGame()');
+                                window.newGame();
+                            } else {
+                                console.log('❌ window.newGame is not defined');
+                            }
+                            """
+                            webView.evaluateJavaScript(script) { result, error in
+                                if let error = error {
+                                    print("❌ Error calling newGame(): \(error)")
+                                } else {
+                                    print("✅ Called newGame() - result: \(String(describing: result))")
+                                }
+                            }
+                        },
+                        onRevealHint: {
+                            // Click the HTML hint button
+                            print("🔵 REVEAL/HINT button pressed")
+                            guard let webView = webView else {
+                                print("❌ webView is nil!")
+                                return
+                            }
+                            print("✅ webView exists")
+                            let script = """
+                            var btn = document.getElementById('hintBtn');
+                            if (btn) {
+                                console.log('✅ Found hintBtn, clicking it');
+                                btn.click();
+                            } else {
+                                console.log('❌ hintBtn not found');
+                            }
+                            """
+                            webView.evaluateJavaScript(script) { result, error in
+                                if let error = error {
+                                    print("❌ Error clicking hint button: \(error)")
+                                } else {
+                                    print("✅ Clicked hint button - result: \(String(describing: result))")
+                                }
+                            }
+                        },
+                        soundEnabled: $soundEnabled,
+                        resetLabel: "START/RESET",
+                        revealLabel: "REVEAL/HINT"
+                    )
+
+                    // STANDARDIZED UI - Game Title
+                    HStack {
+                        Spacer()
+                        Text("Words In Shapes")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.primary)
+                        Button(action: {
+                            showInfoPopup = true
+                        }) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 20))
+                                .foregroundColor(.purple)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                    .background(colorScheme == .dark ? Color(red: 0.15, green: 0.15, blue: 0.2) : Color(UIColor.systemBackground))
+
+                    // STANDARDIZED UI - Info Bar
+                    StandardGameInfoBar(
+                        time: gameTime,
+                        score: (gameScore, "Score"),
+                        moves: nil,
+                        streak: gameStreak,
+                        hints: hintsUsed,
+                        penalty: (gamePenalty, "Hint Penalty")
+                    )
+
                     // WebView for the game
                     WebGameViewRepresentable(
                         seed: seed,
-                        onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion
+                        onGameCompleted: archiveMode ? { _, _ in } : handleGameCompletion,
+                        onWebViewCreated: { createdWebView in
+                            DispatchQueue.main.async {
+                                print("✅ WebView created and reference stored")
+                                webView = createdWebView
+                            }
+                        },
+                        onTimeUpdate: { time in
+                            gameTime = time
+                        },
+                        onScoreUpdate: { score in
+                            gameScore = score
+                        },
+                        onStreakUpdate: { streak in
+                            gameStreak = streak
+                        },
+                        onPenaltyUpdate: { penalty in
+                            gamePenalty = penalty
+                        },
+                        onHintsUpdate: { hints in
+                            hintsUsed = hints
+                        }
                     )
                     .id(seed) // Force recreation when seed changes (new day)
                 }
@@ -95,6 +206,10 @@ struct WebWordInShapesGameView: View {
         .sheet(isPresented: $showInstructions) {
             GameInstructionsView(gameType: .wordInShapes)
         }
+        .fullScreenCover(isPresented: $showInfoPopup) {
+            WordInShapesInfoView()
+                .background(BackgroundClearView())
+        }
         .alert("Exit Game?", isPresented: $showExitWarning) {
             Button("Cancel", role: .cancel) { }
             Button("Exit", role: .destructive) {
@@ -102,6 +217,15 @@ struct WebWordInShapesGameView: View {
             }
         } message: {
             Text("Are you sure? You may lose your progress if you exit.")
+        }
+        .onChange(of: soundEnabled) { newValue in
+            // Sync sound setting with HTML game
+            let soundValue = newValue ? "true" : "false"
+            webView?.evaluateJavaScript("SOUND_ON = \(soundValue); document.getElementById('soundBtn').textContent = 'Sound: ' + (SOUND_ON ? 'On' : 'Off');") { _, error in
+                if let error = error {
+                    print("❌ Error updating sound: \(error)")
+                }
+            }
         }
         .onAppear {
             // Check if new day when view appears
@@ -135,21 +259,43 @@ struct WebWordInShapesGameView: View {
 struct WebGameViewRepresentable: UIViewRepresentable {
     let seed: Int
     let onGameCompleted: (Int, String) -> Void
+    let onWebViewCreated: (WKWebView) -> Void
+    let onTimeUpdate: (String) -> Void
+    let onScoreUpdate: (Int) -> Void
+    let onStreakUpdate: (Int) -> Void
+    let onPenaltyUpdate: (Int) -> Void
+    let onHintsUpdate: (Int) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(seed: seed, onGameCompleted: onGameCompleted)
+        Coordinator(
+            seed: seed,
+            onGameCompleted: onGameCompleted,
+            onTimeUpdate: onTimeUpdate,
+            onScoreUpdate: onScoreUpdate,
+            onStreakUpdate: onStreakUpdate,
+            onPenaltyUpdate: onPenaltyUpdate,
+            onHintsUpdate: onHintsUpdate
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.userContentController.add(context.coordinator, name: "gameCompleted")
+        configuration.userContentController.add(context.coordinator, name: "timeUpdate")
+        configuration.userContentController.add(context.coordinator, name: "scoreUpdate")
+        configuration.userContentController.add(context.coordinator, name: "streakUpdate")
+        configuration.userContentController.add(context.coordinator, name: "penaltyUpdate")
+        configuration.userContentController.add(context.coordinator, name: "hintsUpdate")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.backgroundColor = .systemBackground
         webView.isOpaque = false
         webView.scrollView.isScrollEnabled = true
         webView.scrollView.bounces = true
+
+        // Call the callback with the created webView
+        onWebViewCreated(webView)
 
         // Load the HTML file from bundle
         if let htmlPath = Bundle.main.path(forResource: "game", ofType: "html") {
@@ -175,10 +321,20 @@ struct WebGameViewRepresentable: UIViewRepresentable {
     class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var seed: Int
         let onGameCompleted: (Int, String) -> Void
+        let onTimeUpdate: (String) -> Void
+        let onScoreUpdate: (Int) -> Void
+        let onStreakUpdate: (Int) -> Void
+        let onPenaltyUpdate: (Int) -> Void
+        let onHintsUpdate: (Int) -> Void
 
-        init(seed: Int, onGameCompleted: @escaping (Int, String) -> Void) {
+        init(seed: Int, onGameCompleted: @escaping (Int, String) -> Void, onTimeUpdate: @escaping (String) -> Void, onScoreUpdate: @escaping (Int) -> Void, onStreakUpdate: @escaping (Int) -> Void, onPenaltyUpdate: @escaping (Int) -> Void, onHintsUpdate: @escaping (Int) -> Void) {
             self.seed = seed
             self.onGameCompleted = onGameCompleted
+            self.onTimeUpdate = onTimeUpdate
+            self.onScoreUpdate = onScoreUpdate
+            self.onStreakUpdate = onStreakUpdate
+            self.onPenaltyUpdate = onPenaltyUpdate
+            self.onHintsUpdate = onHintsUpdate
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -189,6 +345,21 @@ struct WebGameViewRepresentable: UIViewRepresentable {
 
                 print("✅ Game completed! Score: \(score), Time: \(time)")
                 onGameCompleted(score, time)
+            } else if message.name == "timeUpdate",
+                      let time = message.body as? String {
+                onTimeUpdate(time)
+            } else if message.name == "scoreUpdate",
+                      let score = message.body as? Int {
+                onScoreUpdate(score)
+            } else if message.name == "streakUpdate",
+                      let streak = message.body as? Int {
+                onStreakUpdate(streak)
+            } else if message.name == "penaltyUpdate",
+                      let penalty = message.body as? Int {
+                onPenaltyUpdate(penalty)
+            } else if message.name == "hintsUpdate",
+                      let hints = message.body as? Int {
+                onHintsUpdate(hints)
             }
         }
 

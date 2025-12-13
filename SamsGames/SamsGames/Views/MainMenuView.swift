@@ -241,6 +241,7 @@ struct GameCard: View {
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var statisticsManager: StatisticsManager
     @State private var showArchive = false
+    @State private var showGameArchive = false
 
     // NYT-style branded colors for each game
     private var brandColor: Color {
@@ -405,6 +406,21 @@ struct GameCard: View {
                                             .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .black.opacity(0.6))
                                     }
                                 }
+
+                                // Archive button (NYT Games style) - for ALL games
+                                Button(action: {
+                                    showGameArchive = true
+                                }) {
+                                    Text("Archive")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(brandColor)
+                                        .cornerRadius(8)
+                                        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                                }
+                                .padding(.top, 8)
                             }
 
                             Spacer()
@@ -466,6 +482,11 @@ struct GameCard: View {
         }
         .sheet(isPresented: $showArchive) {
             ArchiveView(filterGameType: gameType)
+                .environmentObject(dailyPuzzleManager)
+                .environmentObject(statisticsManager)
+        }
+        .sheet(isPresented: $showGameArchive) {
+            XNumbersArchiveView(gameType: gameType)
                 .environmentObject(dailyPuzzleManager)
                 .environmentObject(statisticsManager)
         }

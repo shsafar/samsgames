@@ -52,10 +52,10 @@ struct StatisticsView: View {
                     }
                 }
             }
-            .alert("Test Mode Activated", isPresented: $showTestModeAlert) {
+            .alert(subscriptionManager.testModeEnabled ? "Test Mode Activated" : "Test Mode Deactivated", isPresented: $showTestModeAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text("Archive access unlocked for testing. This will persist until the app is reinstalled.")
+                Text(subscriptionManager.testModeEnabled ? "Archive access unlocked for testing." : "Archive access locked. Subscription required.")
             }
         }
     }
@@ -75,11 +75,15 @@ struct StatisticsView: View {
 
         print("🔢 Title tap count: \(titleTapCount)/5")
 
-        // Enable test mode after 5 taps
+        // Toggle test mode after 5 taps (reset counter each time)
         if titleTapCount >= 5 {
-            subscriptionManager.enableTestMode()
+            if subscriptionManager.testModeEnabled {
+                subscriptionManager.disableTestMode()
+            } else {
+                subscriptionManager.enableTestMode()
+            }
             showTestModeAlert = true
-            titleTapCount = 0
+            titleTapCount = 0  // Reset counter to 0 after toggle
         }
     }
 }

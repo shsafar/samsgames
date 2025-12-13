@@ -15,6 +15,8 @@ struct FixedXNumbersGame: View {
     @State private var showSpecialCoinReveal = false
     @State private var specialCoinImage = ""
     @State private var specialCoinMessage = ""
+    @State private var soundEnabled = true  // For standardized UI
+    @State private var showInstructions = false  // For info button
 
     var body: some View {
         ZStack {
@@ -32,33 +34,78 @@ struct FixedXNumbersGame: View {
             )
             .ignoresSafeArea()
 
-            VStack {
-                // Header
-                HStack {
-                    // Timer - Much larger and prominent
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("TIME")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.gray)
-                        Text(game.formattedTime)
-                            .font(.system(size: 22, weight: .bold, design: .monospaced))
-                            .foregroundColor(game.timeColor)
-                            .scaleEffect(game.timeElapsed >= 50 && timerFlash && !game.dailyPuzzleMode ? 1.1 : 1.0)
-                            .animation(game.dailyPuzzleMode ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: timerFlash)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 15)
-                            .fill(Color.white)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 15)
-                                    .stroke(game.timeColor.opacity(0.5), lineWidth: 2)
-                            )
-                            .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
-                    )
+            VStack(spacing: 0) {
+                // STANDARDIZED UI - Button Bar
+                StandardGameButtonBar(
+                    onReset: {
+                        // Reset the game (new puzzle, reset timer, reset hints)
+                        game.generateNewGame()
+                    },
+                    onRevealHint: {
+                        // Reveal the selected node's correct value
+                        game.useHint()
+                    },
+                    soundEnabled: $soundEnabled,
+                    resetLabel: "START/RESET",
+                    revealLabel: "REVEAL/HINT"
+                )
 
+                // STANDARDIZED UI - Game Title
+                HStack {
                     Spacer()
+                    Text("X-Numbers")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.primary)
+                    Button(action: {
+                        showInstructions = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(.blue)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+                .background(colorScheme == .dark ? Color.black.opacity(0.3) : Color.white.opacity(0.9))
+
+                // STANDARDIZED UI - Info Bar
+                StandardGameInfoBar(
+                    time: game.formattedTime,
+                    score: (0, "Score"),
+                    moves: nil,
+                    streak: nil,
+                    hints: game.maxHints - game.hintsUsed,  // Counts down from 3 to 0, turns red at 0
+                    penalty: (0, "Penalty")
+                )
+
+                // EXISTING HEADER (Keep for now)
+                HStack {
+                    // HIDDEN: Timer box (now shown in StandardGameInfoBar)
+                    if false {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("TIME")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.gray)
+                            Text(game.formattedTime)
+                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                                .foregroundColor(game.timeColor)
+                                .scaleEffect(game.timeElapsed >= 50 && timerFlash && !game.dailyPuzzleMode ? 1.1 : 1.0)
+                                .animation(game.dailyPuzzleMode ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: timerFlash)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 15)
+                                .fill(Color.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .stroke(game.timeColor.opacity(0.5), lineWidth: 2)
+                                )
+                                .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+                        )
+
+                        Spacer()
+                    }
 
                     // Stats Button (hidden in daily puzzle mode)
                     if !game.dailyPuzzleMode {
@@ -114,23 +161,25 @@ struct FixedXNumbersGame: View {
                         Spacer()
                     }
 
-                    // Revealed counter and Copyright - Larger
+                    // HIDDEN: Revealed counter (now shown in StandardGameInfoBar as Hints)
                     VStack(alignment: .trailing, spacing: 4) {
-                        HStack(spacing: 4) {
-                            Text("Revealed:")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.gray)
-                            Text("\(game.hintsUsed)/\(game.maxHints)")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(game.hintsUsed >= 2 ? .orange : .blue)
+                        if false {
+                            HStack(spacing: 4) {
+                                Text("Revealed:")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.gray)
+                                Text("\(game.hintsUsed)/\(game.maxHints)")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(game.hintsUsed >= 2 ? .orange : .blue)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white)
+                                    .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
+                            )
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color.white)
-                                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 1)
-                        )
 
                         Text("©zYouSoft, Inc")
                             .font(.system(size: 14, weight: .medium))
@@ -293,27 +342,33 @@ struct FixedXNumbersGame: View {
                         }
                         }
 
-                        Button(action: {
-                            game.useHint()
-                        }) {
-                            Label("Reveal (\(game.maxHints - game.hintsUsed))", systemImage: "lightbulb")
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(game.hintsUsed >= game.maxHints ? Color.gray : Color.orange)
-                                .cornerRadius(20)
+                        // HIDDEN: Old Reveal button (moved to StandardGameButtonBar)
+                        if false {
+                            Button(action: {
+                                game.useHint()
+                            }) {
+                                Label("Reveal (\(game.maxHints - game.hintsUsed))", systemImage: "lightbulb")
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(game.hintsUsed >= game.maxHints ? Color.gray : Color.orange)
+                                    .cornerRadius(20)
+                            }
+                            .disabled(game.selectedNode == nil || game.hintsUsed >= game.maxHints)
                         }
-                        .disabled(game.selectedNode == nil || game.hintsUsed >= game.maxHints)
 
-                        Button(action: {
-                            presentationMode.wrappedValue.dismiss()
-                        }) {
-                            Label("Exit", systemImage: "xmark.circle")
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.red)
-                                .cornerRadius(20)
+                        // HIDDEN: Exit button (removed from UI)
+                        if false {
+                            Button(action: {
+                                presentationMode.wrappedValue.dismiss()
+                            }) {
+                                Label("Exit", systemImage: "xmark.circle")
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color.red)
+                                    .cornerRadius(20)
+                            }
                         }
                     }
                 }
@@ -391,6 +446,10 @@ struct FixedXNumbersGame: View {
         .sheet(isPresented: $showAwards) {
             AwardsView()
         }
+        .fullScreenCover(isPresented: $showInstructions) {
+            XNumbersTimeLimitsView()
+                .background(BackgroundClearView())
+        }
     }
 
     private var alertBinding: Binding<Bool> {
@@ -420,7 +479,7 @@ struct FixedXNumbersGame: View {
             let timeUsed = game.maxTime - game.timeElapsed
             return "You completed the puzzle with \(timeUsed) seconds remaining and used \(game.hintsUsed) hints!"
         } else if game.showTimeoutAlert {
-            return "Maximum 60 seconds exceeded. Try again!"
+            return "Maximum \(game.maxTime) seconds exceeded. Try again!"
         } else if game.showTooManyHintsAlert {
             return "You've used too many hints (maximum 3). Try again!"
         }
@@ -1683,7 +1742,16 @@ class XNumbersGameModel: ObservableObject {
     @Published var revealedNodes: Set<Int> = [] // Track nodes revealed using Reveal button
     @Published var timerStarted = false // Track if timer has started (starts on first move)
 
-    let maxTime = 60 // 60 seconds limit
+    // Dynamic time limit based on level
+    var maxTime: Int {
+        switch currentLevel {
+        case 1: return 999  // Level 1: No time limit (999 seconds)
+        case 2: return 60   // Level 2: 60 seconds
+        case 3: return 90   // Level 3: 90 seconds
+        default: return 90
+        }
+    }
+
     let maxHints = 3 // Maximum 3 hints
 
     private var timer: Timer?
@@ -2320,7 +2388,13 @@ class XNumbersGameModel: ObservableObject {
             DispatchQueue.main.async {
                 if !self.isGameComplete && !self.gameOver {
                     self.timeElapsed += 1
-                    // No timeout check - timer counts up indefinitely
+
+                    // Check for timeout (only for levels with time limits)
+                    if self.currentLevel != 1 && self.timeElapsed >= self.maxTime {
+                        self.showTimeoutAlert = true
+                        self.gameOver = true
+                        self.stopTimer()
+                    }
                 }
             }
         }

@@ -92,7 +92,83 @@ struct InstructionItem: View {
     }
 }
 
+// MARK: - Simple Time Limits Info View
+
+struct XNumbersTimeLimitsView: View {
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    dismiss()
+                }
+
+            // Popup content
+            VStack(spacing: 0) {
+                // Title
+                Text("Time Limits by Level")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .padding(.top, 20)
+                    .padding(.horizontal, 20)
+
+                // Content
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("• Level 1: No time limit")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+
+                    Text("• Level 2: 60 seconds")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+
+                    Text("• Level 3: 90 seconds")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                }
+                .padding(.vertical, 20)
+                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Divider
+                Divider()
+
+                // OK Button
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text("OK")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+            }
+            .frame(width: 300)
+            .background(Color(UIColor.systemBackground))
+            .cornerRadius(14)
+            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        }
+    }
+}
+
+// MARK: - Background Clear View for FullScreenCover
+
+struct BackgroundClearView: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        DispatchQueue.main.async {
+            view.superview?.superview?.backgroundColor = .clear
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
+}
+
 #Preview {
     XNumbersInstructionsView()
-        .background(Color(red: 0.1, green: 0.1, blue: 0.15))
 }

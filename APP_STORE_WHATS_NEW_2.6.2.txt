@@ -1,0 +1,20 @@
+📅 NEW: Archive Access for Every Game!
+
+Inspired by NYT Games, we've added a dedicated Archive button to all 13 puzzle games!
+
+✨ What's New:
+• Archive button on every game card
+• View the past week's puzzles at a glance
+• Beautiful calendar view with completion tracking
+• Green checkmarks show completed puzzles
+• Each game has its own color-coded archive
+• Subscribers get instant access to 390+ past puzzles
+
+🎯 How It Works:
+Tap the Archive button on any game card to explore previous puzzles. Not a subscriber? You'll see a quick preview and can unlock the full archive anytime.
+
+🔧 Testing Improvements:
+• Tap "Statistics" 5 times to toggle test mode
+• Easier testing of premium features
+
+Enjoy revisiting your favorite puzzles! 🎉
